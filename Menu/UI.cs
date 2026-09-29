@@ -51,9 +51,12 @@ namespace iiMenu.Menu
             controlBackground = canvas.Find("ControlUI").GetComponent<Image>();
 
             debugUI = canvas.Find("DebugUI")?.gameObject;
-            debugUI.AddComponent<UIDragWindow>();
 
-            templateLine = debugUI.transform.Find("Lines/Line")?.gameObject;
+            if (debugUI != null)
+            {
+                debugUI.AddComponent<UIDragWindow>();
+                templateLine = debugUI.transform.Find("Lines/Line")?.gameObject;
+            }
 
             r = canvas.Find("ControlUI/R").GetComponent<TMP_InputField>();
             g = canvas.Find("ControlUI/G").GetComponent<TMP_InputField>();
@@ -84,18 +87,21 @@ namespace iiMenu.Menu
                 ChangeName(textInput.text);
             });
 
-            TMP_InputField inputField = debugUI.transform.Find("TextInput").gameObject.GetComponent<TMP_InputField>();
-
-            inputField.onSelect.AddListener(_ => focusedOnDebug = true);
-            inputField.onDeselect.AddListener(_ => focusedOnDebug = false);
-
-            inputField.onEndEdit.AddListener((string text) =>
+            if (debugUI != null)
             {
-                if (focusedOnDebug && !inputField.text.IsNullOrEmpty())
-                    HandleDebugCommand(text);
+                TMP_InputField inputField = debugUI.transform.Find("TextInput").gameObject.GetComponent<TMP_InputField>();
 
-                inputField.text = string.Empty;
-            });
+                inputField.onSelect.AddListener(_ => focusedOnDebug = true);
+                inputField.onDeselect.AddListener(_ => focusedOnDebug = false);
+
+                inputField.onEndEdit.AddListener((string text) =>
+                {
+                    if (focusedOnDebug && !inputField.text.IsNullOrEmpty())
+                        HandleDebugCommand(text);
+
+                    inputField.text = string.Empty;
+                });
+            }
 
             textObjects = new List<TextMeshProUGUI>
             {
@@ -118,10 +124,14 @@ namespace iiMenu.Menu
                 canvas.Find("ControlUI/QueueButton").GetComponent<Image>(),
                 canvas.Find("ControlUI/JoinButton").GetComponent<Image>(),
                 canvas.Find("ControlUI/ColorButton").GetComponent<Image>(),
-                canvas.Find("ControlUI/NameButton").GetComponent<Image>(),
-                debugUI.transform.Find("TextInput").GetComponent<Image>(),
-                debugUI.transform.Find("Lines").GetComponent<Image>()
+                canvas.Find("ControlUI/NameButton").GetComponent<Image>()
             };
+
+            if (debugUI != null)
+            {
+                imageObjects.Add(debugUI.transform.Find("TextInput").GetComponent<Image>());
+                imageObjects.Add(debugUI.transform.Find("Lines").GetComponent<Image>());
+            }
 
             watermark.material = new Material(watermark.material);
             watermarkImage = LoadTextureFromResource($"{PluginInfo.ClientResourcePath}.icon.png");
@@ -319,7 +329,7 @@ namespace iiMenu.Menu
                 roomStatus.SafeSetText(FollowMenuSettings(!PhotonNetwork.InRoom ? "Not connected to room" : "Connected to room ") +
                    (PhotonNetwork.InRoom ? PhotonNetwork.CurrentRoom.Name : ""));
 
-                if (debugUI.activeSelf)
+                if (debugUI != null && debugUI.activeSelf)
                 {
                     debugUI.GetComponent<Image>().color = backgroundColor.GetCurrentColor();
 
@@ -452,7 +462,7 @@ namespace iiMenu.Menu
 
         private void ToggleDebug()
         {
-            if (debugUI.activeSelf)
+            if (debugUI != null && debugUI.activeSelf)
                 debugUI.SetActive(false);
             else
             {
@@ -466,7 +476,7 @@ namespace iiMenu.Menu
         private GameObject templateLine;
         public void DebugPrint(string text)
         {
-            if (!debugUI.activeSelf)
+            if (debugUI != null && !debugUI.activeSelf)
                 return;
 
             GameObject line = Instantiate(templateLine, debugUI.transform.Find("Lines"), false);

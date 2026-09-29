@@ -3934,13 +3934,17 @@ namespace iiMenu.Mods
                     GameObject bodyCollider = GameObject.CreatePrimitive(PrimitiveType.Cube);
                     bodyCollider.GetComponent<Renderer>().enabled = false;
                     bodyCollider.transform.localScale = new Vector3(0.3f, 0.55f, 0.3f);
+                    colliders.Add(bodyCollider);
 
                     for (int i = 0; i < 19; i++)
                     {
-                        bodyCollider = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                        bodyCollider.GetComponent<Renderer>().enabled = false;
-                        bodyCollider.transform.localScale = new Vector3(0.2f, 0.2f, 0.2f);
+                        GameObject boneCollider = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                        boneCollider.GetComponent<Renderer>().enabled = false;
+                        boneCollider.transform.localScale = new Vector3(0.2f, 0.2f, 0.2f);
+                        colliders.Add(boneCollider);
                     }
+
+                    RigColliders[vrrig] = colliders;
                 }
 
                 colliders[0].transform.position = vrrig.head.rigTarget.transform.position + new Vector3(0f, -0.12f, 0f);

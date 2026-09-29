@@ -171,7 +171,11 @@ namespace iiMenu.Mods
         public static void GlobalReturn()
         {
             NotificationManager.ClearAllNotifications();
-            Toggle(Buttons.buttons[Buttons.CurrentCategoryIndex][Buttons.GetCategory("Main")].buttonText, true);
+
+            ButtonInfo[] current = Buttons.buttons[Buttons.CurrentCategoryIndex];
+
+            if (current.Length > 0)
+                Toggle(current[0].buttonText, true);
 
             if (prompts.Count > 0)
                 StopCurrentPrompt();

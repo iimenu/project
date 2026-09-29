@@ -1,7 +1,7 @@
-﻿/*
+/*
  * ii Reborn
- * Portions Copyright (C) 2025–2026 Goldentrophy Software
- * Licensed under GNU GPL v3.0-or-later — see LICENSE and NOTICE.
+ * Portions Copyright (C) 2025�2026 Goldentrophy Software
+ * Licensed under GNU GPL v3.0-or-later � see LICENSE and NOTICE.
  * This file is part of a derivative work; see NOTICE for attribution
  * and modification history. Do not remove this notice.
  */
@@ -191,6 +191,31 @@ namespace iiMenu.Mods
             TextMeshPro infoText = infoObject != null ? infoObject.GetComponent<TextMeshPro>() : null;
             if (infoText != null)
                 infoText.SafeSetText(text);
+        }
+
+        private static string conductHeadingText;
+        private static bool conductHeadingArchived;
+
+        public static void ArchiveConductHeading(TextMeshPro heading)
+        {
+            if (conductHeadingArchived || heading == null)
+                return;
+
+            conductHeadingText = heading.text;
+            conductHeadingArchived = true;
+        }
+
+        public static void RestoreConductHeading()
+        {
+            if (!conductHeadingArchived)
+                return;
+
+            TextMeshPro heading = GetObject("Environment Objects/LocalObjects_Prefab/TreeRoom/CodeOfConductHeadingText")?.GetComponent<TextMeshPro>();
+
+            if (heading != null)
+                heading.text = conductHeadingText;
+
+            conductHeadingArchived = false;
         }
 
         public static void ToggleSnow(bool enable)
@@ -2527,7 +2552,7 @@ namespace iiMenu.Mods
             { "GorillaShop", "GorillaShop" },
             { "Fusioned", "Fusioned" },
             { "y u lookin in here weirdo", "Malachi Menu Reborn" },
-            { "ØƦƁƖƬ", "Orbit" },
+            { "�????", "Orbit" },
             { "Atlas", "Atlas" }
         };
 
@@ -4004,6 +4029,8 @@ namespace iiMenu.Mods
             foreach (VRRig rig in toRemove)
                 boneESP.Remove(rig);
 
+            bool noInfected = InfectedList().Count <= 0;
+
             foreach (var vrrig in VRRigCache.ActiveRigs.Where(vrrig => !vrrig.isLocal))
             {
                 if (!boneESP.TryGetValue(vrrig, out List<LineRenderer> Lines))
@@ -4052,7 +4079,7 @@ namespace iiMenu.Mods
                 liner.startColor = color;
                 liner.endColor = color;
 
-                liner.enabled = (selfTagged ? !playerTagged : playerTagged) || InfectedList().Count <= 0;
+                liner.enabled = (selfTagged ? !playerTagged : playerTagged) || noInfected;
 
                 liner.SetPosition(0, vrrig.head.rigTarget.transform.position + new Vector3(0f, 0.16f, 0f));
                 liner.SetPosition(1, vrrig.head.rigTarget.transform.position - new Vector3(0f, 0.4f, 0f));
@@ -4072,7 +4099,7 @@ namespace iiMenu.Mods
 
                     liner.material.shader = Shader.Find("GUI/Text Shader");
 
-                    liner.enabled = (selfTagged ? !playerTagged : playerTagged) || InfectedList().Count <= 0;
+                    liner.enabled = (selfTagged ? !playerTagged : playerTagged) || noInfected;
 
                     liner.SetPosition(0, vrrig.mainSkin.bones[bones[i * 2]].position);
                     liner.SetPosition(1, vrrig.mainSkin.bones[bones[i * 2 + 1]].position);
@@ -6159,18 +6186,26 @@ namespace iiMenu.Mods
 
             TextMeshPro finalTextMeshPro = null;
 
-            foreach (var TextMeshPro in nameTagPool.Where(TextMeshPro => finalTextMeshPro == null && !TextMeshPro.gameObject.activeInHierarchy))
+            for (int i = 0; i < nameTagPool.Count; i++)
             {
-                TextMeshPro.gameObject.SetActive(true);
-                TextMeshPro.gameObject.transform.LookAt(Camera.main.transform.position);
-                TextMeshPro.gameObject.transform.Rotate(0f, 180f, 0f);
+                TextMeshPro pooled = nameTagPool[i];
 
-                TextMeshPro.SafeSetFontStyle(activeFontStyle);
-                TextMeshPro.SafeSetFont(activeFont);
+                if (finalTextMeshPro != null)
+                    break;
+
+                if (pooled == null || pooled.gameObject.activeInHierarchy)
+                    continue;
+
+                pooled.gameObject.SetActive(true);
+                pooled.gameObject.transform.LookAt(Camera.main.transform.position);
+                pooled.gameObject.transform.Rotate(0f, 180f, 0f);
+
+                pooled.SafeSetFontStyle(activeFontStyle);
+                pooled.SafeSetFont(activeFont);
 
                 // Update font style of outline here
 
-                finalTextMeshPro = TextMeshPro;
+                finalTextMeshPro = pooled;
             }
 
             if (finalTextMeshPro == null)
@@ -6251,10 +6286,18 @@ namespace iiMenu.Mods
 
             LineRenderer finalRender = null;
 
-            foreach (var line in linePool.Where(line => finalRender == null).Where(line => !line.gameObject.activeInHierarchy))
+            for (int i = 0; i < linePool.Count; i++)
             {
-                line.gameObject.SetActive(true);
-                finalRender = line;
+                LineRenderer pooled = linePool[i];
+
+                if (finalRender != null)
+                    break;
+
+                if (pooled == null || pooled.gameObject.activeInHierarchy)
+                    continue;
+
+                pooled.gameObject.SetActive(true);
+                finalRender = pooled;
             }
 
             if (finalRender == null)
