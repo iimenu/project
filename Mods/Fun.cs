@@ -1415,13 +1415,27 @@ namespace iiMenu.Mods
         }
 
         private static VirtualStumpAd virtualStumpAd;
-        public static void CustomVirtualStumpVideo() =>
-            virtualStumpAd ??= new GameObject("iiMenu_VirtualStumpAd").AddComponent<VirtualStumpAd>();
+        public static void CustomVirtualStumpVideo()
+        {
+            if (virtualStumpAd != null)
+                return;
+
+            GameObject host = new GameObject("iiMenu_VirtualStumpAd");
+            Object.DontDestroyOnLoad(host);
+            virtualStumpAd = host.AddComponent<VirtualStumpAd>();
+        }
 
         public static void DisableCustomVirtualStumpVideo()
         {
+            if (virtualStumpAd == null)
+            {
+                virtualStumpAd = null;
+                return;
+            }
+
             virtualStumpAd.enabled = false;
             Object.Destroy(virtualStumpAd.gameObject);
+            virtualStumpAd = null;
         }
 
         public static void ChangeCustomQuestScore(bool positive = true)
@@ -6328,15 +6342,21 @@ Piece Name: {gunTarget.name}";
             lastHitRS = rightSecondary;
         }
 
-        private static readonly Dictionary<string[], int[]> cachePacked = new Dictionary<string[], int[]>();
+        private static readonly Dictionary<string, int[]> cachePacked = new Dictionary<string, int[]>();
         public static int[] PackCosmetics(string[] unpackedCosmetics)
         {
-            if (cachePacked.TryGetValue(unpackedCosmetics, out var cosmetics))
+            string key = string.Join(",", unpackedCosmetics);
+
+            if (cachePacked.TryGetValue(key, out var cosmetics))
                 return cosmetics;
 
             CosmeticsController.CosmeticSet Set = new CosmeticsController.CosmeticSet(unpackedCosmetics, CosmeticsController.instance);
             int[] packedIDs = Set.ToPackedIDArray();
-            cachePacked.Add(unpackedCosmetics, packedIDs);
+
+            if (cachePacked.Count > 256)
+                cachePacked.Clear();
+
+            cachePacked[key] = packedIDs;
             return packedIDs;
         }
 

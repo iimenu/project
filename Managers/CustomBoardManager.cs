@@ -84,11 +84,18 @@ namespace iiMenu.Managers
 
                     instance.objectBoards.Clear();
 
-                    instance.motdTitle.SetActive(false);
-                    instance.motdText.SetActive(false);
+                    if (instance.motdTitle != null)
+                        instance.motdTitle.SetActive(false);
+                    if (instance.motdText != null)
+                        instance.motdText.SetActive(false);
 
-                    GetObject("Environment Objects/LocalObjects_Prefab/TreeRoom/motdHeadingText").SetActive(true);
-                    GetObject("Environment Objects/LocalObjects_Prefab/TreeRoom/motdBodyText").SetActive(true);
+                    GameObject motdHeading = GetObject("Environment Objects/LocalObjects_Prefab/TreeRoom/motdHeadingText");
+                    GameObject motdBody = GetObject("Environment Objects/LocalObjects_Prefab/TreeRoom/motdBodyText");
+
+                    if (motdHeading != null)
+                        motdHeading.SetActive(true);
+                    if (motdBody != null)
+                        motdBody.SetActive(true);
 
                     instance.ReloadBoards();
                 }
@@ -212,10 +219,12 @@ namespace iiMenu.Managers
 
         private bool hasFoundAllBoards;
         private bool loggedMissingBoardObjects;
+        private float nextBoardScanTime;
         public void ReloadBoards()
         {
             hasFoundAllBoards = false;
             loggedMissingBoardObjects = false;
+            nextBoardScanTime = 0f;
         }
 
         private static void ApplyJoinTriggerScreens()
@@ -332,7 +341,7 @@ namespace iiMenu.Managers
         {
             FrameProfiler.Begin("Board.Update");
 
-            if (!hasFoundAllBoards)
+            if (!hasFoundAllBoards && Time.time >= nextBoardScanTime)
             {
                 try
                 {
@@ -345,6 +354,8 @@ namespace iiMenu.Managers
                             "Environment Objects/LocalObjects_Prefab/TreeRoom/Data",
                             "Environment Objects/LocalObjects_Prefab/TreeRoom/FunctionSelect"
                         };
+                    int missing = 0;
+
                     foreach (string objectName in objectsWithTMPro)
                     {
                         GameObject obj = GetObject(objectName);
@@ -354,8 +365,13 @@ namespace iiMenu.Managers
                             if (!textMeshPro.Contains(text))
                                 textMeshPro.Add(text);
                         }
-                        else if (!loggedMissingBoardObjects)
-                            LogManager.Log("Could not find " + objectName);
+                        else
+                        {
+                            missing++;
+
+                            if (!loggedMissingBoardObjects)
+                                LogManager.Log("Could not find " + objectName);
+                        }
                     }
 
                     // Stump (motd + Code of Conduct) and Forest leaderboard plates
@@ -378,7 +394,11 @@ namespace iiMenu.Managers
                     }
 
                     loggedMissingBoardObjects = true;
-                    hasFoundAllBoards = true;
+
+                    if (missing == 0)
+                        hasFoundAllBoards = true;
+                    else
+                        nextBoardScanTime = Time.time + 2f;
                 }
                 catch (Exception exc)
                 {

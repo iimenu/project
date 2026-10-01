@@ -1,7 +1,7 @@
-﻿/*
+/*
  * ii Reborn
- * Portions Copyright (C) 2025–2026 Goldentrophy Software
- * Licensed under GNU GPL v3.0-or-later — see LICENSE and NOTICE.
+ * Portions Copyright (C) 2025�2026 Goldentrophy Software
+ * Licensed under GNU GPL v3.0-or-later � see LICENSE and NOTICE.
  * This file is part of a derivative work; see NOTICE for attribution
  * and modification history. Do not remove this notice.
  */
@@ -418,8 +418,8 @@ namespace iiMenu.Mods
                 line.SetReportState(false, GorillaPlayerLineButton.ButtonType.Cancel);
                 line.reportButton.isOn = false;
                 line.reportButton.UpdateColor();
-                int viewID = viewIdArchive[line.linePlayer.VRRig()];
-                Destroy(line.linePlayer.VRRig(), null, null, viewID);
+                if (viewIdArchive.TryGetValue(line.linePlayer.VRRig(), out int lineViewID))
+                    Destroy(line.linePlayer.VRRig(), null, null, lineViewID);
             }
         }
 
@@ -463,8 +463,8 @@ namespace iiMenu.Mods
                     VRRig gunTarget = iiMenu.Utilities.RigUtilities.GetRigFromHit(Ray);
                     if (gunTarget && !gunTarget.IsLocal())
                     {
-                        int viewID = viewIdArchive[gunTarget];
-                        Destroy(gunTarget, null, null, viewID);
+                if (viewIdArchive.TryGetValue(gunTarget, out int gunViewID))
+                    Destroy(gunTarget, null, null, gunViewID);
                     }
                 }
             }
@@ -496,8 +496,8 @@ namespace iiMenu.Mods
             {
                 foreach (VRRig rig in nearbyPlayers)
                 {
-                    int viewID = viewIdArchive[rig];
-                    Destroy(rig, null, null, viewID);
+                    if (viewIdArchive.TryGetValue(rig, out int viewID))
+                        Destroy(rig, null, null, viewID);
                 }
             }
         }
@@ -522,8 +522,8 @@ namespace iiMenu.Mods
 
             foreach (VRRig rig in touchedRigs)
             {
-                int viewID = viewIdArchive[rig];
-                Destroy(rig, null, null,viewID);
+                if (viewIdArchive.TryGetValue(rig, out int touchViewID))
+                    Destroy(rig, null, null, touchViewID);
             }
         }
 

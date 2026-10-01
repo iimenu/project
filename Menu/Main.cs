@@ -965,7 +965,7 @@ namespace iiMenu.Menu
                     {
                         if (js.y > 0.5f)
                         {
-                            pageOffset = Mathf.Clamp(pageOffset - 1, 0, DisplayedItemCount - PageSize);
+                            pageOffset = Mathf.Clamp(pageOffset - 1, 0, Mathf.Max(0, DisplayedItemCount - PageSize));
 
                             shouldReload = true;
                             scrollDelay = Time.time + 0.1f;
@@ -973,7 +973,7 @@ namespace iiMenu.Menu
 
                         if (js.y < -0.5f)
                         {
-                            pageOffset = Mathf.Clamp(pageOffset + 1, 0, DisplayedItemCount - PageSize);
+                            pageOffset = Mathf.Clamp(pageOffset + 1, 0, Mathf.Max(0, DisplayedItemCount - PageSize));
 
                             shouldReload = true;
                             scrollDelay = Time.time + 0.1f;
@@ -1333,121 +1333,129 @@ namespace iiMenu.Menu
                 FrameProfiler.End();
 
                 // Menu
-                foreach (ButtonInfo button in Buttons.buttons
-                    .SelectMany(list => list)
-                    .Where(button => button.enabled && (button.method != null || button.postMethod != null)))
+                for (int categoryIndex = 0; categoryIndex < Buttons.buttons.Length; categoryIndex++)
                 {
-                    try
-                    {
-                        bool _leftPrimary = leftPrimary;
-                        bool _leftSecondary = leftSecondary;
-                        bool _rightPrimary = rightPrimary;
-                        bool _rightSecondary = rightSecondary;
-                        bool _leftGrab = leftGrab;
-                        bool _rightGrab = rightGrab;
-                        float _leftTrigger = leftTrigger;
-                        float _rightTrigger = rightTrigger;
-                        bool _leftJoystickClick = leftJoystickClick;
-                        bool _rightJoystickClick = rightJoystickClick;
+                    ButtonInfo[] categoryList = Buttons.buttons[categoryIndex];
 
-                        if (OverwriteKeybinds && button.customBind != null)
-                        {
-                            leftPrimary = true;
-                            leftSecondary = true;
-                            rightPrimary = true;
-                            rightSecondary = true;
-                            leftGrab = true;
-                            rightGrab = true;
-                            leftTrigger = 1f;
-                            rightTrigger = 1f;
-                            leftJoystickClick = true;
-                            rightJoystickClick = true;
-                        }
+                    for (int buttonIndex = 0; buttonIndex < categoryList.Length; buttonIndex++)
+                    {
+                        ButtonInfo button = categoryList[buttonIndex];
+
+                        if (!button.enabled || (button.method == null && button.postMethod == null))
+                            continue;
 
                         try
                         {
-                            if (button.rebindKey != null)
-                            {
-                                float buttonAmount = 0f;
-                                switch (button.rebindKey)
-                                {
-                                    case "A":
-                                        buttonAmount = _rightPrimary ? 1f : 0f;
-                                        break;
-                                    case "B":
-                                        buttonAmount = _rightSecondary ? 1f : 0f;
-                                        break;
-                                    case "X":
-                                        buttonAmount = _leftPrimary ? 1f : 0f;
-                                        break;
-                                    case "Y":
-                                        buttonAmount = _leftSecondary ? 1f : 0f;
-                                        break;
-                                    case "LG":
-                                        buttonAmount = _leftGrab ? 1f : 0f;
-                                        break;
-                                    case "RG":
-                                        buttonAmount = _rightGrab ? 1f : 0f;
-                                        break;
-                                    case "LT":
-                                        buttonAmount = _leftTrigger;
-                                        break;
-                                    case "RT":
-                                        buttonAmount = _rightTrigger;
-                                        break;
-                                    case "LJ":
-                                        buttonAmount = _leftJoystickClick ? 1f : 0f;
-                                        break;
-                                    case "RJ":
-                                        buttonAmount = _rightJoystickClick ? 1f : 0f;
-                                        break;
-                                }
-                                leftPrimary = buttonAmount > 0.5f;
-                                leftSecondary = buttonAmount > 0.5f;
-                                rightPrimary = buttonAmount > 0.5f;
-                                rightSecondary = buttonAmount > 0.5f;
-                                leftGrab = buttonAmount > 0.5f;
-                                rightGrab = buttonAmount > 0.5f;
-                                leftTrigger = buttonAmount;
-                                rightTrigger = buttonAmount;
-                                leftJoystickClick = buttonAmount > 0.5f;
-                                rightJoystickClick = buttonAmount > 0.5f;
-                            }
-                            if (button.postMethod != null)
-                                postActions.Add(button.buttonText);
-                            button.method?.Invoke();
-                            if (button.rebindKey != null)
-                            {
-                                leftPrimary = _leftPrimary;
-                                leftSecondary = _leftSecondary;
-                                rightPrimary = _rightPrimary;
-                                rightSecondary = _rightSecondary;
-                                leftGrab = _leftGrab;
-                                rightGrab = _rightGrab;
-                                leftTrigger = _leftTrigger;
-                                rightTrigger = _rightTrigger;
-                                leftJoystickClick = _leftJoystickClick;
-                                rightJoystickClick = _rightJoystickClick;
-                            }
-                        }
-                        catch (Exception exc)
-                        {
-                            LogManager.LogError(
-                                $"Error with mod method {button.buttonText} at {exc.StackTrace}: {exc.Message}");
-                        }
+                            bool _leftPrimary = leftPrimary;
+                            bool _leftSecondary = leftSecondary;
+                            bool _rightPrimary = rightPrimary;
+                            bool _rightSecondary = rightSecondary;
+                            bool _leftGrab = leftGrab;
+                            bool _rightGrab = rightGrab;
+                            float _leftTrigger = leftTrigger;
+                            float _rightTrigger = rightTrigger;
+                            bool _leftJoystickClick = leftJoystickClick;
+                            bool _rightJoystickClick = rightJoystickClick;
 
-                        if (!OverwriteKeybinds || button.customBind == null) continue;
-                        leftPrimary = _leftPrimary;
-                        leftSecondary = _leftSecondary;
-                        rightPrimary = _rightPrimary;
-                        rightSecondary = _rightSecondary;
-                        leftGrab = _leftGrab;
-                        rightGrab = _rightGrab;
-                        leftTrigger = _leftTrigger;
-                        rightTrigger = _rightTrigger;
-                        leftJoystickClick = _leftJoystickClick;
-                        rightJoystickClick = _rightJoystickClick;
-                    } catch { }
+                            if (OverwriteKeybinds && button.customBind != null)
+                            {
+                                leftPrimary = true;
+                                leftSecondary = true;
+                                rightPrimary = true;
+                                rightSecondary = true;
+                                leftGrab = true;
+                                rightGrab = true;
+                                leftTrigger = 1f;
+                                rightTrigger = 1f;
+                                leftJoystickClick = true;
+                                rightJoystickClick = true;
+                            }
+
+                            try
+                            {
+                                if (button.rebindKey != null)
+                                {
+                                    float buttonAmount = 0f;
+                                    switch (button.rebindKey)
+                                    {
+                                        case "A":
+                                            buttonAmount = _rightPrimary ? 1f : 0f;
+                                            break;
+                                        case "B":
+                                            buttonAmount = _rightSecondary ? 1f : 0f;
+                                            break;
+                                        case "X":
+                                            buttonAmount = _leftPrimary ? 1f : 0f;
+                                            break;
+                                        case "Y":
+                                            buttonAmount = _leftSecondary ? 1f : 0f;
+                                            break;
+                                        case "LG":
+                                            buttonAmount = _leftGrab ? 1f : 0f;
+                                            break;
+                                        case "RG":
+                                            buttonAmount = _rightGrab ? 1f : 0f;
+                                            break;
+                                        case "LT":
+                                            buttonAmount = _leftTrigger;
+                                            break;
+                                        case "RT":
+                                            buttonAmount = _rightTrigger;
+                                            break;
+                                        case "LJ":
+                                            buttonAmount = _leftJoystickClick ? 1f : 0f;
+                                            break;
+                                        case "RJ":
+                                            buttonAmount = _rightJoystickClick ? 1f : 0f;
+                                            break;
+                                    }
+                                    leftPrimary = buttonAmount > 0.5f;
+                                    leftSecondary = buttonAmount > 0.5f;
+                                    rightPrimary = buttonAmount > 0.5f;
+                                    rightSecondary = buttonAmount > 0.5f;
+                                    leftGrab = buttonAmount > 0.5f;
+                                    rightGrab = buttonAmount > 0.5f;
+                                    leftTrigger = buttonAmount;
+                                    rightTrigger = buttonAmount;
+                                    leftJoystickClick = buttonAmount > 0.5f;
+                                    rightJoystickClick = buttonAmount > 0.5f;
+                                }
+                                if (button.postMethod != null)
+                                    postActions.Add(button.buttonText);
+                                button.method?.Invoke();
+                                if (button.rebindKey != null)
+                                {
+                                    leftPrimary = _leftPrimary;
+                                    leftSecondary = _leftSecondary;
+                                    rightPrimary = _rightPrimary;
+                                    rightSecondary = _rightSecondary;
+                                    leftGrab = _leftGrab;
+                                    rightGrab = _rightGrab;
+                                    leftTrigger = _leftTrigger;
+                                    rightTrigger = _rightTrigger;
+                                    leftJoystickClick = _leftJoystickClick;
+                                    rightJoystickClick = _rightJoystickClick;
+                                }
+                            }
+                            catch (Exception exc)
+                            {
+                                LogManager.LogError(
+                                    $"Error with mod method {button.buttonText} at {exc.StackTrace}: {exc.Message}");
+                            }
+
+                            if (!OverwriteKeybinds || button.customBind == null) continue;
+                            leftPrimary = _leftPrimary;
+                            leftSecondary = _leftSecondary;
+                            rightPrimary = _rightPrimary;
+                            rightSecondary = _rightSecondary;
+                            leftGrab = _leftGrab;
+                            rightGrab = _rightGrab;
+                            leftTrigger = _leftTrigger;
+                            rightTrigger = _rightTrigger;
+                            leftJoystickClick = _leftJoystickClick;
+                            rightJoystickClick = _rightJoystickClick;
+                        } catch { }
+                    }
                 }
                 #endregion
             }
@@ -1714,12 +1722,16 @@ namespace iiMenu.Menu
                                     }
 
                                     ButtonInfo[] buttons = StringsToInfos(Alphabetize(InfosToStrings(searchedMods.ToArray())));
-                                    ButtonInfo button = buttons[0];
 
-                                    if (button.incremental)
-                                        ToggleIncremental(button.buttonText, UnityInput.Current.GetKey(KeyCode.LeftShift));
-                                    else
-                                        Toggle(buttons[0].buttonText, true);
+                                    if (buttons.Length > 0)
+                                    {
+                                        ButtonInfo button = buttons[0];
+
+                                        if (button.incremental)
+                                            ToggleIncremental(button.buttonText, UnityInput.Current.GetKey(KeyCode.LeftShift));
+                                        else
+                                            Toggle(buttons[0].buttonText, true);
+                                    }
                                 }
                                 else if (CurrentPrompt != null && CurrentPrompt.IsText)
                                     Toggle("Accept Prompt");

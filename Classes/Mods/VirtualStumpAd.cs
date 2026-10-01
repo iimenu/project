@@ -39,15 +39,30 @@ namespace iiMenu.Classes.Mods
         private void OnDisable()
         {
             hasSetupFeaturedMapVideo = false;
-            TextMeshPro featuredMapText = MapInfoText.GetComponent<TextMeshPro>();
-            featuredMapText.text = oldText;
-            MapInfoText.SetActive(false);
-            LoadingText.SetActive(true);
-            
-            foreach (Transform child in DisplayTextObj.transform)
-                if (child.name.ToLower().EndsWith("tmp"))
-                    child.gameObject.SetActive(!child.gameObject.activeSelf);
-            
+
+            if (MapInfoText != null)
+            {
+                TextMeshPro featuredMapText = MapInfoText.GetComponent<TextMeshPro>();
+
+                if (featuredMapText != null)
+                    featuredMapText.text = oldText;
+
+                MapInfoText.SetActive(false);
+            }
+
+            if (LoadingText != null)
+                LoadingText.SetActive(true);
+
+            if (DisplayTextObj != null)
+            {
+                foreach (Transform child in DisplayTextObj.transform)
+                    if (child.name.ToLower().EndsWith("tmp"))
+                        child.gameObject.SetActive(!child.gameObject.activeSelf);
+            }
+
+            if (FeaturedMaps == null)
+                return;
+
             GameObject featuredMapImage = FeaturedMaps.transform.Find("FeaturedMapImage")?.gameObject;
             
             if (featuredMapImage == null)
