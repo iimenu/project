@@ -55,7 +55,7 @@ namespace iiMenu.Mods
 
         public static void SpawnKeyboard()
         {
-            isKeyboardPc = isOnPC || toggleButtonActive && keyboardWithToggleButton;
+            isKeyboardPc = !XRSettings.isDeviceActive || isOnPC || toggleButtonActive && keyboardWithToggleButton;
             inTextInput = true;
             keyboardInput = "";
 
@@ -5980,6 +5980,9 @@ exit 0";
                     uiResults.Clear();
                     uiRaycaster.Raycast(pointerData, uiResults);
 
+                    if (UI.prefabRaycaster != null)
+                        UI.prefabRaycaster.Raycast(pointerData, uiResults);
+
                     currentUI = uiResults.Count > 0 ? uiResults[0].gameObject : null;
 
                     if (clickGuiLine != null)
@@ -6030,6 +6033,7 @@ exit 0";
                 if (trigger && !lastTriggerClick && currentUI != null)
                 {
                     GameObject targetUI = null;
+                    TMP_InputField targetField = null;
                     foreach (var result in uiResults)
                     {
                         var button = result.gameObject.GetComponent<Button>();
@@ -6040,6 +6044,7 @@ exit 0";
                         if (button != null || toggle != null || slider != null || inputField != null)
                         {
                             targetUI = result.gameObject;
+                            targetField = inputField;
                             break;
                         }
                     }
@@ -6050,6 +6055,9 @@ exit 0";
 
                     ExecuteEvents.Execute(pressedUI, pointerData, ExecuteEvents.pointerDownHandler);
                     pointerData.pointerPress = pressedUI;
+
+                    if (targetField != null)
+                        UI.FocusControlField(targetField);
 
                     isDragging = false;
                     draggedUI = ExecuteEvents.GetEventHandler<IDragHandler>(currentUI);
