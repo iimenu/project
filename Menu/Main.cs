@@ -94,6 +94,7 @@ namespace iiMenu.Menu
             NetworkSystem.Instance.OnPlayerJoined += OnPlayerJoin;
             NetworkSystem.Instance.OnPlayerLeft += OnPlayerLeave;
             OnMenuClosed += ThrowableMenuManager.OnMenuClosed;
+            OnMenuClosed += DestroyPCBackground;
 
             SerializePatch.OnSerialize += OnSerialize;
             PlayerSerializePatch.OnPlayerSerialize += OnPlayerSerialize;
@@ -3214,31 +3215,29 @@ namespace iiMenu.Menu
                             pcBackground.transform.localScale = new Vector3(10f, 10f, 0.01f);
                             pcBackground.transform.transform.position = TPC.transform.position + TPC.transform.forward;
 
-                            OnMenuClosed += () => Destroy(pcBackground);
+                            Destroy(pcBackground.GetComponent<Collider>());
                         }
-                        
+
                         Color realcolor = backgroundColor.GetCurrentColor();
                         pcBackground.GetComponent<Renderer>().material.color = new Color32((byte)(realcolor.r * 50), (byte)(realcolor.g * 50), (byte)(realcolor.b * 50), 255);
                     }
+                    else
+                        DestroyPCBackground();
 
                     menu.transform.parent = TPC.transform;
                     menu.transform.position = TPC.transform.position + TPC.transform.forward * 0.5f;
                     menu.transform.rotation = clickGUI && !XRSettings.isDeviceActive ? Quaternion.identity : TPC.transform.rotation * Quaternion.Euler(-90f, 90f, 0f);
 
-                    if (reference != null && Mouse.current != null)
+                    if (Mouse.current != null)
                     {
+                        if (reference == null)
+                            CreateReference();
+
                         if (Mouse.current.leftButton.isPressed && !isMouseDown)
                         {
-                            Ray ray = TPC.ScreenPointToRay(Mouse.current.position.ReadValue());
-                            bool worked = Physics.Raycast(ray, out RaycastHit hit, 512f, ~0, QueryTriggerInteraction.Collide);
-                            if (worked)
-                            {
-                                ButtonCollider collide = hit.transform.GetComponent<ButtonCollider>()
-                                    ?? hit.transform.GetComponentInParent<ButtonCollider>();
-                                collide?.PressFromMouse();
-                            }
+                            PressFromScreenPoint(Mouse.current.position.ReadValue());
                         }
-                        else
+                        else if (reference != null)
                             reference.transform.position = new Vector3(999f, -999f, -999f);
 
                         isMouseDown = Mouse.current.leftButton.isPressed;
@@ -3272,35 +3271,48 @@ namespace iiMenu.Menu
             menu.transform.rotation = smoothTargetRotation;
         }
 
+        private static void DestroyPCBackground()
+        {
+            if (pcBackground == null)
+                return;
+
+            Destroy(pcBackground);
+            pcBackground = null;
+        }
+
+        private static void PressFromScreenPoint(Vector2 screenPoint)
+        {
+            Camera clickCamera = TPC != null ? TPC : Camera.main;
+            if (clickCamera == null || menu == null)
+                return;
+
+            Ray ray = clickCamera.ScreenPointToRay(screenPoint);
+            RaycastHit[] hits = Physics.RaycastAll(ray, 512f, ~0, QueryTriggerInteraction.Collide);
+
+            ButtonCollider clickedButton = null;
+            float nearestButtonDistance = float.MaxValue;
+            foreach (RaycastHit hit in hits)
+            {
+                ButtonCollider candidate = hit.transform.GetComponent<ButtonCollider>()
+                    ?? hit.transform.GetComponentInParent<ButtonCollider>();
+                if (candidate != null && hit.distance < nearestButtonDistance)
+                {
+                    clickedButton = candidate;
+                    nearestButtonDistance = hit.distance;
+                }
+            }
+
+            clickedButton?.PressFromMouse();
+        }
+
         private static void ProcessFirstPersonMouseClick()
         {
             if (!FirstPersonMouseMode || menu == null || Mouse.current == null)
                 return;
 
-            Camera clickCamera = TPC != null ? TPC : Camera.main;
-            if (clickCamera == null)
-                return;
-
             bool mousePressed = Mouse.current.leftButton.isPressed;
             if (mousePressed && !isMouseDown)
-            {
-                Ray ray = clickCamera.ScreenPointToRay(Mouse.current.position.ReadValue());
-                RaycastHit[] hits = Physics.RaycastAll(ray, 512f, ~0, QueryTriggerInteraction.Collide);
-                ButtonCollider clickedButton = null;
-                float nearestButtonDistance = float.MaxValue;
-                foreach (RaycastHit hit in hits)
-                {
-                    ButtonCollider candidate = hit.transform.GetComponent<ButtonCollider>()
-                        ?? hit.transform.GetComponentInParent<ButtonCollider>();
-                    if (candidate != null && hit.distance < nearestButtonDistance)
-                    {
-                        clickedButton = candidate;
-                        nearestButtonDistance = hit.distance;
-                    }
-                }
-
-                clickedButton?.PressFromMouse();
-            }
+                PressFromScreenPoint(Mouse.current.position.ReadValue());
 
             isMouseDown = mousePressed;
         }

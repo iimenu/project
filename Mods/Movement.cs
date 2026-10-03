@@ -446,25 +446,51 @@ namespace iiMenu.Mods
         }
 
         public static bool noclip;
+        private static bool noclipHeld;
+        private static bool noclipFlyHeld;
+        private static LayerMask noclipLocomotionLayers;
+        private static bool noclipLocomotionLayersSaved;
+
+        private static void SetNoclip(bool noclipHeldNow, bool noclipFlyHeldNow)
+        {
+            noclipHeld = noclipHeldNow;
+            noclipFlyHeld = noclipFlyHeldNow;
+
+            bool shouldNoclip = noclipHeld || noclipFlyHeld;
+            if (shouldNoclip == noclip || GTPlayer.Instance == null)
+                return;
+
+            noclip = shouldNoclip;
+
+            if (shouldNoclip)
+            {
+                noclipLocomotionLayers = GTPlayer.Instance.locomotionEnabledLayers;
+                noclipLocomotionLayersSaved = true;
+
+                GTPlayer.Instance.locomotionEnabledLayers = 0;
+            }
+            else if (noclipLocomotionLayersSaved)
+            {
+                noclipLocomotionLayersSaved = false;
+                GTPlayer.Instance.locomotionEnabledLayers = noclipLocomotionLayers;
+            }
+        }
+
+        public static void DisableNoclip() =>
+            SetNoclip(false, noclipFlyHeld);
+
+        public static void DisableNoclipFly() =>
+            SetNoclip(noclipHeld, false);
+
         public static void NoclipFly()
         {
             if (rightPrimary)
             {
                 GTPlayer.Instance.transform.position += GorillaTagger.Instance.headCollider.transform.forward * (Time.deltaTime * FlySpeed);
                 GorillaTagger.Instance.rigidbody.linearVelocity = Vector3.zero;
-                if (!noclip)
-                {
-                    noclip = true;
-                    UpdateClipColliders(false);
-                }
-            } else
-            {
-                if (noclip)
-                {
-                    noclip = false;
-                    UpdateClipColliders(true);
-                }
             }
+
+            SetNoclip(noclipHeld, rightPrimary);
         }
 
         public static void JoystickFly()
@@ -2898,22 +2924,9 @@ namespace iiMenu.Mods
         public static void Noclip()
         {
             bool gripNoclip = Buttons.GetIndex("Grip Noclip").enabled;
-            if (gripNoclip ? rightGrab : rightTrigger > 0.5f || Buttons.GetIndex("Constant Noclip").enabled)
-            {
-                if (!noclip)
-                {
-                    noclip = true;
-                    UpdateClipColliders(false);
-                }
-            }
-            else
-            {
-                if (noclip)
-                {
-                    noclip = false;
-                    UpdateClipColliders(true);
-                }
-            }
+            bool constantNoclip = Buttons.GetIndex("Constant Noclip").enabled;
+
+            SetNoclip((gripNoclip ? rightGrab : rightTrigger > 0.5f) || constantNoclip, noclipFlyHeld);
         }
 
         public static readonly List<GameObject> forestColliders = new List<GameObject>();
