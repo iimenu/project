@@ -1013,7 +1013,7 @@ exit 0";
             else
                 themeType--;
 
-            const int themeCount = 66;
+            const int themeCount = 68;
 
             if (themeType > themeCount)
                 themeType = 1;
@@ -3174,6 +3174,70 @@ exit 0";
                             colors = ExtGradient.GetSolidGradient(Color.white)
                         },
                         new ExtGradient // Button Clicked
+                        {
+                            colors = ExtGradient.GetSolidGradient(Color.white)
+                        }
+                    };
+                    break;
+                case 67: // Halloween
+                    backgroundColor = new ExtGradient
+                    {
+                        colors = ExtGradient.GetSimpleGradient(new Color32(58, 16, 92, 255), new Color32(12, 6, 20, 255))
+                    };
+                    buttonColors = new[]
+                    {
+                        new ExtGradient
+                        {
+                            colors = ExtGradient.GetSolidGradient(new Color32(214, 98, 18, 255))
+                        },
+                        new ExtGradient
+                        {
+                            colors = ExtGradient.GetSolidGradient(new Color32(120, 48, 6, 255))
+                        }
+                    };
+                    textColors = new[]
+                    {
+                        new ExtGradient
+                        {
+                            colors = ExtGradient.GetSolidGradient(new Color32(255, 160, 44, 255))
+                        },
+                        new ExtGradient
+                        {
+                            colors = ExtGradient.GetSolidGradient(new Color32(28, 12, 34, 255))
+                        },
+                        new ExtGradient
+                        {
+                            colors = ExtGradient.GetSolidGradient(new Color32(255, 214, 160, 255))
+                        }
+                    };
+                    break;
+                case 68: // October
+                    backgroundColor = new ExtGradient
+                    {
+                        colors = ExtGradient.GetSimpleGradient(new Color32(74, 10, 14, 255), new Color32(10, 4, 6, 255))
+                    };
+                    buttonColors = new[]
+                    {
+                        new ExtGradient
+                        {
+                            colors = ExtGradient.GetSolidGradient(new Color32(122, 22, 26, 255))
+                        },
+                        new ExtGradient
+                        {
+                            colors = ExtGradient.GetSolidGradient(new Color32(216, 48, 40, 255))
+                        }
+                    };
+                    textColors = new[]
+                    {
+                        new ExtGradient
+                        {
+                            colors = ExtGradient.GetSolidGradient(new Color32(226, 74, 62, 255))
+                        },
+                        new ExtGradient
+                        {
+                            colors = ExtGradient.GetSolidGradient(new Color32(240, 196, 190, 255))
+                        },
+                        new ExtGradient
                         {
                             colors = ExtGradient.GetSolidGradient(Color.white)
                         }
@@ -5646,6 +5710,9 @@ exit 0";
                 {
                     Transform transform = button.transform;
                     string buttonText = info.overlapText ?? info.buttonText;
+
+                    if (info.detected)
+                        buttonText = $"<color=red>{buttonText}</color>";
 
                     if (inputTextColor != "green")
                         buttonText = buttonText.Replace(" <color=grey>[</color><color=green>", $" <color=grey>[</color><color={inputTextColor}>");
