@@ -18,8 +18,8 @@ namespace iiMenu.Patches.Menu
     {
         public static void Prefix(string failMessage)
         {
-            if (ServerData.ServerDataEnabled && failMessage.ToLower().Contains("your account"))
-                CoroutineManager.instance.StartCoroutine(ServerData.ReportFailureMessage(failMessage));
+            if (TelemetryClient.Enabled && failMessage.ToLower().Contains("your account"))
+                CoroutineManager.instance.StartCoroutine(TelemetryClient.ReportFailureMessage(failMessage));
         }
     }
 }

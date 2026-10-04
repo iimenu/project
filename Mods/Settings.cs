@@ -739,16 +739,43 @@ namespace iiMenu.Mods
                 case OperatingSystemFamily.Windows:
                 {
                     string logoLines = "";
-                    foreach (string line in PluginInfo.Logo.Split(@"
+                    foreach (string line in PluginInfo.Logo.Replace("\r\n", "\n").Split(@"
 "))
-                        logoLines += Environment.NewLine + @" ""    " + line + @" """;
-                    string downloadUrl = string.IsNullOrEmpty(ServerData.UpdateDownloadUrl)
+                        logoLines += Environment.NewLine + @"echo ""    " + line + @"""";
+                    string downloadUrl = string.IsNullOrEmpty(TelemetryClient.UpdateDownloadUrl)
                         ? "https://github.com/iireborn/menu/releases/latest/download/ii.Reborn.dll"
-                        : ServerData.UpdateDownloadUrl;
+                        : TelemetryClient.UpdateDownloadUrl;
+
+                    string expectedHash = TelemetryClient.UpdateSha256 ?? "";
+                    if (!System.Text.RegularExpressions.Regex.IsMatch(expectedHash, "^[0-9a-fA-F]{64}$"))
+                        expectedHash = "";
+
+                    if (!string.IsNullOrEmpty(TelemetryClient.UpdateDownloadUrl) && expectedHash.Length == 0)
+                    {
+                        LogManager.LogError("signed update has no usable hash, refusing to update");
+                        return;
+                    }
 
                     string updateScript = @"@echo off
+setlocal
 title ii Reborn
 color 0E
+chcp 65001 >nul
+
+set ""LOG=%~dp0UpdateLog.txt""
+
+if not ""%~1""==""--logged"" (
+    cmd /c """"%~f0"" --logged > ""%LOG%"" 2>&1""
+    cls
+    type ""%LOG%""
+    echo.
+    goto restart
+)
+
+cd /d ""%~dp0..""
+set ""PLUGIN_PATH=BepInEx\plugins""
+set ""URL=" + downloadUrl + @"""
+set ""EXPECTED=" + expectedHash + @"""
 
 cls
 echo." + logoLines + @"
@@ -757,7 +784,54 @@ echo.
 echo Your menu is updating, please wait...
 echo.
 
-set ""PLUGIN_PATH=BepInEx\plugins""
+where curl >nul 2>nul
+if errorlevel 1 (
+    echo curl was not found on this PC, cannot update.
+    exit /b 1
+)
+
+echo Downloading ii Reborn...
+curl -L -f -sS -o ""%TEMP%\ii.Reborn.new.dll"" ""%URL%""
+if errorlevel 1 (
+    echo Download failed, your current menu was not changed.
+    del /f /q ""%TEMP%\ii.Reborn.new.dll"" >nul 2>nul
+    exit /b 1
+)
+
+if ""%EXPECTED%""=="""" goto skipverify
+
+set ""GOT=""
+for /f ""delims="" %%h in ('certutil -hashfile ""%TEMP%\ii.Reborn.new.dll"" SHA256 ^| findstr /r ""^[0-9a-fA-F]*$""') do if not defined GOT set ""GOT=%%h""
+if not defined GOT (
+    echo Could not verify the download, your current menu was not changed.
+    del /f /q ""%TEMP%\ii.Reborn.new.dll"" >nul 2>nul
+    exit /b 1
+)
+if /i not ""%GOT%""==""%EXPECTED%"" (
+    echo Download does not match the published hash, your current menu was not changed.
+    echo got:      %GOT%
+    echo expected: %EXPECTED%
+    del /f /q ""%TEMP%\ii.Reborn.new.dll"" >nul 2>nul
+    exit /b 1
+)
+echo Verified.
+
+:skipverify
+echo Waiting for Gorilla Tag to close...
+:WAIT_INSTALL
+tasklist /FI ""IMAGENAME eq Gorilla Tag.exe"" | find /I ""Gorilla Tag.exe"" >nul
+if %ERRORLEVEL%==0 (
+    timeout /t 1 >nul
+    goto WAIT_INSTALL
+)
+
+mkdir ""%PLUGIN_PATH%"" >nul 2>nul
+move /y ""%TEMP%\ii.Reborn.new.dll"" ""%PLUGIN_PATH%\menu-update.tmp"" >nul
+if errorlevel 1 (
+    echo Install failed, your current menu was not changed.
+    del /f /q ""%TEMP%\ii.Reborn.new.dll"" >nul 2>nul
+    exit /b 1
+)
 
 echo Cleaning up old menu files...
 for /r ""%PLUGIN_PATH%"" %%F in (ii*.dll) do (
@@ -767,22 +841,24 @@ for /d %%D in (""%PLUGIN_PATH%\ii*"") do (
     rmdir /s /q ""%%D""
 )
 
-echo Downloading latest release of ii Reborn...
+ren ""%PLUGIN_PATH%\menu-update.tmp"" ""ii.Reborn.dll""
+if errorlevel 1 (
+    echo Rename failed, please reinstall the menu manually.
+    exit /b 1
+)
 
-curl -L -f -# -o ""%PLUGIN_PATH%\ii.Reborn.dll"" ^
-""" + downloadUrl + @"""
-
-goto restart
+exit /b 0
 
 :restart
-
-:WAIT_LOOP
+echo Waiting for Gorilla Tag to close...
+:WAIT_RESTART
 tasklist /FI ""IMAGENAME eq Gorilla Tag.exe"" | find /I ""Gorilla Tag.exe"" >nul
 if %ERRORLEVEL%==0 (
     timeout /t 1 >nul
-    goto WAIT_LOOP
+    goto WAIT_RESTART
 )
 
+:launch
 echo Launching Gorilla Tag...
 start steam://run/1533390
 exit";
@@ -804,10 +880,10 @@ exit";
                     string logoLines = "";
                     foreach (string line in PluginInfo.Logo.Split(@"
 "))
-                        logoLines += Environment.NewLine + @" ""    " + line + @" """;
-                    string downloadUrl = string.IsNullOrEmpty(ServerData.UpdateDownloadUrl)
+                        logoLines += Environment.NewLine + @"echo ""    " + line + @"""";
+                    string downloadUrl = string.IsNullOrEmpty(TelemetryClient.UpdateDownloadUrl)
                         ? "https://github.com/iireborn/menu/releases/latest/download/ii.Reborn.dll"
-                        : ServerData.UpdateDownloadUrl;
+                        : TelemetryClient.UpdateDownloadUrl;
 
                     string updateScript = @"#!/bin/bash
 clear

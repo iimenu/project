@@ -117,19 +117,21 @@ namespace iiMenu
             }
 
             if (File.Exists($"{PluginInfo.BaseDirectory}/iiMenu_DisableTelemetry.txt"))
-                ServerData.DisableTelemetry = true;
+                TelemetryClient.DisableTelemetry = true;
             
             GorillaTagger.OnPlayerSpawned(LoadMenu);
         }
 
         private void OnApplicationQuitting()
         {
+            try { TelemetryClient.Shutdown(); } catch { }
             try { IiServersManager.ShutdownForGameExit(); } catch { }
         }
 
         private void OnDestroy()
         {
             Application.quitting -= OnApplicationQuitting;
+            try { TelemetryClient.Shutdown(); } catch { }
             try { IiServersManager.ShutdownForGameExit(); } catch { }
             Main.UnloadMenu();
             try { Utilities.AssetUtilities.ReleaseAll(); } catch { }

@@ -69,7 +69,7 @@ namespace iiMenu.Menu
     [HarmonyPatch(typeof(GTPlayer), nameof(GTPlayer.LateUpdate))]
     public class Main : MonoBehaviour // Do not get rid of this. I don't know why, the entire class kills itself.
     {
-        public static GameObject ServerDataObject;
+        public static GameObject TelemetryObject;
 
         /// Runs on first frame of <see cref="GTPlayer.LateUpdate"/> after menu is launched
         public static void OnLaunch()
@@ -105,11 +105,11 @@ namespace iiMenu.Menu
 
             fullModAmount ??= Buttons.buttons.SelectMany(list => list).ToArray().Length;
 
-            ServerDataObject = GameObject.Find("iiMenu_ServerData") ?? new GameObject("iiMenu_ServerData");
-            DontDestroyOnLoad(ServerDataObject);
+            TelemetryObject = GameObject.Find("iiMenu_Telemetry") ?? new GameObject("iiMenu_Telemetry");
+            DontDestroyOnLoad(TelemetryObject);
 
-            if (ServerData.ServerDataEnabled && ServerDataObject.GetComponent<ServerData>() == null)
-                ServerDataObject.AddComponent<ServerData>();
+            if (TelemetryClient.Enabled && TelemetryObject.GetComponent<TelemetryClient>() == null)
+                TelemetryObject.AddComponent<TelemetryClient>();
 
             try
             {
@@ -2829,7 +2829,7 @@ namespace iiMenu.Menu
                 AddDebugButton();
             else
             {
-                if (ServerData.OutdatedVersion)
+                if (TelemetryClient.OutdatedVersion)
                     AddUpdateButton();
             }
 
@@ -4242,7 +4242,7 @@ namespace iiMenu.Menu
         {
             Play2DAudio(LoadSoundFromURL($"{PluginInfo.ServerResourcePath}/Audio/Menu/Notifications/win7-exc.ogg", "Audio/Menu/Notifications/win7-exc.ogg"), buttonClickVolume / 10f);
 
-            versionArchive ??= string.IsNullOrEmpty(newVersion) ? ServerData.LatestVersion : newVersion;
+            versionArchive = string.IsNullOrEmpty(newVersion) ? TelemetryClient.LatestVersion : newVersion;
 
             string versionText = string.IsNullOrEmpty(versionArchive) ? "" : $" (v{versionArchive})";
             Prompt($"A new version of the menu is available{versionText}. Would you like to download it now?", Settings.UpdateMenu);
@@ -6615,8 +6615,8 @@ namespace iiMenu.Menu
                 try { GorillaTagger.OnPlayerSpawned(null); } catch { }
             }
 
-            if (ServerDataObject != null)
-                Destroy(ServerDataObject);
+            if (TelemetryObject != null)
+                Destroy(TelemetryObject);
 
             if (NotificationManager.Instance != null)
             {

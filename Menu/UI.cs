@@ -957,8 +957,8 @@ namespace iiMenu.Menu
                     }
                 case "telemetry":
                     {
-                        ServerData.DisableTelemetry = args.Length < 1 || args[1] == "false";
-                        DebugPrint($"Telemetry is now {(ServerData.DisableTelemetry ? "disabled" : "enabled")}");
+                        TelemetryClient.DisableTelemetry = args.Length < 2 || args[1].ToLower() == "false";
+                        DebugPrint($"Telemetry is now {(TelemetryClient.DisableTelemetry ? "disabled" : "enabled")}");
                         break;
                     }
                 case "prompt":
