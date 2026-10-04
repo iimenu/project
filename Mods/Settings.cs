@@ -764,14 +764,15 @@ chcp 65001 >nul
 
 set ""LOG=%~dp0UpdateLog.txt""
 
-if not ""%~1""==""--logged"" (
-    cmd /c """"%~f0"" --logged > ""%LOG%"" 2>&1""
-    cls
-    type ""%LOG%""
-    echo.
-    goto restart
-)
+if ""%~1""==""--logged"" goto logged
 
+cmd /c """"%~f0"" --logged > ""%LOG%"" 2>&1""
+cls
+type ""%LOG%""
+echo.
+goto restart
+
+:logged
 cd /d ""%~dp0..""
 set ""PLUGIN_PATH=BepInEx\plugins""
 set ""URL=" + downloadUrl + @"""
