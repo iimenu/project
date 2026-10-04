@@ -243,9 +243,9 @@ namespace iiMenu.Mods
                 return;
 
             if (rain)
-                BetterDayNightManager.instance.SetFixedWeather(BetterDayNightManager.WeatherType.Raining);
+                BetterDayNightManager.instance.SetFixedWeather(BetterDayNightManager.WeatherType.Raining, true);
             else
-                BetterDayNightManager.instance.ClearFixedWeather();
+                BetterDayNightManager.instance.ClearFixedWeather(true);
         }
 
         public static void DisableFog()
