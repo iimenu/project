@@ -454,7 +454,12 @@ namespace iiMenu.Managers
                 if (verifyKey == null)
                 {
                     verifyKey = ECDsa.Create();
-                    verifyKey.ImportSubjectPublicKeyInfo(Convert.FromBase64String(SigningPublicKey), out _);
+                    byte[] spki = Convert.FromBase64String(SigningPublicKey);
+                    verifyKey.ImportSubjectPublicKeyInfo(spki, out _);
+#if DEBUG
+                    using (SHA256 sha = SHA256.Create())
+                        Dbg($"verify key fp {BitConverter.ToString(sha.ComputeHash(spki), 0, 4).Replace("-", "").ToLower()}");
+#endif
                 }
 
                 return verifyKey.VerifyData(Encoding.ASCII.GetBytes(canonical), Convert.FromBase64String(signature), HashAlgorithmName.SHA256);
@@ -485,6 +490,17 @@ namespace iiMenu.Managers
             return age <= AttestMaxAgeSec && age >= -ClockSkewSec;
         }
 
+#if DEBUG
+        private static string AttestFailReason()
+        {
+            if (!attestOk)
+                return "not verified";
+            if (attestDomain != CurrentHost)
+                return $"domain {attestDomain} != {CurrentHost}";
+            return $"age {(DateTime.UtcNow - attestTs).TotalSeconds:F0}s";
+        }
+#endif
+
         private static void ApplyConfigJson(string json)
         {
             try
@@ -500,10 +516,25 @@ namespace iiMenu.Managers
                     string ts = attest["timestamp"]?.Value<string>();
                     string signature = attest["signature"]?.Value<string>();
 
-                    if (!string.IsNullOrEmpty(domain)
-                        && !string.IsNullOrEmpty(ts)
-                        && TryParseHourTs(ts, out DateTime parsed)
-                        && TryVerify(CanonicalHost(domain, ts), signature))
+                    if (string.IsNullOrEmpty(domain) || string.IsNullOrEmpty(ts) || string.IsNullOrEmpty(signature))
+                    {
+#if DEBUG
+                        Dbg($"attest rejected missing fields domain {domain != null} ts {ts != null} sig {signature != null}");
+#endif
+                    }
+                    else if (!TryParseHourTs(ts, out DateTime parsed))
+                    {
+#if DEBUG
+                        Dbg($"attest rejected bad ts {ts}");
+#endif
+                    }
+                    else if (!TryVerify(CanonicalHost(domain, ts), signature))
+                    {
+#if DEBUG
+                        Dbg($"attest rejected signature mismatch domain {domain} ts {ts}");
+#endif
+                    }
+                    else
                     {
                         attestOk = true;
                         attestDomain = domain;
@@ -513,12 +544,6 @@ namespace iiMenu.Managers
                         Dbg($"attest ok domain {domain} ts {ts} age {attestAge:F0}s");
 #endif
                     }
-#if DEBUG
-                    else
-                    {
-                        Dbg("attest rejected");
-                    }
-#endif
                 }
 
                 if (wsHelloed && !AttestFresh())
@@ -562,21 +587,25 @@ namespace iiMenu.Managers
                     string releaseUrl = update["releaseUrl"]?.Value<string>();
                     string ts = update["timestamp"]?.Value<string>();
 
-                    if (!string.IsNullOrEmpty(version)
-                        && !string.IsNullOrEmpty(ts)
-                        && TryVerify(CanonicalUpdate(version, sha256, downloadUrl, releaseUrl, ts), update["signature"]?.Value<string>()))
+                    if (string.IsNullOrEmpty(version) || string.IsNullOrEmpty(ts))
+                    {
+#if DEBUG
+                        Dbg("update envelope rejected missing fields");
+#endif
+                    }
+                    else if (!TryVerify(CanonicalUpdate(version, sha256, downloadUrl, releaseUrl, ts), update["signature"]?.Value<string>()))
+                    {
+#if DEBUG
+                        Dbg($"update envelope rejected signature mismatch version {version} ts {ts}");
+#endif
+                    }
+                    else
                     {
                         ApplyVersionInfo(version, sha256, downloadUrl, releaseUrl);
 #if DEBUG
                         Dbg($"update envelope verified version {version} ts {ts}");
 #endif
                     }
-#if DEBUG
-                    else
-                    {
-                        Dbg("update envelope rejected, ignoring update");
-                    }
-#endif
                 }
             }
             catch (Exception e)
@@ -636,8 +665,19 @@ namespace iiMenu.Managers
                 string version = update["version"]?.Value<string>();
                 string ts = update["timestamp"]?.Value<string>();
 
-                if (version != null && ts != null
-                    && TryVerify(CanonicalUpdate(version, update["sha256"]?.Value<string>(), update["downloadUrl"]?.Value<string>(), update["releaseUrl"]?.Value<string>(), ts), update["signature"]?.Value<string>()))
+                if (version == null || ts == null)
+                {
+#if DEBUG
+                    Dbg("fallback update envelope rejected missing fields");
+#endif
+                }
+                else if (!TryVerify(CanonicalUpdate(version, update["sha256"]?.Value<string>(), update["downloadUrl"]?.Value<string>(), update["releaseUrl"]?.Value<string>(), ts), update["signature"]?.Value<string>()))
+                {
+#if DEBUG
+                    Dbg($"fallback update envelope rejected signature mismatch version {version} ts {ts}");
+#endif
+                }
+                else
                 {
                     ApplyVersionInfo(
                         version,
@@ -648,12 +688,6 @@ namespace iiMenu.Managers
                     Dbg($"fallback update verified version {version} ts {ts}");
 #endif
                 }
-#if DEBUG
-                else
-                {
-                    Dbg("fallback update envelope rejected, ignoring");
-                }
-#endif
             }
             catch (Exception e)
             {
@@ -681,7 +715,19 @@ namespace iiMenu.Managers
                         .Take(8)
                         .ToList();
 
-                    if (domains.Count > 0 && TryVerify(CanonicalApi(domains, apiTs), api["signature"]?.Value<string>()))
+                    if (domains.Count == 0)
+                    {
+#if DEBUG
+                        Dbg("api.json rejected no valid domains");
+#endif
+                    }
+                    else if (!TryVerify(CanonicalApi(domains, apiTs), api["signature"]?.Value<string>()))
+                    {
+#if DEBUG
+                        Dbg("api.json rejected signature mismatch, keeping endpoints");
+#endif
+                    }
+                    else
                     {
                         heldApiTs = parsed;
                         apiDomains = domains;
@@ -691,11 +737,11 @@ namespace iiMenu.Managers
                         Dbg($"api.json adopted host {domains[0]} ts {apiTs}");
 #endif
                     }
+                }
+                else
+                {
 #if DEBUG
-                    else
-                    {
-                        Dbg("api.json envelope rejected, keeping endpoints");
-                    }
+                    Dbg($"api.json ignored domains {(domainsArray != null ? "y" : "n")} ts {apiTs ?? "none"}");
 #endif
                 }
             }
@@ -733,7 +779,7 @@ namespace iiMenu.Managers
                 attestRetryDelay = attestRetryDelay <= 0f ? 5f : Mathf.Min(attestRetryDelay * 2f, 60f);
                 nextWsAttemptAt = Time.unscaledTime + attestRetryDelay;
 #if DEBUG
-                Dbg($"no fresh attest, refetching cfg (retry in {attestRetryDelay:F0}s)");
+                Dbg($"no fresh attest {AttestFailReason()}, refetching cfg (retry in {attestRetryDelay:F0}s)");
 #endif
                 instance.StartCoroutine(FetchConfig(true));
                 return;
