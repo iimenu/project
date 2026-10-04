@@ -115,7 +115,11 @@ namespace iiMenu.Managers
         private static string attestDomain;
         private static DateTime attestTs;
         private static DateTime heldApiTs = DateTime.MinValue;
-        private static ECDsa verifyKey;
+        private static ManagedEcdsa verifyKey;
+        private static bool verifyBroken;
+        private static string lastVerifyCanonical;
+        private static string lastVerifySignature;
+        private static bool lastVerifyResult;
         private static float attestRetryDelay;
         private static List<string> apiDomains = new List<string>();
         private static float nextApiRotateAt;
@@ -449,21 +453,47 @@ namespace iiMenu.Managers
             if (string.IsNullOrEmpty(signature))
                 return false;
 
-            try
+            if (canonical == lastVerifyCanonical && signature == lastVerifySignature)
+                return lastVerifyResult;
+
+            bool ok = VerifySignature(canonical, signature);
+            lastVerifyCanonical = canonical;
+            lastVerifySignature = signature;
+            lastVerifyResult = ok;
+            return ok;
+        }
+
+        private static bool VerifySignature(string canonical, string signature)
+        {
+            byte[] sig;
+            try { sig = Convert.FromBase64String(signature); }
+            catch { return false; }
+
+            if (verifyKey == null && !verifyBroken)
             {
-                if (verifyKey == null)
+                try
                 {
-                    verifyKey = ECDsa.Create();
                     byte[] spki = Convert.FromBase64String(SigningPublicKey);
+                    verifyKey = new ManagedEcdsa();
                     verifyKey.ImportSubjectPublicKeyInfo(spki, out _);
 #if DEBUG
                     using (SHA256 sha = SHA256.Create())
                         Dbg($"verify key fp {BitConverter.ToString(sha.ComputeHash(spki), 0, 4).Replace("-", "").ToLower()}");
 #endif
                 }
-
-                return verifyKey.VerifyData(Encoding.ASCII.GetBytes(canonical), Convert.FromBase64String(signature), HashAlgorithmName.SHA256);
+                catch (Exception e)
+                {
+                    verifyKey = null;
+                    verifyBroken = true;
+                    LogManager.LogError($"signature verify key rejected: {e.Message}");
+                    return false;
+                }
             }
+
+            if (verifyKey == null)
+                return false;
+
+            try { return verifyKey.VerifyData(Encoding.ASCII.GetBytes(canonical), sig); }
             catch (Exception e)
             {
                 LogManager.LogError($"signature verify failed: {e.Message}");
