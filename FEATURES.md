@@ -361,7 +361,6 @@ after the dash is the in-menu tooltip.
 - **Create Public** — *Action.* Creates a public room.
 - **Create Private** — *Action.* Creates a private room.
 - **Fast Disconnect** — Uses the fastest method of disconnecting possible.
-- **iiServers** — *Action.* Private Photon Cloud for banned players. Fetches AppId and the shared room codes from https://gtag.useless.best/v1/api/iiservers (no credentials needed). Everyone connects to the same code, and to the next one when it is full. OFF restores official - no restart needed.
 - **Join Menu Room** — *Action.* Connects you to a room that is exclusive to ii <b>Reborn</b> users.
 - **Bypass Join Room Type** — Bypasses the immediate disconnection when trying to join a room that is in another map.
 - **Auto Join Room** — *Action.* Automatically attempts to connect to whatever room you desire every couple of seconds until connected.
@@ -1804,7 +1803,6 @@ after the dash is the in-menu tooltip.
 - **Exit Credits** — *Action.* Returns you back to the main page.
 - **Old Devs** — *Action.* The original developers of ii's <b>Stupid</b> Menu.
 - **Zlothy** — *Action.* Disc design and deployment inspiration: github.com/gorillan0t/Sentinel/blob/master/Sentinel/Disc.cs
-- **Useless** — *Action.* Useless — discord.gg/iidk
 - **GPL v3** — *Action.* The GNU General Public License Version 3 is the license that my menu uses. It proveides a "free, copyleft license for software and other kinds of works."
 - **Exit Custom Maps** — *Action.* Returns you back to the fun mods.
 - **You have not loaded a map.**
@@ -1907,7 +1905,6 @@ after the dash is the in-menu tooltip.
 - **Install LibrePad Updated** — *Action.* Installs the latest LibrePad-Updated from GitHub (iireborn/LibrePad-Updated) to BepInEx/plugins. Then restart.
 - **Open Plugins Folder** — *Action.* Opens BepInEx/plugins in Explorer.
 - **Exit iiServers** — *Action.* Back to Room Mods.
-- **Connect to iiServers** — Live swap to private Photon Cloud. ON fetches AppId/AppVersion/Region/room codes from https://gtag.useless.best/v1/api/iiservers -> disconnects official -> reconnects -> joins the shared code list, moving on whenever a code is full. OFF restores official - no restart needed. Bypasses PlayFab bans.
 - **iiServers Status** — *Action.* Shows iiServers vs official and the room you are in. Connect already joins the shared room codes for you.
 - **Refresh iiServers Config** — *Action.* Re-fetches AppId/Version from API.
 

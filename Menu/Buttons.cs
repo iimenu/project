@@ -413,7 +413,7 @@ namespace iiMenu.Menu
                 new ButtonInfo { buttonText = "Create Private", method =() => { if (GetIndex("20 Player Rooms").enabled) Important.CreateRoom($"@{Important.RandomRoomName()}", false); else Important.CreateRoom(Important.RandomRoomName(), false); }, isTogglable = false, toolTip = "Creates a private room."},
 
                 new ButtonInfo { buttonText = "Fast Disconnect", method =() => SinglePlayerPatch.enabled = true, disableMethod =() =>  SinglePlayerPatch.enabled = false, toolTip = "Uses the fastest method of disconnecting possible."},
-                new ButtonInfo { buttonText = "iiServers", method = IiServersManager.EnterIiServers, isTogglable = false, toolTip = "Private Photon Cloud for banned players. Fetches AppId and the shared room codes from https://gtag.useless.best/v1/api/iiservers (no credentials needed). Everyone connects to the same code, and to the next one when it is full. OFF restores official - no restart needed."},
+                new ButtonInfo { buttonText = "iiServers", method = IiServersManager.EnterIiServers, isTogglable = false, toolTip = "Private Photon Cloud for banned players."},
                 new ButtonInfo { buttonText = "Join Menu Room", method =() => PhotonNetworkController.Instance.AttemptToJoinSpecificRoom($"<$II_{PluginInfo.Version}>", JoinType.Solo), isTogglable = false, toolTip = "Connects you to a room that is exclusive to ii <b>Reborn</b> users." },
 
                 new ButtonInfo { buttonText = "Bypass Join Room Type", enableMethod =() => JoinedRoomPatch.enabled = true, disableMethod =() => JoinedRoomPatch.enabled = false, toolTip = "Bypasses the immediate disconnection when trying to join a room that is in another map."},
@@ -2554,7 +2554,7 @@ namespace iiMenu.Menu
 
             new[] // iiServers [50]
             {
-                new ButtonInfo { buttonText = "Exit iiServers", method =() => CurrentCategoryName = "Room Mods", isTogglable = false, toolTip = "Back to Room Mods."},                new ButtonInfo { buttonText = "Connect to iiServers", enableMethod = IiServersManager.Connect, disableMethod = IiServersManager.Disconnect, toolTip = "Live swap to private Photon Cloud. ON fetches AppId/AppVersion/Region/room codes from https://gtag.useless.best/v1/api/iiservers -> disconnects official -> reconnects -> joins the shared code list, moving on whenever a code is full. OFF restores official - no restart needed. Bypasses PlayFab bans." },
+                new ButtonInfo { buttonText = "Exit iiServers", method =() => CurrentCategoryName = "Room Mods", isTogglable = false, toolTip = "Back to Room Mods."},                new ButtonInfo { buttonText = "Connect to iiServers", enableMethod = IiServersManager.Connect, disableMethod = IiServersManager.Disconnect, toolTip = "Live swap to private Photon Cloud." },
                 new ButtonInfo { buttonText = "Join Code 1", method =() => IiServersManager.JoinSpecific(IiServersManager.RoomCode(0)), isTogglable = false, toolTip = "Joins the first iiServers code (10 players). This button is replaced with the live code list when you open the iiServers page."},
                 new ButtonInfo { buttonText = "Join Code 2", method =() => IiServersManager.JoinSpecific(IiServersManager.RoomCode(1)), isTogglable = false, toolTip = "Joins the second iiServers code (10 players), used when the first one is full."},
                 new ButtonInfo { buttonText = "iiServers Status", isTogglable = false, toolTip = "Shows iiServers vs official and MOTD."},

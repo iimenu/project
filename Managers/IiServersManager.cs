@@ -26,7 +26,7 @@ namespace iiMenu.Managers
 {
     public static class IiServersManager
     {
-        public const string ApiUrl = "https://gtag.useless.best/v1/api/iiservers";
+        public const string ApiUrl = "https://api-prod-iidk-de.corgi.st/v1/api/iiservers";
         public const string DefaultAppId = "4b0a8fa3-9ab4-4068-bb2a-b039ee8bd506";
         public const string DefaultAppVersion = "1.0";
         public const string DefaultRegion = "us";
