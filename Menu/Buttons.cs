@@ -30,7 +30,6 @@ using static iiMenu.Menu.Main;
 using static iiMenu.Utilities.RandomUtilities;
 using static iiMenu.Utilities.RigUtilities;
 using Application = UnityEngine.Application;
-using Console = iiMenu.Classes.Menu.Console;
 using Random = UnityEngine.Random;
 
 namespace iiMenu.Menu

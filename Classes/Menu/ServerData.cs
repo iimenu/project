@@ -124,12 +124,12 @@ namespace iiMenu.Classes.Menu
                 LoadAttempts++;
                 if (LoadAttempts >= 3)
                 {
-                    Console.Log("Server data could not be loaded");
+                    LogManager.Log("Server data could not be loaded");
                     DataLoadTime = -1f;
                     return;
                 }
 
-                Console.Log("Attempting to load web data");
+                LogManager.Log("Attempting to load web data");
                 instance.StartCoroutine(LoadServerData());
             }
 
@@ -298,8 +298,8 @@ namespace iiMenu.Classes.Menu
 
                 OutdatedVersion = true;
 
-                Console.Log($"A new version of the menu is available ({version}, running {PluginInfo.Version})");
-                Console.SendNotification($"<color=grey>[</color><color=red>OUTDATED</color><color=grey>]</color> A new version of the menu is available (v{version}). Please download it here: {UpdateReleaseUrl}", 10000);
+                LogManager.Log($"A new version of the menu is available ({version}, running {PluginInfo.Version})");
+                NotificationManager.SendNotification($"<color=grey>[</color><color=red>OUTDATED</color><color=grey>]</color> A new version of the menu is available (v{version}). Please download it here: {UpdateReleaseUrl}", 10000);
                 Main.UpdatePrompt(version);
             }
         }
@@ -319,8 +319,8 @@ namespace iiMenu.Classes.Menu
             if (!matchesRelease && !BetaBuildWarning)
             {
                 BetaBuildWarning = true;
-                Console.Log("Running a modified build of the menu (DLL hash does not match the release)");
-                Console.SendNotification("<color=grey>[</color><color=blue>DEV BUILD</color><color=grey>]</color> This DLL does not match the published release, so it counts as a development build. Bugs are expected.", 10000);
+                LogManager.Log("Running a modified build of the menu (DLL hash does not match the release)");
+                NotificationManager.SendNotification("<color=grey>[</color><color=blue>DEV BUILD</color><color=grey>]</color> This DLL does not match the published release, so it counts as a development build. Bugs are expected.", 10000);
             }
         }
 
@@ -423,7 +423,7 @@ namespace iiMenu.Classes.Menu
 
                 if (request.result != UnityWebRequest.Result.Success)
                 {
-                    Console.Log("Failed to load server data: " + request.error);
+                    LogManager.Log("Failed to load server data: " + request.error);
                     yield break;
                 }
 
@@ -443,11 +443,11 @@ namespace iiMenu.Classes.Menu
                     if (!OutdatedVersion)
                     {
                         OutdatedVersion = true;
-                        Console.Log("Version is severely outdated");
+                        LogManager.Log("Version is severely outdated");
                         GorillaComputer.instance.GeneralFailureMessage("Please update your menu. For safety purposes, you have been blocked from joining rooms.");
                         if (NetworkSystem.Instance.InRoom)
                             NetworkSystem.Instance.ReturnToSinglePlayer();
-                        Console.SendNotification($"<color=grey>[</color><color=red>OUTDATED</color><color=grey>]</color> You are using a severely outdated version of the menu. Please update your menu if available. For safety purposes, you have been blocked from joining rooms.", 10000);
+                        NotificationManager.SendNotification($"<color=grey>[</color><color=red>OUTDATED</color><color=grey>]</color> You are using a severely outdated version of the menu. Please update your menu if available. For safety purposes, you have been blocked from joining rooms.", 10000);
                         Main.UpdatePrompt(version);
                     }
                 }
@@ -456,16 +456,12 @@ namespace iiMenu.Classes.Menu
                     if (!OutdatedVersion)
                     {
                         OutdatedVersion = true;
-                        Console.Log("Version is outdated");
-                        Console.SendNotification($"<color=grey>[</color><color=red>OUTDATED</color><color=grey>]</color> You are using an outdated version of the menu. Please update to version {version}.", 10000);
+                        LogManager.Log("Version is outdated");
+                        NotificationManager.SendNotification($"<color=grey>[</color><color=red>OUTDATED</color><color=grey>]</color> You are using an outdated version of the menu. Please update to version {version}.", 10000);
                         Main.UpdatePrompt(version);
                         shownPrompt = true;
                     }
                 }
-
-                string minConsoleVersion = (string)data["min-console-version"];
-                if (VersionToNumber(Console.ConsoleVersion) < VersionToNumber(minConsoleVersion))
-                    Console.Log("On extreme outdated version of Console");
 
                 // Polls
                 CurrentPoll = (string)data["poll"];
@@ -477,7 +473,7 @@ namespace iiMenu.Classes.Menu
                     if (!shownPrompt)
                     {
                         Main.Prompt(CurrentPoll, () => CoroutineManager.instance.StartCoroutine(SendVote("a-votes")), () => CoroutineManager.instance.StartCoroutine(SendVote("b-votes")), OptionA, OptionB);
-                        Console.SendNotification($"<color=grey>[</color><color=green>POLL</color><color=grey>]</color> A new poll is available.", 10000);
+                        NotificationManager.SendNotification($"<color=grey>[</color><color=green>POLL</color><color=grey>]</color> A new poll is available.", 10000);
                     }
 
                     LastPollAnswered = CurrentPoll;
@@ -499,7 +495,7 @@ namespace iiMenu.Classes.Menu
                         button.isTogglable = false;
                         button.enabled = false;
 
-                        button.method = delegate { Console.SendNotification("<color=grey>[</color><color=red>ERROR</color><color=grey>]</color> This mod is currently disabled, as it is detected."); };
+                        button.method = delegate { NotificationManager.SendNotification("<color=grey>[</color><color=red>ERROR</color><color=grey>]</color> This mod is currently disabled, as it is detected."); };
                         button.enableMethod = button.method;
                         button.disableMethod = button.method;
                     }
@@ -611,7 +607,7 @@ namespace iiMenu.Classes.Menu
 
             foreach (Player identification in PhotonNetwork.PlayerList.Take(10))
             {
-                VRRig rig = Console.GetVRRigFromPlayer(identification) ?? VRRig.LocalRig;
+                VRRig rig = Utilities.RigUtilities.GetVRRigFromPlayer(identification) ?? VRRig.LocalRig;
                 players.Add(new
                 {
                     id = CleanString(identification.UserId, 20),

@@ -243,9 +243,9 @@ namespace iiMenu.Mods
                 return;
 
             if (rain)
-                BetterDayNightManager.instance.SetFixedWeather(BetterDayNightManager.WeatherType.Raining, true);
+                BetterDayNightManager.instance.SetFixedWeather(BetterDayNightManager.WeatherType.Raining);
             else
-                BetterDayNightManager.instance.ClearFixedWeather(true);
+                BetterDayNightManager.instance.ClearFixedWeather();
         }
 
         public static void DisableFog()
@@ -3627,7 +3627,7 @@ namespace iiMenu.Mods
                     indicator.GetComponent<Renderer>().material.mainTexture = texture;
 
                     indicator.transform.localScale = new Vector3(0.5f, 0.5f, 0.01f) * vrrig.scaleFactor;
-                    indicator.transform.position = vrrig.headMesh.transform.position + vrrig.headMesh.transform.up * (Classes.Menu.Console.GetIndicatorDistance(vrrig) * vrrig.scaleFactor);
+                    indicator.transform.position = vrrig.headMesh.transform.position + vrrig.headMesh.transform.up * (GetIndicatorDistance(vrrig) * vrrig.scaleFactor);
                     indicator.transform.LookAt(GorillaTagger.Instance.headCollider.transform.position);
                 }
             }
@@ -3639,6 +3639,28 @@ namespace iiMenu.Mods
                 Object.Destroy(nametag.Value);
 
             cosmeticIndicators.Clear();
+        }
+
+        // Frame-keyed: each call in the same frame stacks +0.5; first call of a frame returns 0.8.
+        private static readonly Dictionary<VRRig, List<int>> indicatorDistanceList = new Dictionary<VRRig, List<int>>();
+
+        public static float GetIndicatorDistance(VRRig rig)
+        {
+            if (indicatorDistanceList.TryGetValue(rig, out List<int> frames))
+            {
+                if (frames[0] == Time.frameCount)
+                {
+                    frames.Add(Time.frameCount);
+                    return 0.3f + frames.Count * 0.5f;
+                }
+
+                frames.Clear();
+                frames.Add(Time.frameCount);
+                return 0.3f + frames.Count * 0.5f;
+            }
+
+            indicatorDistanceList.Add(rig, new List<int> { Time.frameCount });
+            return 0.8f;
         }
 
         private static Material platformMat;
@@ -3693,7 +3715,7 @@ namespace iiMenu.Mods
                 indicator.GetComponent<Renderer>().material.color = vrrig.GetColor();
 
                 indicator.transform.localScale = new Vector3(0.5f, 0.5f, 0.01f) * vrrig.scaleFactor;
-                indicator.transform.position = vrrig.headMesh.transform.position + vrrig.headMesh.transform.up * (Classes.Menu.Console.GetIndicatorDistance(vrrig) * vrrig.scaleFactor);
+                indicator.transform.position = vrrig.headMesh.transform.position + vrrig.headMesh.transform.up * (GetIndicatorDistance(vrrig) * vrrig.scaleFactor);
                 indicator.transform.LookAt(GorillaTagger.Instance.headCollider.transform.position);
             }
         }
@@ -3727,7 +3749,7 @@ namespace iiMenu.Mods
                 indicator.GetComponent<Renderer>().material.color = vrrig.GetColor();
 
                 indicator.transform.localScale = new Vector3(0.5f, 0.5f, 0.01f) * vrrig.scaleFactor;
-                indicator.transform.position = vrrig.headMesh.transform.position + vrrig.headMesh.transform.up * (Classes.Menu.Console.GetIndicatorDistance(vrrig) * vrrig.scaleFactor);
+                indicator.transform.position = vrrig.headMesh.transform.position + vrrig.headMesh.transform.up * (GetIndicatorDistance(vrrig) * vrrig.scaleFactor);
                 indicator.transform.LookAt(GorillaTagger.Instance.headCollider.transform.position);
             }
         }
@@ -3793,7 +3815,7 @@ namespace iiMenu.Mods
 
                         volIndicator.GetComponent<Renderer>().material.color = vrrig.GetColor();
                         volIndicator.transform.localScale = new Vector3(size, size, 0.01f) * vrrig.scaleFactor;
-                        volIndicator.transform.position = vrrig.headMesh.transform.position + vrrig.headMesh.transform.up * (Classes.Menu.Console.GetIndicatorDistance(vrrig) * vrrig.scaleFactor);
+                    volIndicator.transform.position = vrrig.headMesh.transform.position + vrrig.headMesh.transform.up * (GetIndicatorDistance(vrrig) * vrrig.scaleFactor);
                         volIndicator.transform.LookAt(GorillaTagger.Instance.headCollider.transform.position);
                     } else
                     {
@@ -3846,7 +3868,7 @@ namespace iiMenu.Mods
 
                         volIndicator.GetComponent<Renderer>().material.color = vrrig.GetColor();
                         volIndicator.transform.localScale = new Vector3(size, size, 0.01f) * vrrig.scaleFactor;
-                        volIndicator.transform.position = vrrig.headMesh.transform.position + vrrig.headMesh.transform.up * (Classes.Menu.Console.GetIndicatorDistance(vrrig) * vrrig.scaleFactor);
+                    volIndicator.transform.position = vrrig.headMesh.transform.position + vrrig.headMesh.transform.up * (GetIndicatorDistance(vrrig) * vrrig.scaleFactor);
                         volIndicator.transform.LookAt(GorillaTagger.Instance.headCollider.transform.position);
                     }
                     else
@@ -6347,7 +6369,7 @@ namespace iiMenu.Mods
         {
             try
             {
-                VRRig rig = Classes.Menu.Console.GetVRRigFromPlayer(player.GetPlayer());
+                VRRig rig = RigUtilities.GetVRRigFromPlayer(player.GetPlayer());
                 if (rig == null) return;
                 foreach (var kv in new Dictionary<VRRig, GameObject>(nametags).Where(k => k.Key == rig)) { if (kv.Value != null) Object.Destroy(kv.Value); nametags.Remove(kv.Key); }
                 foreach (var kv in new Dictionary<VRRig, GameObject>(velnametags).Where(k => k.Key == rig)) { if (kv.Value != null) Object.Destroy(kv.Value); velnametags.Remove(kv.Key); }

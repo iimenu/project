@@ -33,7 +33,6 @@ using UnityEngine.XR;
 using static iiMenu.Menu.Main;
 using static iiMenu.Utilities.AssetUtilities;
 using static iiMenu.Utilities.RigUtilities;
-using Console = iiMenu.Classes.Menu.Console;
 using Object = UnityEngine.Object;
 
 namespace iiMenu.Mods

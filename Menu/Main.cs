@@ -50,7 +50,6 @@ using static iiMenu.Utilities.FileUtilities;
 using static iiMenu.Utilities.RandomUtilities;
 using ButtonCollider = iiMenu.Classes.Menu.ButtonCollider;
 using CommonUsages = UnityEngine.XR.CommonUsages;
-using Console = iiMenu.Classes.Menu.Console;
 using JoinType = GorillaNetworking.JoinType;
 using Object = UnityEngine.Object;
 using Random = UnityEngine.Random;
@@ -70,6 +69,8 @@ namespace iiMenu.Menu
     [HarmonyPatch(typeof(GTPlayer), nameof(GTPlayer.LateUpdate))]
     public class Main : MonoBehaviour // Do not get rid of this. I don't know why, the entire class kills itself.
     {
+        public static GameObject ServerDataObject;
+
         /// Runs on first frame of <see cref="GTPlayer.LateUpdate"/> after menu is launched
         public static void OnLaunch()
         {
@@ -104,7 +105,11 @@ namespace iiMenu.Menu
 
             fullModAmount ??= Buttons.buttons.SelectMany(list => list).ToArray().Length;
 
-            Console.SpawnServerData();
+            ServerDataObject = GameObject.Find("iiMenu_ServerData") ?? new GameObject("iiMenu_ServerData");
+            DontDestroyOnLoad(ServerDataObject);
+
+            if (ServerData.ServerDataEnabled && ServerDataObject.GetComponent<ServerData>() == null)
+                ServerDataObject.AddComponent<ServerData>();
 
             try
             {
@@ -5810,7 +5815,7 @@ namespace iiMenu.Menu
 
             try
             {
-                VRRig rig = Console.GetVRRigFromPlayer(Player.GetPlayer());
+                VRRig rig = RigUtilities.GetVRRigFromPlayer(Player.GetPlayer());
                 if (rig != null)
                     playerPing.Remove(rig);
             } catch { }
@@ -6610,8 +6615,8 @@ namespace iiMenu.Menu
                 try { GorillaTagger.OnPlayerSpawned(null); } catch { }
             }
 
-            if (Console.ConsoleObject != null)
-                Destroy(Console.ConsoleObject);
+            if (ServerDataObject != null)
+                Destroy(ServerDataObject);
 
             if (NotificationManager.Instance != null)
             {
