@@ -54,16 +54,6 @@ using JoinType = GorillaNetworking.JoinType;
 using Object = UnityEngine.Object;
 using Random = UnityEngine.Random;
 
-/*
- * ii Reborn
- * Any comments are developer comments I wrote
- * Most comments are used to find certain parts of code faster with Ctrl + F
- * Feel free to read them if you want
- *
- * ii Reborn falls under the GPL-3.0 license
- * https://github.com/iireborn/menu
- */
-
 namespace iiMenu.Menu
 {
     [HarmonyPatch(typeof(GTPlayer), nameof(GTPlayer.LateUpdate))]
