@@ -33,10 +33,10 @@ namespace iiMenu.Managers
         
         public static readonly ExternalMod[] Mods = new ExternalMod[]
         {
-            new ExternalMod { DisplayName = "Utilla", Repo = "iimenu/Utilla", Description = "Backend for custom maps/cosmetics. Required by most mods.", ExpectedFile = "Utilla.dll" },
-            new ExternalMod { DisplayName = "WalkSim Fixed", Repo = "iimenu/Walksim-Fixed", Description = "Fixed WalkSimulator for current build.", ExpectedFile = "WalkSimulator.dll" },
-            new ExternalMod { DisplayName = "TooMuchInfo", Repo = "iimenu/TooMuchInfo", Description = "Shows player/room info.", ExpectedFile = "TooMuchInfo.dll" },
-            new ExternalMod { DisplayName = "LibrePad Updated", Repo = "iimenu/LibrePad-Updated", Description = "Updated LibrePad build.", ExpectedFile = "LibrePad.dll" },
+            new ExternalMod { DisplayName = "Fortnite Emote Wheel", Repo = "iiDkRemastered/fortniteemotewheel", Description = "A Fortnite Emote Wheel mod.", ExpectedFile = "fortniteemotewheel.dll" },
+            new ExternalMod { DisplayName = "TooMuchInfo", Repo = "iiDkRemastered/TooMuchInfo", Description = "Shows player/room info.", ExpectedFile = "TooMuchInfo.dll" },
+            new ExternalMod { DisplayName = "ForeverCosmetx", Repo = "iiDkRemastered/ForeverCosmetxx", Description = "Cosmetics mod.", ExpectedFile = "ForeverCosmetxx.dll" },
+            new ExternalMod { DisplayName = "GorillaMedia", Repo = "iiDkRemastered/GorillaMedia", Description = "Media mod.", ExpectedFile = "GorillaMedia.dll" },
         };
 
         private static string PluginsFolder => FileUtilities.GetGamePath() + "/BepInEx/plugins";

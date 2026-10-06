@@ -1,4 +1,4 @@
-﻿/*
+/*
  * ii Reborn
  * Portions Copyright (C) 2025–2026 Goldentrophy Software
  * Licensed under GNU GPL v3.0-or-later — see LICENSE and NOTICE.
@@ -602,8 +602,8 @@ namespace iiMenu.Managers
                     instance.forestRoot = GetObject("Environment Objects/LocalObjects_Prefab/Forest")?.transform;
             }
 
-            SwapLeaderboardPlate(instance.treeRoomRoot, StumpLeaderboardIndex, ref instance.stumpMaterial);
-            SwapLeaderboardPlate(instance.forestRoot, ForestLeaderboardIndex, ref instance.forestMaterial);
+            // SwapLeaderboardPlate(instance.treeRoomRoot, StumpLeaderboardIndex, ref instance.stumpMaterial);
+            // SwapLeaderboardPlate(instance.forestRoot, ForestLeaderboardIndex, ref instance.forestMaterial);
 
             if (!CustomBoardsEnabled)
                 return;
@@ -640,7 +640,7 @@ namespace iiMenu.Managers
                 return;
 
             Renderer renderer = target.GetComponent<Renderer>();
-            if (renderer != null && renderer.GetComponent<TMP_Text>() == null && !IsBoardControl(target.name))
+            if (renderer != null && renderer.GetComponent<TMP_Text>() == null && !IsBoardControl(target.name) && !target.name.Contains("UnityTempFile"))
             {
                 if (tint)
                 {
