@@ -50,6 +50,7 @@ using static iiMenu.Utilities.FileUtilities;
 using static iiMenu.Utilities.RandomUtilities;
 using ButtonCollider = iiMenu.Classes.Menu.ButtonCollider;
 using CommonUsages = UnityEngine.XR.CommonUsages;
+
 using JoinType = GorillaNetworking.JoinType;
 using Object = UnityEngine.Object;
 using Random = UnityEngine.Random;
@@ -218,9 +219,24 @@ namespace iiMenu.Menu
                 
         }
 
+        private static string lastMusicTitle = "";
+        private static bool lastMusicPaused = false;
+        private static Texture2D lastMusicIcon = null;
+
         public static void Prefix()
         {
             FrameProfiler.Begin("Menu");
+
+            if (menu != null && Buttons.CurrentCategoryName == "Music Player")
+            {
+                if (lastMusicTitle != Important.Title || lastMusicPaused != Important.Paused || lastMusicIcon != Important.Icon)
+                {
+                    lastMusicTitle = Important.Title;
+                    lastMusicPaused = Important.Paused;
+                    lastMusicIcon = Important.Icon;
+                    ReloadMenu();
+                }
+            }
 
             WalkSimCursorPatch.EnsureInstalled();
 
@@ -229,6 +245,8 @@ namespace iiMenu.Menu
                 gunLocked = false;
                 lockTarget = null;
             }
+
+            Important.RunMicMode();
 
             #region Diagnostics
             if (!xrStateLogged)
@@ -355,7 +373,16 @@ namespace iiMenu.Menu
                     { 4, rightJoystickClick }
                 };
 
-                bool isKeyboardCondition = UnityInput.Current.GetKey(KeyCode.Q) || (inTextInput && isKeyboardPc);
+                if (canvasLayout && !XRSettings.isDeviceActive && UnityInput.Current.GetKeyDown(KeyCode.Q))
+                {
+                    pcKeyboardToggleState = !pcKeyboardToggleState;
+                }
+                if (!canvasLayout && !UnityInput.Current.GetKey(KeyCode.Q))
+                {
+                    pcKeyboardToggleState = false;
+                }
+                
+                bool isKeyboardCondition = (canvasLayout ? pcKeyboardToggleState : UnityInput.Current.GetKey(KeyCode.Q)) || (inTextInput && isKeyboardPc);
                 bool buttonCondition = rightHand ? rightInputs[menuButtonIndex] : leftInputs[menuButtonIndex];
 
                 if (oneHand)
@@ -459,7 +486,10 @@ namespace iiMenu.Menu
                     }
 
                     if (buttonCondition && menu != null)
+                    {
                         RecenterMenu();
+                        CanvasBridge.Tick();
+                    }
                 }
 
                 ProcessFirstPersonMouseClick();
@@ -776,7 +806,7 @@ namespace iiMenu.Menu
                         }
                     } else if (RecorderPatch.enabled)
                     {
-                        if (!Buttons.GetIndex("Microphone Feedback").enabled)
+                        if (!Buttons.GetIndex("Microphone Feedback").enabled && !Buttons.GetIndex("Debug Microphone").enabled)
                             GorillaTagger.Instance.myRecorder.DebugEchoMode = VoiceManager.Get().AudioClips.Any() || VoiceManager.Get().PostProcessors.Any();
 
                     }
@@ -2108,6 +2138,10 @@ namespace iiMenu.Menu
 
                 AddSprite("Favorite", LoadTextureFromResource($"{PluginInfo.ClientResourcePath}.favorite.png"));
                 AddSprite("Folder", LoadTextureFromResource($"{PluginInfo.ClientResourcePath}.folder.png"));
+                AddSprite("Forward", LoadTextureFromResource($"{PluginInfo.ClientResourcePath}.forward.png"));
+                AddSprite("Backward", LoadTextureFromResource($"{PluginInfo.ClientResourcePath}.backward.png"));
+                AddSprite("Play", LoadTextureFromResource($"{PluginInfo.ClientResourcePath}.play.png"));
+                AddSprite("PauseBtn", LoadTextureFromResource($"{PluginInfo.ClientResourcePath}.pause.png"));
 
                 for (int i = 1; i <= 3; i++)
                 {
@@ -2416,9 +2450,25 @@ namespace iiMenu.Menu
             }
         }
 
+        public static GameObject CreateCanvasHost()
+        {
+            if (menu == null)
+            {
+                menu = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                Destroy(menu.GetComponent<BoxCollider>());
+                Destroy(menu.GetComponent<Renderer>());
+                menu.transform.localScale = new Vector3(0.1f, 0.3f, 0.3825f);
+                menu.transform.localPosition = Vector3.zero;
+            }
+
+            CanvasBridge.Create();
+
+            return menu;
+        }
+
         public static GameObject CreateMenu()
         {
-            if (clickGUI)
+            if (clickGUI && !canvasLayout)
             {
                 menu = LoadObject<GameObject>("ClickGUI");
                 menu.transform.localScale *= (menuScale * (scaleWithPlayer ? GTPlayer.Instance.scale : 1f));
@@ -2429,6 +2479,9 @@ namespace iiMenu.Menu
 
                 return menu;
             }
+
+            if (canvasLayout)
+                return CreateCanvasHost();
 
             menu = GameObject.CreatePrimitive(PrimitiveType.Cube);
 
@@ -2838,7 +2891,7 @@ namespace iiMenu.Menu
 
                 searchBoxObject.transform.localScale = thinMenu ? new Vector3(0.09f, 0.9f, ButtonDistance * 0.8f) : new Vector3(0.09f, 1.3f, ButtonDistance * 0.8f);
 
-                searchBoxObject.transform.localPosition = new Vector3(0.56f, 0f, 0.28f - buttonOffset * ButtonDistance);
+                searchBoxObject.transform.localPosition = new Vector3(0.56f, 0f, (CurrentPrompt != null ? 0.342f : 0.28f) - buttonOffset * ButtonDistance);
 
                 ColorChanger colorChanger = searchBoxObject.AddComponent<ColorChanger>();
                 colorChanger.colors = buttonColors[0];
@@ -2875,7 +2928,7 @@ namespace iiMenu.Menu
                 if (NoAutoSizeText)
                     textTransform.sizeDelta = new Vector2(9f, 0.015f);
 
-                textTransform.localPosition = new Vector3(.064f, 0, .111f - buttonOffset * ButtonDistance / 2.6f);
+                textTransform.localPosition = new Vector3(.064f, 0, (CurrentPrompt != null ? 0.135f : 0.111f) - buttonOffset * ButtonDistance / 2.6f);
                 textTransform.rotation = Quaternion.Euler(new Vector3(180f, 90f, 90f));
 
                 FollowMenuSettings(keyboardInputObject);
@@ -2985,12 +3038,144 @@ namespace iiMenu.Menu
                             break;
                         }
                         default:
-                            renderButtons = Buttons.buttons[Buttons.CurrentCategoryIndex];
+                            if (Buttons.CurrentCategoryName == "Music Player")
+                            {
+                                renderButtons = Buttons.buttons[Buttons.CurrentCategoryIndex]
+                                    .Where(b => !b.hideFromArraylist)
+                                    .ToArray();
+                            }
+                            else
+                            {
+                                renderButtons = Buttons.buttons[Buttons.CurrentCategoryIndex];
+                            }
                             break;
                     }
 
                     if (Buttons.GetIndex("Alphabetize Menu").enabled || isSearching)
                         renderButtons = StringsToInfos(Alphabetize(InfosToStrings(renderButtons)));
+
+                    if (Buttons.CurrentCategoryName == "Music Player")
+                    {
+                        Important.EnsureIntegrationProgram();
+
+                        if (Time.time > Important.musicPlayerDataDelay)
+                        {
+                            Important.musicPlayerDataDelay = Time.time + 3f;
+                            CoroutineManager.instance.StartCoroutine(Important.UpdateDataCoroutinePublic());
+                        }
+
+                        float GetTextZ(float menuZ) => 0.109f - (0.28f - menuZ) / 2.55f;
+
+                        float coverSizeZ = 0.40f;
+                        float coverSizeY = coverSizeZ;
+                        float coverZ = 0.28f - (buttonOffset * ButtonDistance) - (coverSizeZ / 2f) + 0.19f;
+
+                        GameObject coverObj = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                        Object.Destroy(coverObj.GetComponent<BoxCollider>());
+                        if (!UnityInput.Current.GetKey(KeyCode.Q) && !isKeyboardPc)
+                            coverObj.layer = 2;
+                        coverObj.transform.parent = menu.transform;
+                        coverObj.transform.localRotation = Quaternion.Euler(90f, 180f, 180f);
+                        coverObj.transform.localScale = new Vector3(0.01f, coverSizeY, coverSizeZ);
+                        coverObj.transform.localPosition = new Vector3(0.56f, 0f, coverZ);
+
+                        Material coverMat = new Material(LoadAsset<Shader>("Chams"));
+                        if (Important.ValidData && Important.Icon != null)
+                            coverMat.SetTexture("_MainTex", Important.Icon);
+                        else
+                            coverMat.color = Color.black;
+                        coverObj.GetComponent<Renderer>().material = coverMat;
+
+                        FollowMenuSettings(coverObj);
+
+                        float textBaseZ = coverZ - (coverSizeZ / 2f) - 0.02f;
+
+                        TextMeshPro titleText = new GameObject { transform = { parent = canvasObj.transform } }.AddComponent<TextMeshPro>();
+                        titleText.font = activeFont;
+                        titleText.text = Important.Title;
+                        titleText.fontSize = 1;
+                        titleText.AddComponent<UIColorChanger>().colors = textColors[0];
+                        titleText.fontStyle = activeFontStyle;
+                        titleText.alignment = TextAlignmentOptions.Center;
+                        titleText.enableAutoSizing = true;
+                        titleText.fontSizeMin = 0;
+                        RectTransform titleTransform = titleText.GetComponent<RectTransform>();
+                        titleTransform.sizeDelta = new Vector2(0.28f, 0.03f);
+                        titleTransform.localPosition = new Vector3(0.064f, 0f, GetTextZ(textBaseZ));
+                        titleTransform.rotation = Quaternion.Euler(new Vector3(180f, 90f, 90f));
+                        FollowMenuSettings(titleText);
+
+                        TextMeshPro artistText = new GameObject { transform = { parent = canvasObj.transform } }.AddComponent<TextMeshPro>();
+                        artistText.font = activeFont;
+                        artistText.text = Important.Artist;
+                        artistText.fontSize = 1;
+                        artistText.AddComponent<UIColorChanger>().colors = textColors[0];
+                        artistText.fontStyle = activeFontStyle;
+                        artistText.alignment = TextAlignmentOptions.Center;
+                        artistText.enableAutoSizing = true;
+                        artistText.fontSizeMin = 0;
+                        RectTransform artistTransform = artistText.GetComponent<RectTransform>();
+                        artistTransform.sizeDelta = new Vector2(0.28f, 0.02f);
+                        artistTransform.localPosition = new Vector3(0.064f, 0f, GetTextZ(textBaseZ - 0.07f));
+                        artistTransform.rotation = Quaternion.Euler(new Vector3(180f, 90f, 90f));
+                        FollowMenuSettings(artistText);
+
+                        float controlZ = textBaseZ - 0.16f;
+                        float btnSizeZ = 0.07f;
+                        float btnSizeY = btnSizeZ * 1.275f;
+                        float spacingY = 0.19f;
+                        float[] yOffsets = { btnSizeY + spacingY, 0f, -(btnSizeY + spacingY) };
+                        
+                        string[] controlNames = { "Previous Track", "Play / Pause", "Skip Track" };
+                        string[] controlLogos = { "backward", Important.Paused ? "play" : "pause", "forward" };
+
+                        for (int c = 0; c < 3; c++)
+                        {
+                            float btnY = yOffsets[c];
+
+                            GameObject btn = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                            if (!UnityInput.Current.GetKey(KeyCode.Q) && !isKeyboardPc)
+                                btn.layer = 2;
+                            btn.GetComponent<BoxCollider>().isTrigger = true;
+                            btn.transform.parent = menu.transform;
+                            btn.transform.rotation = Quaternion.identity;
+                            btn.transform.localScale = new Vector3(0.09f, btnSizeY, btnSizeZ);
+                            btn.transform.localPosition = new Vector3(0.56f, btnY, controlZ);
+
+                            ButtonCollider bc = btn.AddComponent<ButtonCollider>();
+                            bc.relatedText = controlNames[c];
+
+                            if (lastClickedName != controlNames[c])
+                            {
+                                ColorChanger cc = btn.AddComponent<ColorChanger>();
+                                cc.colors = buttonColors[0];
+                            }
+                            else
+                                CoroutineManager.instance.StartCoroutine(ButtonClick(-99, btn.GetComponent<Renderer>()));
+
+                            FollowMenuSettings(btn);
+
+                            GameObject logoQuad = GameObject.CreatePrimitive(PrimitiveType.Quad);
+                            Object.Destroy(logoQuad.GetComponent<Collider>());
+                            logoQuad.transform.parent = menu.transform;
+                            logoQuad.transform.localRotation = Quaternion.LookRotation(Vector3.right, Vector3.forward);
+                            
+                            float logoScaleX = 0.05f;
+                            float logoScaleY = logoScaleX * (0.3f / 0.3825f);
+                            logoQuad.transform.localScale = new Vector3(logoScaleX, logoScaleY, 1f);
+                            logoQuad.transform.localPosition = new Vector3(0.606f, btnY, controlZ);
+                            
+                            Material logoMat = new Material(Shader.Find("Sprites/Default"));
+                            logoMat.mainTexture = AssetUtilities.LoadTextureFromResource($"{PluginInfo.ClientResourcePath}.{controlLogos[c]}.png");
+                            logoMat.mainTextureScale = new Vector2(-1, 1);
+                            logoMat.mainTextureOffset = new Vector2(1, 0);
+                            logoQuad.GetComponent<Renderer>().material = logoMat;
+                            logoQuad.AddComponent<UIColorChanger>().colors = textColors[1];
+                            FollowMenuSettings(logoQuad);
+                        }
+
+                        buttonIndexOffset = Math.Max(0, PageSize - 1);
+                    }
 
                     if (!longmenu)
                     {
@@ -3063,7 +3248,7 @@ namespace iiMenu.Menu
         private static Quaternion? recenterRotation;
         public static void RecenterMenu()
         {
-            bool isKeyboardCondition = UnityInput.Current.GetKey(KeyCode.Q) || (inTextInput && isKeyboardPc);
+            bool isKeyboardCondition = (canvasLayout ? pcKeyboardToggleState : UnityInput.Current.GetKey(KeyCode.Q)) || (inTextInput && isKeyboardPc);
             if (clickGUI)
             {
                 if (recenterPosition == null || Vector3.Distance(recenterPosition.Value, GorillaTagger.Instance.bodyCollider.transform.TransformPoint(new Vector3(0f, 0f, 1.5f))) > 1f)
@@ -3327,8 +3512,14 @@ namespace iiMenu.Menu
 
             CreateMenu();
 
-            if (dynamicAnimations)
+            if (canvasLayout)
+            {
+                CanvasBridge.SetOpen(true);
+            }
+            else if (dynamicAnimations)
+            {
                 CoroutineManager.instance.StartCoroutine(GrowCoroutine());
+            }
 
             if (particleSpawnEffect)
             {
@@ -3377,6 +3568,11 @@ namespace iiMenu.Menu
             {
                 OnMenuClosed?.Invoke();
             } catch { }
+
+            if (canvasLayout)
+            {
+                CanvasBridge.SetOpen(false);
+            }
 
             if (cursorFreedByMenu)
             {
@@ -3520,7 +3716,17 @@ namespace iiMenu.Menu
             }
             else
             {
-                CoroutineManager.instance.StartCoroutine(ShrinkCoroutine());
+                if (canvasLayout)
+                {
+                    CanvasBridge.SetOpen(false);
+
+                    Destroy(menu);
+                    menu = null;
+                }
+                else
+                {
+                    CoroutineManager.instance.StartCoroutine(ShrinkCoroutine());
+                }
 
                 Destroy(reference);
                 reference = null;
@@ -3531,6 +3737,7 @@ namespace iiMenu.Menu
         {
             ExtGradient Gradient = buttonColors[swapButtonColors ? 1 : 0];
 
+            if (Buttons.CurrentCategoryName != "Music Player")
             switch (pageButtonType == 3 || pageButtonType == 4 ? 1 : pageButtonType)
             {
                 case 1:
@@ -5692,6 +5899,99 @@ namespace iiMenu.Menu
             return notags.Replace(input, replace);
         }
 
+        public static string RowDescription(ButtonInfo info)
+        {
+            string source = info.toolTip;
+
+            if (string.IsNullOrWhiteSpace(source))
+                return string.Empty;
+
+            if (source.StartsWith("This button doesn't have a tooltip", StringComparison.OrdinalIgnoreCase))
+                return string.Empty;
+
+            string text = NoColorTags(source).Replace("\r", " ").Replace("\n", " ").Trim();
+
+            while (text.Contains("  "))
+                text = text.Replace("  ", " ");
+
+            if (text.EndsWith("."))
+                text = text.Substring(0, text.Length - 1);
+
+            const int limit = 68;
+
+            if (text.Length > limit)
+            {
+                int cut = text.LastIndexOf(' ', limit);
+
+                if (cut < limit / 2)
+                    cut = limit;
+
+                text = text.Substring(0, cut).TrimEnd() + "…";
+            }
+
+            return text;
+        }
+
+        public static bool SetButtonEnabled(string buttonText, bool value)
+        {
+            ButtonInfo target = Buttons.GetIndex(buttonText);
+
+            if (target == null || target.label || !target.isTogglable)
+                return false;
+
+            if (target.enabled == value)
+                return true;
+
+            Toggle(buttonText, false);
+            return true;
+        }
+
+        public static ButtonInfo[] SearchedRowSource()
+        {
+            List<ButtonInfo> found = new List<ButtonInfo>();
+
+            if (nonGlobalSearch && Buttons.CurrentCategoryName != "Main")
+            {
+                foreach (ButtonInfo info in Buttons.buttons[Buttons.CurrentCategoryIndex])
+                {
+                    try
+                    {
+                        List<string> texts = info.aliases == null ? new List<string>() : info.aliases.ToList();
+                        texts.Add(info.overlapText ?? info.buttonText);
+
+                        if (texts.Any(text => text.ClearTags().Replace(" ", "").ToLower()
+                            .Contains(keyboardInput.Replace(" ", "").ToLower())))
+                            found.Add(info);
+                    }
+                    catch { }
+                }
+
+                return found.ToArray();
+            }
+
+            foreach (ButtonInfo[] list in Buttons.buttons)
+            {
+                foreach (ButtonInfo info in list)
+                {
+                    try
+                    {
+                        if (info.detected && !allowDetected)
+                            continue;
+
+                        List<string> texts = info.aliases == null ? new List<string>() : info.aliases.ToList();
+                        texts.Add(info.overlapText ?? info.buttonText);
+
+                        if (texts.Any(text => text.ClearTags().Replace(" ", "").ToLower()
+                            .Contains(keyboardInput.Replace(" ", "").ToLower())))
+                            found.Add(info);
+                    }
+                    catch { }
+                }
+            }
+
+            return found.ToArray();
+        }
+
         private static Gradient richtextGradientGradient = new Gradient();
         public static string RichtextGradient(string input, GradientColorKey[] Colors)
         {
@@ -5794,8 +6094,12 @@ namespace iiMenu.Menu
 
         private static void OnPlayerJoin(NetPlayer Player)
         {
-            if (Player != NetworkSystem.Instance.LocalPlayer && !disablePlayerNotifications)
-                NotificationManager.SendNotification($"<color=grey>[</color><color=green>JOIN</color><color=grey>]</color> Name: {CleanPlayerName(Player.NickName)}");
+            if (Player != NetworkSystem.Instance.LocalPlayer)
+            {
+                latestJoinedPlayer = Player;
+                if (!disablePlayerNotifications)
+                    NotificationManager.SendNotification($"<color=grey>[</color><color=green>JOIN</color><color=grey>]</color> Name: {CleanPlayerName(Player.NickName)}");
+            }
         }
 
         private static void OnPlayerLeave(NetPlayer Player)
@@ -5803,12 +6107,19 @@ namespace iiMenu.Menu
             if (Player != NetworkSystem.Instance.LocalPlayer && !disablePlayerNotifications)
                 NotificationManager.SendNotification($"<color=grey>[</color><color=red>LEAVE</color><color=grey>]</color> Name: {CleanPlayerName(Player.NickName)}");
 
-            try
+            if (latestJoinedPlayer == Player)
+                latestJoinedPlayer = null;
+
+            /// we can't use GetPlayer if they already left so clean up instead
+            List<VRRig> keysToRemove = new List<VRRig>();
+            foreach (var key in playerPing.Keys)
             {
-                VRRig rig = RigUtilities.GetVRRigFromPlayer(Player.GetPlayer());
-                if (rig != null)
-                    playerPing.Remove(rig);
-            } catch { }
+                if (key == null) keysToRemove.Add(key);
+            }
+            foreach (var key in keysToRemove)
+            {
+                playerPing.Remove(key);
+            }
             try
             {
                 Visuals.CleanupPlayerLeave(Player);
@@ -6804,6 +7115,8 @@ jgs \_   _/ |Oo\
         public static bool openedwithright;
         public static bool oneHand;
         public static bool clickGUI;
+        public static bool canvasLayout = false;
+        public static bool pcKeyboardToggleState;
 
         public static int _pageSize = 8;
         public static int PageSize
@@ -7030,6 +7343,7 @@ jgs \_   _/ |Oo\
         public static bool disableMasterClientNotifications;
         public static bool disableRoomNotifications;
         public static bool disablePlayerNotifications;
+        public static NetPlayer latestJoinedPlayer;
         public static bool clearNotificationsOnDisconnect;
         public static string narratorName = "Default";
         public static int narratorIndex;
