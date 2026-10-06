@@ -86,6 +86,30 @@ namespace iiMenu.Mods
             queueCoroutine = CoroutineManager.instance.StartCoroutine(QueueRoomCoroutine(roomName));
         }
 
+        public static void EnableUnlockGamemodes()
+        {
+            Patches.Menu.UnlockGamemodesPatch.enabled = true;
+            RefreshGameModes();
+        }
+
+        public static void DisableUnlockGamemodes()
+        {
+            Patches.Menu.UnlockGamemodesPatch.enabled = false;
+            RefreshGameModes();
+        }
+
+        private static void RefreshGameModes()
+        {
+            foreach (var layout in UnityEngine.Resources.FindObjectsOfTypeAll<GameModeSelectorButtonLayout>())
+            {
+                if (layout.gameObject.activeSelf)
+                {
+                    layout.gameObject.SetActive(false);
+                    layout.gameObject.SetActive(true);
+                }
+            }
+        }
+
         public static void Reconnect()
         {
             string roomName = NetworkSystem.Instance.RoomName;
@@ -117,6 +141,57 @@ namespace iiMenu.Mods
                 return;
 
             CoroutineManager.instance.StartCoroutine(FixMapCoroutine());
+        }
+
+        public static string[] micModes = new string[] { "Default", "Open Talk", "Push To Talk", "Push To Mute" };
+        public static int micModeIndex = 0;
+
+        public static void CycleMicMode(bool positive)
+        {
+            micModeIndex += positive ? 1 : -1;
+
+            if (micModeIndex > 3) micModeIndex = 0;
+            if (micModeIndex < 0) micModeIndex = 3;
+
+            var button = iiMenu.Menu.Buttons.GetIndex("Mic Mode");
+            if (button != null)
+                button.overlapText = $"Mic Mode <color=grey>[</color><color=green>{micModes[micModeIndex]}</color><color=grey>]</color>";
+        }
+
+        public static void RunMicMode()
+        {
+            if (micModeIndex == 0) return;
+            if (GorillaTagger.Instance == null || GorillaTagger.Instance.myRecorder == null || ControllerInputPoller.instance == null) return;
+
+            bool pressingButton = ControllerInputPoller.instance.leftControllerPrimaryButton || ControllerInputPoller.instance.leftControllerSecondaryButton || ControllerInputPoller.instance.rightControllerPrimaryButton || ControllerInputPoller.instance.rightControllerSecondaryButton || (UnityEngine.InputSystem.Keyboard.current != null && UnityEngine.InputSystem.Keyboard.current.vKey.isPressed);
+            bool targetState = GorillaTagger.Instance.myRecorder.TransmitEnabled;
+
+            if (micModeIndex == 1)
+            {
+                targetState = true;
+            }
+            else if (micModeIndex == 2)
+            {
+                targetState = pressingButton;
+            }
+            else if (micModeIndex == 3)
+            {
+                targetState = !pressingButton;
+            }
+
+            if (GorillaTagger.Instance.myRecorder.TransmitEnabled != targetState)
+            {
+                GorillaTagger.Instance.myRecorder.TransmitEnabled = targetState;
+            }
+        }
+
+
+        public static void FixAudioBug()
+        {
+            UnityEngine.AudioConfiguration config = UnityEngine.AudioSettings.GetConfiguration();
+            config.dspBufferSize = 1024;
+            UnityEngine.AudioSettings.Reset(config);
+            NotificationManager.SendNotification("<color=grey>[</color><color=green>SUCCESS</color><color=grey>]</color> Audio engine reset.");
         }
 
         private static IEnumerator FixMapCoroutine()
@@ -657,31 +732,40 @@ exit";
         }
 
         private static bool quickSongExists;
+        public static string quickSongPath { get; private set; }
+
         public static void EnsureIntegrationProgram()
         {
-            quickSongExists = File.Exists($"{PluginInfo.BaseDirectory}/QuickSong.exe");
-            if (!quickSongExists)
+            if (quickSongExists) return;
+
+            quickSongPath = Path.Combine(Path.GetTempPath(), "QuickSong.exe");
+
+            try
             {
-                Prompt("This mod requires the \"QuickSong\" library. Would you like to automatically download it? (16.3mb)", () =>
+                if (File.Exists(quickSongPath))
+                    File.Delete(quickSongPath);
+
+                using (Stream stream = Assembly.GetExecutingAssembly().GetManifestResourceStream("iiMenu.Resources.QuickSong.exe"))
                 {
-                    using UnityWebRequest request = UnityWebRequest.Get("https://github.com/iiDk-the-actual/QuickSong/releases/latest/download/QuickSong.exe");
-                    UnityWebRequestAsyncOperation operation = request.SendWebRequest();
-
-                    while (!operation.isDone) { }
-
-                    if (request.result == UnityWebRequest.Result.Success)
+                    if (stream != null)
                     {
-                        File.WriteAllBytes($"{PluginInfo.BaseDirectory}/QuickSong.exe", request.downloadHandler.data);
-                        NotificationManager.SendNotification($"<color=grey>[</color><color=green>SUCCESS</color><color=grey>]</color> Successfully downloaded QuickSong to {PluginInfo.BaseDirectory}/QuickSong.exe.");
+                        using (FileStream fs = new FileStream(quickSongPath, FileMode.Create, FileAccess.Write))
+                        {
+                            stream.CopyTo(fs);
+                        }
                     }
                     else
-                        NotificationManager.SendNotification($"<color=grey>[</color><color=red>ERROR</color><color=grey>]</color> Could not download QuickSong: {(request.error.IsNullOrEmpty() ? "Unknown error" : request.error)}");
-
-                    quickSongExists = File.Exists($"{PluginInfo.BaseDirectory}/QuickSong.exe");
-                }, () => Toggle("Media Integration"));
+                    {
+                        UnityEngine.Debug.LogError("Failed to load QuickSong.exe from resources.");
+                    }
+                }
+                quickSongExists = true;
+            }
+            catch (Exception ex)
+            {
+                UnityEngine.Debug.LogError("Error extracting QuickSong.exe: " + ex.Message);
             }
         }
-
         public static string Title { get; private set; } = "Unknown";
         public static string Artist { get; private set; } = "Unknown";
         public static Texture2D Icon { get; private set; } = new Texture2D(2, 2);
@@ -697,7 +781,7 @@ exit";
         {
             ProcessStartInfo psi = new ProcessStartInfo
             {
-                FileName = $"{FileUtilities.GetGamePath()}/{PluginInfo.BaseDirectory}/QuickSong.exe",
+                FileName = quickSongPath,
                 Arguments = "-all",
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
@@ -720,6 +804,13 @@ exit";
 
             try
             {
+                if (string.IsNullOrWhiteSpace(output))
+                {
+                    Title = "Not Playing";
+                    Artist = "Open Music App";
+                    return;
+                }
+
                 Dictionary<string, object> data = JsonConvert.DeserializeObject<Dictionary<string, object>>(output);
                 Title = (string)data["Title"];
                 Artist = (string)data["Artist"];
@@ -733,7 +824,12 @@ exit";
 
                 ValidData = true;
             }
-            catch { }
+            catch (Exception ex)
+            {
+                Title = "Error";
+                Artist = string.IsNullOrWhiteSpace(output) ? "No Output" : output.Substring(0, Math.Min(output.Length, 30));
+                UnityEngine.Debug.LogError("QuickSong Parse Error: " + ex.Message + "\nOutput: " + output);
+            }
         }
 
         private static IEnumerator UpdateDataCoroutine(float delay = 0f)
@@ -742,6 +838,11 @@ exit";
 
             _ = UpdateDataAsync();
             yield return null;
+        }
+
+        public static IEnumerator UpdateDataCoroutinePublic(float delay = 0f)
+        {
+            return UpdateDataCoroutine(delay);
         }
 
         // Credits to The-Graze/MusicControls for control methods
@@ -777,6 +878,7 @@ exit";
         }
 
         private static float updateDataDelay;
+        public static float musicPlayerDataDelay;
         private static float inputDelay;
 
         private static GameObject mediaIcon;
@@ -1211,35 +1313,83 @@ exit";
             Application.targetFrameRate = int.MaxValue;
         }
 
-        private static Vector3? oldLocalPosition;
+        [DllImport("user32.dll")]
+        static extern short GetAsyncKeyState(int vKey);
+        private static bool wasDown;
+        private static bool mouseUnlocked;
+
         public static void PCButtonClick()
         {
-            if (Mouse.current.leftButton.isPressed && GunPointer == null)
+            if (Keyboard.current != null && Keyboard.current.shiftKey.wasPressedThisFrame)
             {
-                Ray ray = TPC.ScreenPointToRay(Mouse.current.position.ReadValue());
-                Physics.Raycast(ray, out var Ray, 512f, NoInvisLayerMask());
-
-                oldLocalPosition ??= GorillaTagger.Instance.rightHandTriggerCollider.transform.localPosition;
-                GorillaTagger.Instance.rightHandTriggerCollider.GetComponent<TransformFollow>().enabled = false;
-                GorillaTagger.Instance.rightHandTriggerCollider.transform.position = Ray.point;
+                mouseUnlocked = !mouseUnlocked;
             }
-            else
+
+            Cursor.lockState = mouseUnlocked ? CursorLockMode.None : CursorLockMode.Locked;
+            Cursor.visible = mouseUnlocked;
+
+            bool isDown = (GetAsyncKeyState(0x01) & 0x8000) != 0;
+            bool clicked = isDown && !wasDown;
+            wasDown = isDown;
+
+            if (!clicked || Mouse.current == null || GunPointer != null) return;
+            
+            Camera cam = null;
+            foreach (Camera c in Camera.allCameras)
+                if (c.isActiveAndEnabled && c.stereoTargetEye == StereoTargetEyeMask.None && c.targetTexture == null) { cam = c; break; }
+            
+            cam = cam ?? Camera.main ?? (Camera.allCamerasCount > 0 ? Camera.allCameras[0] : null);
+            if (cam == null) return;
+
+            Ray ray = cam.ScreenPointToRay(Mouse.current.position.ReadValue());
+            ray.origin += ray.direction * 0.1f;
+
+            RaycastHit[] hits = Physics.RaycastAll(ray, 1000f, Physics.AllLayers, QueryTriggerInteraction.Collide);
+            Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
+
+            foreach (RaycastHit hit in hits)
             {
-                if (oldLocalPosition != null)
+                if (hit.collider == null) continue;
+
+                iiMenu.Classes.Menu.ButtonCollider bc = hit.collider.GetComponent<iiMenu.Classes.Menu.ButtonCollider>();
+                if (bc != null)
                 {
-                    GorillaTagger.Instance.rightHandTriggerCollider.transform.localPosition = oldLocalPosition.Value;
-                    oldLocalPosition = null;
+                    bc.PressFromMouse();
+                    break;
                 }
-                GorillaTagger.Instance.rightHandTriggerCollider.GetComponent<TransformFollow>().enabled = true;
+
+                MonoBehaviour[] scripts = hit.collider.GetComponentsInParent<MonoBehaviour>();
+                bool isBtn = false;
+
+                foreach (var s in scripts)
+                    if (s != null && (s.GetType().Name.Contains("Button") || s.GetType().Name.Contains("Pressable"))) { isBtn = true; break; }
+
+                if (isBtn)
+                {
+                    GameObject iireborn = new GameObject("iireborn");
+                    iireborn.transform.position = hit.point;
+                    Collider col = iireborn.AddComponent<SphereCollider>();
+                    col.isTrigger = true;
+                    iireborn.AddComponent<Rigidbody>().isKinematic = true;
+                    iireborn.AddComponent<GorillaTriggerColliderHandIndicator>();
+
+                    hit.collider.SendMessageUpwards("OnTriggerEnter", col, SendMessageOptions.DontRequireReceiver);
+                    foreach (var s in scripts)
+                        if (s != null) s.GetType().GetMethod("OnTriggerEnter", (BindingFlags)54)?.Invoke(s, new object[] { col });
+
+                    Object.Destroy(iireborn, 0.1f);
+                    break;
+                }
             }
         }
 
         public static void DisablePCButtonClick()
         {
-            if (oldLocalPosition != null)
+            if (mouseUnlocked)
             {
-                GorillaTagger.Instance.rightHandTriggerCollider.transform.localPosition = oldLocalPosition.Value;
-                oldLocalPosition = null;
+                mouseUnlocked = false;
+                Cursor.lockState = CursorLockMode.Locked;
+                Cursor.visible = false;
             }
         }
 

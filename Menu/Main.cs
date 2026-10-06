@@ -50,6 +50,7 @@ using static iiMenu.Utilities.FileUtilities;
 using static iiMenu.Utilities.RandomUtilities;
 using ButtonCollider = iiMenu.Classes.Menu.ButtonCollider;
 using CommonUsages = UnityEngine.XR.CommonUsages;
+
 using JoinType = GorillaNetworking.JoinType;
 using Object = UnityEngine.Object;
 using Random = UnityEngine.Random;
@@ -218,9 +219,24 @@ namespace iiMenu.Menu
                 
         }
 
+        private static string lastMusicTitle = "";
+        private static bool lastMusicPaused = false;
+        private static Texture2D lastMusicIcon = null;
+
         public static void Prefix()
         {
             FrameProfiler.Begin("Menu");
+
+            if (menu != null && Buttons.CurrentCategoryName == "Music Player")
+            {
+                if (lastMusicTitle != Important.Title || lastMusicPaused != Important.Paused || lastMusicIcon != Important.Icon)
+                {
+                    lastMusicTitle = Important.Title;
+                    lastMusicPaused = Important.Paused;
+                    lastMusicIcon = Important.Icon;
+                    ReloadMenu();
+                }
+            }
 
             WalkSimCursorPatch.EnsureInstalled();
 
@@ -229,6 +245,8 @@ namespace iiMenu.Menu
                 gunLocked = false;
                 lockTarget = null;
             }
+
+            Important.RunMicMode();
 
             #region Diagnostics
             if (!xrStateLogged)
@@ -2108,6 +2126,10 @@ namespace iiMenu.Menu
 
                 AddSprite("Favorite", LoadTextureFromResource($"{PluginInfo.ClientResourcePath}.favorite.png"));
                 AddSprite("Folder", LoadTextureFromResource($"{PluginInfo.ClientResourcePath}.folder.png"));
+                AddSprite("Forward", LoadTextureFromResource($"{PluginInfo.ClientResourcePath}.forward.png"));
+                AddSprite("Backward", LoadTextureFromResource($"{PluginInfo.ClientResourcePath}.backward.png"));
+                AddSprite("Play", LoadTextureFromResource($"{PluginInfo.ClientResourcePath}.play.png"));
+                AddSprite("PauseBtn", LoadTextureFromResource($"{PluginInfo.ClientResourcePath}.pause.png"));
 
                 for (int i = 1; i <= 3; i++)
                 {
@@ -2985,12 +3007,144 @@ namespace iiMenu.Menu
                             break;
                         }
                         default:
-                            renderButtons = Buttons.buttons[Buttons.CurrentCategoryIndex];
+                            if (Buttons.CurrentCategoryName == "Music Player")
+                            {
+                                renderButtons = Buttons.buttons[Buttons.CurrentCategoryIndex]
+                                    .Where(b => !b.hideFromArraylist)
+                                    .ToArray();
+                            }
+                            else
+                            {
+                                renderButtons = Buttons.buttons[Buttons.CurrentCategoryIndex];
+                            }
                             break;
                     }
 
                     if (Buttons.GetIndex("Alphabetize Menu").enabled || isSearching)
                         renderButtons = StringsToInfos(Alphabetize(InfosToStrings(renderButtons)));
+
+                    if (Buttons.CurrentCategoryName == "Music Player")
+                    {
+                        Important.EnsureIntegrationProgram();
+
+                        if (Time.time > Important.musicPlayerDataDelay)
+                        {
+                            Important.musicPlayerDataDelay = Time.time + 3f;
+                            CoroutineManager.instance.StartCoroutine(Important.UpdateDataCoroutinePublic());
+                        }
+
+                        float GetTextZ(float menuZ) => 0.109f - (0.28f - menuZ) / 2.55f;
+
+                        float coverSizeZ = 0.40f;
+                        float coverSizeY = coverSizeZ;
+                        float coverZ = 0.28f - (buttonOffset * ButtonDistance) - (coverSizeZ / 2f) + 0.19f;
+
+                        GameObject coverObj = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                        Object.Destroy(coverObj.GetComponent<BoxCollider>());
+                        if (!UnityInput.Current.GetKey(KeyCode.Q) && !isKeyboardPc)
+                            coverObj.layer = 2;
+                        coverObj.transform.parent = menu.transform;
+                        coverObj.transform.localRotation = Quaternion.Euler(90f, 180f, 180f);
+                        coverObj.transform.localScale = new Vector3(0.01f, coverSizeY, coverSizeZ);
+                        coverObj.transform.localPosition = new Vector3(0.56f, 0f, coverZ);
+
+                        Material coverMat = new Material(LoadAsset<Shader>("Chams"));
+                        if (Important.ValidData && Important.Icon != null)
+                            coverMat.SetTexture("_MainTex", Important.Icon);
+                        else
+                            coverMat.color = Color.black;
+                        coverObj.GetComponent<Renderer>().material = coverMat;
+
+                        FollowMenuSettings(coverObj);
+
+                        float textBaseZ = coverZ - (coverSizeZ / 2f) - 0.02f;
+
+                        TextMeshPro titleText = new GameObject { transform = { parent = canvasObj.transform } }.AddComponent<TextMeshPro>();
+                        titleText.font = activeFont;
+                        titleText.text = Important.Title;
+                        titleText.fontSize = 1;
+                        titleText.AddComponent<UIColorChanger>().colors = textColors[0];
+                        titleText.fontStyle = activeFontStyle;
+                        titleText.alignment = TextAlignmentOptions.Center;
+                        titleText.enableAutoSizing = true;
+                        titleText.fontSizeMin = 0;
+                        RectTransform titleTransform = titleText.GetComponent<RectTransform>();
+                        titleTransform.sizeDelta = new Vector2(0.28f, 0.03f);
+                        titleTransform.localPosition = new Vector3(0.064f, 0f, GetTextZ(textBaseZ));
+                        titleTransform.rotation = Quaternion.Euler(new Vector3(180f, 90f, 90f));
+                        FollowMenuSettings(titleText);
+
+                        TextMeshPro artistText = new GameObject { transform = { parent = canvasObj.transform } }.AddComponent<TextMeshPro>();
+                        artistText.font = activeFont;
+                        artistText.text = Important.Artist;
+                        artistText.fontSize = 1;
+                        artistText.AddComponent<UIColorChanger>().colors = textColors[0];
+                        artistText.fontStyle = activeFontStyle;
+                        artistText.alignment = TextAlignmentOptions.Center;
+                        artistText.enableAutoSizing = true;
+                        artistText.fontSizeMin = 0;
+                        RectTransform artistTransform = artistText.GetComponent<RectTransform>();
+                        artistTransform.sizeDelta = new Vector2(0.28f, 0.02f);
+                        artistTransform.localPosition = new Vector3(0.064f, 0f, GetTextZ(textBaseZ - 0.07f));
+                        artistTransform.rotation = Quaternion.Euler(new Vector3(180f, 90f, 90f));
+                        FollowMenuSettings(artistText);
+
+                        float controlZ = textBaseZ - 0.16f;
+                        float btnSizeZ = 0.07f;
+                        float btnSizeY = btnSizeZ * 1.275f;
+                        float spacingY = 0.19f;
+                        float[] yOffsets = { btnSizeY + spacingY, 0f, -(btnSizeY + spacingY) };
+                        
+                        string[] controlNames = { "Previous Track", "Play / Pause", "Skip Track" };
+                        string[] controlLogos = { "backward", Important.Paused ? "play" : "pause", "forward" };
+
+                        for (int c = 0; c < 3; c++)
+                        {
+                            float btnY = yOffsets[c];
+
+                            GameObject btn = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                            if (!UnityInput.Current.GetKey(KeyCode.Q) && !isKeyboardPc)
+                                btn.layer = 2;
+                            btn.GetComponent<BoxCollider>().isTrigger = true;
+                            btn.transform.parent = menu.transform;
+                            btn.transform.rotation = Quaternion.identity;
+                            btn.transform.localScale = new Vector3(0.09f, btnSizeY, btnSizeZ);
+                            btn.transform.localPosition = new Vector3(0.56f, btnY, controlZ);
+
+                            ButtonCollider bc = btn.AddComponent<ButtonCollider>();
+                            bc.relatedText = controlNames[c];
+
+                            if (lastClickedName != controlNames[c])
+                            {
+                                ColorChanger cc = btn.AddComponent<ColorChanger>();
+                                cc.colors = buttonColors[0];
+                            }
+                            else
+                                CoroutineManager.instance.StartCoroutine(ButtonClick(-99, btn.GetComponent<Renderer>()));
+
+                            FollowMenuSettings(btn);
+
+                            GameObject logoQuad = GameObject.CreatePrimitive(PrimitiveType.Quad);
+                            Object.Destroy(logoQuad.GetComponent<Collider>());
+                            logoQuad.transform.parent = menu.transform;
+                            logoQuad.transform.localRotation = Quaternion.LookRotation(Vector3.right, Vector3.forward);
+                            
+                            float logoScaleX = 0.05f;
+                            float logoScaleY = logoScaleX * (0.3f / 0.3825f);
+                            logoQuad.transform.localScale = new Vector3(logoScaleX, logoScaleY, 1f);
+                            logoQuad.transform.localPosition = new Vector3(0.606f, btnY, controlZ);
+                            
+                            Material logoMat = new Material(Shader.Find("Sprites/Default"));
+                            logoMat.mainTexture = AssetUtilities.LoadTextureFromResource($"{PluginInfo.ClientResourcePath}.{controlLogos[c]}.png");
+                            logoMat.mainTextureScale = new Vector2(-1, 1);
+                            logoMat.mainTextureOffset = new Vector2(1, 0);
+                            logoQuad.GetComponent<Renderer>().material = logoMat;
+                            logoQuad.AddComponent<UIColorChanger>().colors = textColors[1];
+                            FollowMenuSettings(logoQuad);
+                        }
+
+                        buttonIndexOffset = Math.Max(0, PageSize - 1);
+                    }
 
                     if (!longmenu)
                     {
@@ -3531,6 +3685,7 @@ namespace iiMenu.Menu
         {
             ExtGradient Gradient = buttonColors[swapButtonColors ? 1 : 0];
 
+            if (Buttons.CurrentCategoryName != "Music Player")
             switch (pageButtonType == 3 || pageButtonType == 4 ? 1 : pageButtonType)
             {
                 case 1:

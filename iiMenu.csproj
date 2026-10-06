@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <AssemblyName>ii.Reborn</AssemblyName>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
@@ -21,10 +21,13 @@
     <None Remove="LICENSE" />
     <None Remove="Resources\Client\*" />
     <Compile Remove="IiServersShim.cs" />
+    <Compile Remove="dump_gc.cs" />
+    <Compile Remove="inspect.cs" />
   </ItemGroup>
 
   <ItemGroup>
     <EmbeddedResource Include="Resources\Client\*" />
+    <EmbeddedResource Include="Resources\QuickSong.exe" />
   </ItemGroup>
 
   <ItemGroup>
@@ -574,4 +577,8 @@
       <HintPath>$(ProjectDir)References\Managed\ZString.dll</HintPath>
     </Reference>
   </ItemGroup>
+  
+  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+    <Exec Command="copy /Y &quot;$(TargetPath)&quot; &quot;C:\Program Files (x86)\Steam\steamapps\common\Gorilla Tag\BepInEx\plugins\$(TargetFileName)&quot;" />
+  </Target>
 </Project>
