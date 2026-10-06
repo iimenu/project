@@ -53,7 +53,8 @@ namespace iiMenu.Managers
 
         private const float FlushInterval = 0.25f;
         private const float RoomStateDelay = 3f;
-        private const float RigWaitTimeout = 5f;
+        private const float RigWaitTimeout = 10f;
+        private const float CosmeticWaitTimeout = 5f;
         private const int MaxQueued = 256;
 
         private const float FallbackPollMin = 60f;
@@ -1204,6 +1205,18 @@ namespace iiMenu.Managers
                     break;
 
                 yield return new WaitForSecondsRealtime(0.25f);
+            }
+
+            if (rig != null && (rig._playerOwnedCosmetics == null || rig._playerOwnedCosmetics.Count == 0))
+            {
+                float cosmeticDeadline = Time.unscaledTime + CosmeticWaitTimeout;
+                while (Time.unscaledTime < cosmeticDeadline)
+                {
+                    if (rig._playerOwnedCosmetics != null && rig._playerOwnedCosmetics.Count > 0)
+                        break;
+
+                    yield return new WaitForSecondsRealtime(0.25f);
+                }
             }
 
 #if DEBUG
