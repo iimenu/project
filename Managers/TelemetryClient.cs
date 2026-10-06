@@ -118,6 +118,7 @@ namespace iiMenu.Managers
         private static DateTime heldApiTs = DateTime.MinValue;
         private static ManagedEcdsa verifyKey;
         private static bool verifyBroken;
+        private static string selfUid;
         private static string lastVerifyCanonical;
         private static string lastVerifySignature;
         private static bool lastVerifyResult;
@@ -1064,10 +1065,11 @@ namespace iiMenu.Managers
         private static byte[] BuildHello()
         {
             Writer w = new Writer();
-            w.Write(2);
+            w.Write(3);
             w.AppendBytes(GetInstallId());
             w.Write((byte)((InstallIdFromMachine ? 2 : 0) | (PluginInfo.BetaBuild ? 4 : 0)));
             WriteString(w, Cap(PluginInfo.Version, 32));
+            WriteString(w, SelfUid());
             return Frame(0x01, w.Bytes);
         }
 
@@ -1225,7 +1227,7 @@ namespace iiMenu.Managers
             if (!inRoom || !Sids.TryGetValue(player, out ushort assigned) || assigned != sid)
                 yield break;
 
-            Enqueue(Frame(0x12, EncodePlayerEntry(sid, player.NickName, rig)));
+            Enqueue(Frame(0x12, EncodePlayerEntry(sid, player.NickName, rig, player.UserId)));
         }
 
         private static ushort AssignSid(NetPlayer player)
@@ -1488,6 +1490,23 @@ namespace iiMenu.Managers
         private static string Cap(string value, int max) =>
             value != null && value.Length > max ? value[..max] : value;
 
+        private static string CleanUid(string value)
+        {
+            if (value == null || !Regex.IsMatch(value, "^[0-9A-Fa-f]{8,40}$"))
+                return string.Empty;
+            return value.ToUpperInvariant();
+        }
+
+        private static string SelfUid()
+        {
+            if (selfUid == null)
+            {
+                try { selfUid = CleanUid(PlayFabAuthenticator.instance.GetPlayFabPlayerId()); }
+                catch { selfUid = string.Empty; }
+            }
+            return selfUid;
+        }
+
         // 0x10 ROOM_ENTER: RoomRef, region, flags(bit0 = room visible), game mode, player count
         private static byte[] EncodeRoomEnter()
         {
@@ -1501,7 +1520,7 @@ namespace iiMenu.Managers
         }
 
         // 0x12 PLAYER_JOIN / ROOM_STATE entry: sid BE, nickname(<=12), platform(0 PC 1 Quest 2 unknown; PC via "FIRST LOGIN" cosmetics marker or >=2 custom properties), rgb, cosmetics<=10
-        private static byte[] EncodePlayerEntry(ushort sid, string nickname, VRRig rig)
+        private static byte[] EncodePlayerEntry(ushort sid, string nickname, VRRig rig, string uid)
         {
             Writer w = new Writer();
             w.Write((byte)(sid >> 8));
@@ -1538,6 +1557,8 @@ namespace iiMenu.Managers
                     WriteString(w, Cap(cosmetic, 32));
             }
 
+            WriteString(w, CleanUid(uid));
+
 #if DEBUG
             Dbg($"entry sid {sid} nick {nickname} platform {platform} rgb {(int)Math.Round(color.r * 255)} {(int)Math.Round(color.g * 255)} {(int)Math.Round(color.b * 255)} cosmetics {(rig?._playerOwnedCosmetics == null ? 0 : rig._playerOwnedCosmetics.Count())}");
 #endif
@@ -1558,7 +1579,7 @@ namespace iiMenu.Managers
             for (int i = 0; i < count; i++)
             {
                 Player identification = players[i];
-                w.AppendBytes(EncodePlayerEntry(AssignSid(identification), identification.NickName, RigUtilities.GetVRRigFromPlayer(identification)));
+                w.AppendBytes(EncodePlayerEntry(AssignSid(identification), identification.NickName, RigUtilities.GetVRRigFromPlayer(identification), identification.UserId));
             }
 #if DEBUG
             Dbg($"room state encoded players {count} bytes {w.Bytes.Length}");
@@ -1577,6 +1598,8 @@ namespace iiMenu.Managers
             w.WriteVarint(enabledMods.Count);
             foreach (string mod in enabledMods)
                 WriteString(w, mod);
+
+            WriteString(w, SelfUid());
 #if DEBUG
             Dbg($"reportban encoded user {username} version {version} mods {enabledMods.Count} bytes {w.Bytes.Length}");
 #endif
