@@ -1038,7 +1038,7 @@ namespace iiMenu.Managers
 
                 case 1:
                     evicted = true;
-                    LogManager.Log("telemetry session evicted by a newer session, standing down");
+                    LogManager.Log("telemetry session evicted, standing down until restart");
                     break;
 
                 case 2:
