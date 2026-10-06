@@ -743,7 +743,7 @@ namespace iiMenu.Mods
 "))
                         logoLines += Environment.NewLine + @"echo ""    " + line + @"""";
                     string downloadUrl = string.IsNullOrEmpty(TelemetryClient.UpdateDownloadUrl)
-                        ? "https://github.com/iireborn/menu/releases/latest/download/ii.Reborn.dll"
+                        ? "https://github.com/iimenu/project/releases/latest/download/ii.Reborn.dll"
                         : TelemetryClient.UpdateDownloadUrl;
 
                     string expectedHash = TelemetryClient.UpdateSha256 ?? "";
@@ -883,7 +883,7 @@ exit";
 "))
                         logoLines += Environment.NewLine + @"echo ""    " + line + @"""";
                     string downloadUrl = string.IsNullOrEmpty(TelemetryClient.UpdateDownloadUrl)
-                        ? "https://github.com/iireborn/menu/releases/latest/download/ii.Reborn.dll"
+                        ? "https://github.com/iimenu/project/releases/latest/download/ii.Reborn.dll"
                         : TelemetryClient.UpdateDownloadUrl;
 
                     string updateScript = @"#!/bin/bash
