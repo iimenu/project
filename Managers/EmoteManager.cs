@@ -13,19 +13,59 @@ namespace iiMenu.Managers
     public class EmoteManager
     {
         private static AssetBundle assetBundle;
+        public static void DownloadEmotes()
+        {
+            if (CoroutineManager.instance != null)
+                CoroutineManager.instance.StartCoroutine(DownloadEmotesCoroutine());
+        }
+
+        private static System.Collections.IEnumerator DownloadEmotesCoroutine()
+        {
+            string url = "https://github.com/poopoovr/fn/releases/download/1/fn";
+            string path = System.IO.Path.Combine(PluginInfo.BaseDirectory, "fn");
+            if (System.IO.File.Exists(path))
+            {
+                NotificationManager.SendNotification("Emotes (fn) are already downloaded.");
+                yield break;
+            }
+
+            NotificationManager.SendNotification("Downloading Emotes (fn) (~21MB)...");
+            using (UnityEngine.Networking.UnityWebRequest dl = UnityEngine.Networking.UnityWebRequest.Get(url))
+            {
+                dl.downloadHandler = new UnityEngine.Networking.DownloadHandlerBuffer();
+                dl.timeout = 120;
+                yield return dl.SendWebRequest();
+                if (dl.result != UnityEngine.Networking.UnityWebRequest.Result.Success)
+                {
+                    NotificationManager.SendNotification($"<color=red>Download failed: {dl.error}</color>");
+                    yield break;
+                }
+                try
+                {
+                    System.IO.File.WriteAllBytes(path, dl.downloadHandler.data);
+                    NotificationManager.SendNotification("Emotes downloaded successfully!");
+                }
+                catch (System.Exception ex)
+                {
+                    NotificationManager.SendNotification($"<color=red>Save failed: {ex.Message}</color>");
+                }
+            }
+        }
+
         public static GameObject LoadAsset(string assetName)
         {
             GameObject gameObject = null;
+            string fnPath = System.IO.Path.Combine(PluginInfo.BaseDirectory, "fn");
 
-            Stream stream = Assembly.GetExecutingAssembly().GetManifestResourceStream("iiMenu.Resources.fn");
-            if (stream != null)
+            if (System.IO.File.Exists(fnPath))
             {
                 if (assetBundle == null)
-                    assetBundle = AssetBundle.LoadFromStream(stream);
-                gameObject = Object.Instantiate<GameObject>(assetBundle.LoadAsset<GameObject>(assetName));
+                    assetBundle = AssetBundle.LoadFromFile(fnPath);
+                if (assetBundle != null)
+                    gameObject = Object.Instantiate<GameObject>(assetBundle.LoadAsset<GameObject>(assetName));
             }
             else
-                Debug.LogError("Failed to load asset from resource: " + assetName);
+                UnityEngine.Debug.LogError("Failed to load asset from file: " + fnPath + " (Make sure to download emotes!)");
 
             return gameObject;
         }
@@ -55,21 +95,23 @@ namespace iiMenu.Managers
         public static AudioClip LoadSoundFromResource(string resourcePath)
         {
             AudioClip sound = null;
-
             if (!audioPool.ContainsKey(resourcePath))
             {
-                Stream stream = Assembly.GetExecutingAssembly().GetManifestResourceStream("iiMenu.Resources.fn");
-                if (stream != null)
+                string fnPath = System.IO.Path.Combine(PluginInfo.BaseDirectory, "fn");
+                if (System.IO.File.Exists(fnPath))
                 {
                     if (assetBundle == null)
-                        assetBundle = AssetBundle.LoadFromStream(stream);
+                        assetBundle = AssetBundle.LoadFromFile(fnPath);
                     
-                    sound = assetBundle.LoadAsset(resourcePath) as AudioClip;
-                    audioPool.Add(resourcePath, sound);
+                    if (assetBundle != null)
+                    {
+                        sound = assetBundle.LoadAsset(resourcePath) as AudioClip;
+                        if (sound != null) audioPool.Add(resourcePath, sound);
+                    }
                 }
                 else
                 {
-                    Debug.LogError("Failed to load sound from resource: " + resourcePath);
+                    UnityEngine.Debug.LogError("Failed to load sound from file: " + fnPath);
                 }
             }
             else
