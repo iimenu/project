@@ -44,6 +44,46 @@ namespace iiMenu.Mods
 {
     public class Visuals
     {
+        private static GameObject[] alienClutters;
+        private static readonly string[] alienPaths = new[]
+        {
+            "Environment Objects/LocalObjects_Prefab/Forest/2026_Halloween_Forest/",
+            "Environment Objects/LocalObjects_Prefab/Mountain/2026_Halloween_Mountain",
+            "City_Pretty/Event_Overview_AlienArrival/10_02_ArrivalExperience/Arrival_Scene/2WorldRelativeObjects/EventHierarchy/1Gameplay",
+            "Environment Objects/LocalObjects_Prefab/Canyon/2026_Halloween_Canyon",
+            "Environment Objects/LocalObjects_Prefab/Beach/2026_Halloween_Beach"
+        };
+
+        public static void DisableAlienClutter()
+        {
+            if (alienClutters == null)
+            {
+                alienClutters = new GameObject[alienPaths.Length];
+                for (int i = 0; i < alienPaths.Length; i++)
+                {
+                    alienClutters[i] = GameObject.Find(alienPaths[i]);
+                }
+            }
+
+            foreach (var clutter in alienClutters)
+            {
+                if (clutter != null)
+                    clutter.SetActive(false);
+            }
+        }
+
+        public static void EnableAlienClutter()
+        {
+            if (alienClutters != null)
+            {
+                foreach (var clutter in alienClutters)
+                {
+                    if (clutter != null)
+                        clutter.SetActive(true);
+                }
+            }
+        }
+
         private static Shader GetVisualShader()
         {
             return Shader.Find("GUI/Text Shader") ?? Shader.Find("Universal Render Pipeline/Unlit") ?? Shader.Find("Sprites/Default");
@@ -666,6 +706,78 @@ namespace iiMenu.Mods
             Renderer renderer = sky != null ? sky.GetComponent<Renderer>() : null;
             if (renderer != null && oldSkyMat != null)
                 renderer.material = oldSkyMat;
+        }
+
+        private static GameObject greenBox;
+        private static Vector3 preGreenScreenPos;
+        private static bool greenScreenActive;
+
+        public static void GreenScreen()
+        {
+            if (!greenScreenActive)
+            {
+                preGreenScreenPos = GorillaTagger.Instance.rigidbody.transform.position;
+                greenScreenActive = true;
+            }
+
+            Vector3 tpPos = new Vector3(0f, 200f, 0f);
+            TeleportPlayer(tpPos);
+            GorillaTagger.Instance.rigidbody.linearVelocity = Vector3.zero;
+
+            if (greenBox == null)
+            {
+                greenBox = new GameObject("GreenScreenBox");
+                greenBox.transform.position = tpPos;
+
+                Material greenMat = new Material(Shader.Find("GUI/Text Shader"));
+                greenMat.color = Color.green;
+
+                Vector3[] positions = {
+                    new Vector3(0, -5, 0),
+                    new Vector3(0, 5, 0),
+                    new Vector3(-5, 0, 0),
+                    new Vector3(5, 0, 0),
+                    new Vector3(0, 0, -5),
+                    new Vector3(0, 0, 5)
+                };
+
+                Vector3[] scales = {
+                    new Vector3(10, 1, 10),
+                    new Vector3(10, 1, 10),
+                    new Vector3(1, 10, 10),
+                    new Vector3(1, 10, 10),
+                    new Vector3(10, 10, 1),
+                    new Vector3(10, 10, 1)
+                };
+
+                for (int i = 0; i < 6; i++)
+                {
+                    GameObject wall = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                    wall.transform.SetParent(greenBox.transform);
+                    wall.transform.localPosition = positions[i];
+                    wall.transform.localScale = scales[i];
+                    wall.GetComponent<Renderer>().material = greenMat;
+                    
+                    if (i != 0) 
+                        Object.Destroy(wall.GetComponent<Collider>());
+                }
+            }
+        }
+
+        public static void FixGreenScreen()
+        {
+            if (greenScreenActive)
+            {
+                TeleportPlayer(preGreenScreenPos);
+                GorillaTagger.Instance.rigidbody.linearVelocity = Vector3.zero;
+                greenScreenActive = false;
+            }
+
+            if (greenBox != null)
+            {
+                Object.Destroy(greenBox);
+                greenBox = null;
+            }
         }
 
         public static TrailRenderer trailRenderer;
@@ -3365,46 +3477,53 @@ namespace iiMenu.Mods
             foreach (var vrrig in VRRigCache.ActiveRigs.Where(vrrig => vrrig.mainSkin.material.name.Contains("gorilla_body") && vrrig.mainSkin.material.shader == Shader.Find("GorillaTag/UberShader")))
                 vrrig.mainSkin.material.color = vrrig.playerColor;
         }
-
-        public static string _leavesName;
-        private const int LeavesIndex = 10;
-        public static string LeavesName
+        // Credits to me (poopoovr) for the NoLeaves fix :O
+        private static string FindLeavesName(GameObject parent)
         {
-            get 
+            if (parent == null) return "";
+            int max = Math.Min(29, parent.transform.childCount), count = 1;
+            string lastName = "";
+            for (int i = 15; i < max; i++)
             {
-                if (_leavesName == null)
-                {
-                    GameObject forest = GetObject("Environment Objects/LocalObjects_Prefab/Forest");
-                    Transform[] forestObjects = forest == null
-                        ? new Transform[0]
-                        : forest.GetComponentsInChildren<Transform>(true).Where(t => t.name.Contains("UnityTempFile")).ToArray();
-
-                    _leavesName = forestObjects.Length > LeavesIndex
-                        ? forestObjects[LeavesIndex].gameObject.name
-                        : forestObjects.GroupBy(t => t.name).FirstOrDefault(g => g.Count() == 3)?.Key;
-                }
-
-                return _leavesName;
-            } 
+                string n = parent.transform.GetChild(i).name;
+                count = n == lastName ? count + 1 : 1;
+                if (count >= 3) return n;
+                lastName = n;
+            }
+            return "";
         }
 
         public static readonly List<GameObject> leaves = new List<GameObject>();
+        public static string mainLeavesName = "";
+        public static string rankedLeavesName = "";
 
         private static IEnumerable<GameObject> LeavesObjects()
         {
-            string[] containers = { "Environment Objects/LocalObjects_Prefab/Forest", "RankedMain/Ranked_Layout/Ranked_Forest_prefab" };
-
-            foreach (string container in containers)
+            GameObject forest = GetObject("Environment Objects/LocalObjects_Prefab/Forest");
+            if (forest != null)
             {
-                GameObject forest = GetObject(container);
-                if (forest == null || string.IsNullOrEmpty(LeavesName))
-                    continue;
-
-                for (int i = 0; i < forest.transform.childCount; i++)
+                if (string.IsNullOrEmpty(mainLeavesName)) mainLeavesName = FindLeavesName(forest);
+                if (!string.IsNullOrEmpty(mainLeavesName))
                 {
-                    GameObject v = forest.transform.GetChild(i).gameObject;
-                    if (v.name.Contains(LeavesName))
-                        yield return v;
+                    for (int i = 0; i < forest.transform.childCount; i++)
+                    {
+                        GameObject v = forest.transform.GetChild(i).gameObject;
+                        if (v.name == mainLeavesName) yield return v;
+                    }
+                }
+            }
+
+            GameObject rankedForest = GetObject("RankedMain/Ranked_Layout/Ranked_Forest_prefab");
+            if (rankedForest != null)
+            {
+                if (string.IsNullOrEmpty(rankedLeavesName)) rankedLeavesName = FindLeavesName(rankedForest);
+                if (!string.IsNullOrEmpty(rankedLeavesName))
+                {
+                    for (int i = 0; i < rankedForest.transform.childCount; i++)
+                    {
+                        GameObject v = rankedForest.transform.GetChild(i).gameObject;
+                        if (v.name == rankedLeavesName) yield return v;
+                    }
                 }
             }
         }
@@ -3815,7 +3934,7 @@ namespace iiMenu.Mods
 
                         volIndicator.GetComponent<Renderer>().material.color = vrrig.GetColor();
                         volIndicator.transform.localScale = new Vector3(size, size, 0.01f) * vrrig.scaleFactor;
-                    volIndicator.transform.position = vrrig.headMesh.transform.position + vrrig.headMesh.transform.up * (GetIndicatorDistance(vrrig) * vrrig.scaleFactor);
+                        volIndicator.transform.position = vrrig.headMesh.transform.position + vrrig.headMesh.transform.up * (GetIndicatorDistance(vrrig) * vrrig.scaleFactor);
                         volIndicator.transform.LookAt(GorillaTagger.Instance.headCollider.transform.position);
                     } else
                     {
@@ -3868,7 +3987,7 @@ namespace iiMenu.Mods
 
                         volIndicator.GetComponent<Renderer>().material.color = vrrig.GetColor();
                         volIndicator.transform.localScale = new Vector3(size, size, 0.01f) * vrrig.scaleFactor;
-                    volIndicator.transform.position = vrrig.headMesh.transform.position + vrrig.headMesh.transform.up * (GetIndicatorDistance(vrrig) * vrrig.scaleFactor);
+                        volIndicator.transform.position = vrrig.headMesh.transform.position + vrrig.headMesh.transform.up * (GetIndicatorDistance(vrrig) * vrrig.scaleFactor);
                         volIndicator.transform.LookAt(GorillaTagger.Instance.headCollider.transform.position);
                     }
                     else
@@ -6426,6 +6545,47 @@ namespace iiMenu.Mods
             liner.SetPosition(1, vrrig.transform.position - new Vector3(0f, 9999f, 0f));
             liner.material.shader = Shader.Find("GUI/Text Shader");
             Object.Destroy(line, 3f);
+        }
+
+        public static void LucyTracers()
+        {
+            if (DoPerformanceCheck()) return;
+            HalloweenGhostChaser lucy = Overpowered.Lucy;
+            if (lucy == null) return;
+            bool followMenuTheme = Buttons.GetIndex("Follow Menu Theme").enabled;
+            bool transparentTheme = Buttons.GetIndex("Transparent Theme").enabled;
+            float lineWidth = (Buttons.GetIndex("Thin Tracers").enabled ? 0.0075f : 0.025f) * (scaleWithPlayer ? GTPlayer.Instance.scale : 1f);
+            Color lineColor = lucy.isSummoned ? Color.red : Color.cyan;
+            if (followMenuTheme) lineColor = backgroundColor.GetCurrentColor();
+            if (transparentTheme) lineColor.a = 0.5f;
+            LineRenderer line = GetLineRender();
+            line.startColor = lineColor;
+            line.endColor = lineColor;
+            line.startWidth = lineWidth;
+            line.endWidth = lineWidth;
+            line.SetPosition(0, GorillaTagger.Instance.rightHandTransform.position);
+            line.SetPosition(1, lucy.skullTransform != null ? lucy.skullTransform.position : lucy.transform.position);
+        }
+
+        public static void RainbowLucy()
+        {
+            HalloweenGhostChaser lucy = Overpowered.Lucy;
+            if (lucy != null && lucy.ghostBody != null)
+            {
+                Color rainbow = Color.HSVToRGB((Time.time * 0.5f) % 1f, 1f, 1f);
+                foreach (var renderer in lucy.ghostBody.GetComponentsInChildren<Renderer>())
+                {
+                    renderer.material.shader = Shader.Find("GUI/Text Shader");
+                    renderer.material.color = rainbow;
+                }
+            }
+        }
+
+        public static void LucyHeadSpin()
+        {
+            HalloweenGhostChaser lucy = Overpowered.Lucy;
+            if (lucy != null && lucy.skullTransform != null)
+                lucy.skullTransform.Rotate(Vector3.up * (Time.deltaTime * 720f));
         }
     }
 }

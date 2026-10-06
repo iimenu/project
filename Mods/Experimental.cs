@@ -29,6 +29,7 @@ using UnityEngine;
 using static iiMenu.Menu.Main;
 using static iiMenu.Utilities.RandomUtilities;
 using static iiMenu.Utilities.RigUtilities;
+
 using Object = UnityEngine.Object;
 using Random = UnityEngine.Random;
 

@@ -101,7 +101,7 @@ namespace iiMenu.Mods
                     i++;
                 }
             }
-            else NotificationManager.SendNotification("<color=grey>[</color><color=red>ERROR</color><color=grey>]</color> You are not master client.");
+            
         }
 
         public static void UnguardianSelf()
@@ -111,7 +111,7 @@ namespace iiMenu.Mods
                 foreach (var gorillaGuardianZoneManager in GorillaGuardianZoneManager.zoneManagers.Where(gorillaGuardianZoneManager => gorillaGuardianZoneManager.enabled && gorillaGuardianZoneManager.IsZoneValid()).Where(gorillaGuardianZoneManager => gorillaGuardianZoneManager.CurrentGuardian == NetworkSystem.Instance.LocalPlayer))
                     gorillaGuardianZoneManager.SetGuardian(null);
             }
-            else NotificationManager.SendNotification("<color=grey>[</color><color=red>ERROR</color><color=grey>]</color> You are not master client.");
+            
         }
 
         public static void UnguardianGun()
@@ -131,7 +131,7 @@ namespace iiMenu.Mods
                             foreach (var gorillaGuardianZoneManager in GorillaGuardianZoneManager.zoneManagers.Where(gorillaGuardianZoneManager => gorillaGuardianZoneManager.enabled && gorillaGuardianZoneManager.IsZoneValid()).Where(gorillaGuardianZoneManager => gorillaGuardianZoneManager.CurrentGuardian == GetPlayerFromVRRig(gunTarget)))
                                 gorillaGuardianZoneManager.SetGuardian(null);
                         }
-                        else NotificationManager.SendNotification("<color=grey>[</color><color=red>ERROR</color><color=grey>]</color> You are not master client.");
+                        
                         guardianDelay = Time.time + 0.1f;
                     }
                 }
@@ -145,7 +145,7 @@ namespace iiMenu.Mods
                 foreach (var gorillaGuardianZoneManager in GorillaGuardianZoneManager.zoneManagers.Where(gorillaGuardianZoneManager => gorillaGuardianZoneManager.enabled && gorillaGuardianZoneManager.IsZoneValid()))
                     gorillaGuardianZoneManager.SetGuardian(null);
             }
-            else NotificationManager.SendNotification("<color=grey>[</color><color=red>ERROR</color><color=grey>]</color> You are not master client.");
+            
         }
 
         public static void SetPlayerColors(Dictionary<int, int> colors) // ActorNumber : Team // 0 = Blue, 1 = Red, -1 = None
@@ -455,109 +455,15 @@ namespace iiMenu.Mods
         }
 
         private static float crashAllDelay;
-        public static void GuardianKickGun()
-        {
-            if (GetGunInput(false))
-            {
-                var GunData = RenderGun();
-                RaycastHit Ray = GunData.Ray;
+        public static void GuardianKickGun() { }
 
-                if (gunLocked && lockTarget != null)
-                {
-                    if (Time.time > crashAllDelay)
-                    {
-                        crashAllDelay = Time.time + 0.1f;
-                        BetaSetVelocityPlayer(GetPlayerFromVRRig(lockTarget), lockTarget.transform.position.z < -28.5f ? (new Vector3(-47.82025f, 6.460508f, -29.04836f) - lockTarget.transform.position).normalized * 50f : lockTarget.transform.position.z < -23f ? new Vector3(-50f, 0f, 50f) : Vector3.left * 50f);
-                        RPCProtection();
-                    }
-                }
-                if (GetGunInput(true))
-                {
-                    VRRig gunTarget = iiMenu.Utilities.RigUtilities.GetRigFromHit(Ray);
-                    if (gunTarget && !gunTarget.IsLocal())
-                    {
-                        gunLocked = true;
-                        lockTarget = gunTarget;
-                    }
-                }
-            }
-            else
-            {
-                if (gunLocked)
-                    gunLocked = false;
-            }
-        }
+        public static void GuardianKickAll() { }
 
-        public static void GuardianKickAll()
-        {
-            if (rightTrigger > 0.5f && Time.time > crashAllDelay)
-            {
-                crashAllDelay = Time.time + 0.1f;
-                foreach (var rig in VRRigCache.ActiveRigs.Where(rig => !rig.isLocal))
-                {
-                    BetaSetVelocityPlayer(GetPlayerFromVRRig(rig), rig.transform.position.z < -28.5f ? (new Vector3(-47.82025f, 6.460508f, -29.04836f) - rig.transform.position).normalized * 50f : rig.transform.position.z < -23f ? new Vector3(-50f, 0f, 50f) : Vector3.left * 50f);
-                    RPCProtection();
-                }
-            }
-        }
+        public static void CrashPlayer(NetPlayer target) { }
 
-        public static void CrashPlayer(NetPlayer target)
-        {
-            VRRig rig = GetVRRigFromPlayer(target);
-            if (Time.time > crashAllDelay && rig.transform.position.x < -5)
-            {
-                crashAllDelay = Time.time + 0.1f;
-                
-                BetaSetVelocityPlayer(target, (rig.transform.position.y > 55f ? Vector3.right : Vector3.up) * 50f);
-                RPCProtection();
-            }
-        }
+        public static void GuardianCrashGun() { }
 
-        public static void GuardianCrashGun()
-        {
-            if (GetGunInput(false))
-            {
-                var GunData = RenderGun();
-                RaycastHit Ray = GunData.Ray;
-
-                if (gunLocked && lockTarget != null)
-                {
-                    if (Time.time > crashAllDelay && lockTarget.transform.position.x < -5)
-                    {
-                        crashAllDelay = Time.time + 0.1f;
-                        BetaSetVelocityPlayer(GetPlayerFromVRRig(lockTarget), (lockTarget.transform.position.y > 55f ? Vector3.right : Vector3.up) * 50f);
-                        RPCProtection();
-                    }
-                }
-                if (GetGunInput(true))
-                {
-                    VRRig gunTarget = iiMenu.Utilities.RigUtilities.GetRigFromHit(Ray);
-                    if (gunTarget && !gunTarget.IsLocal())
-                    {
-                        gunLocked = true;
-                        lockTarget = gunTarget;
-                    }
-                }
-            }
-            else
-            {
-                if (gunLocked)
-                    gunLocked = false;
-            }
-        }
-
-        public static void GuardianCrashAll()
-        {
-            if (rightTrigger > 0.5f && Time.time > crashAllDelay)
-            {
-                crashAllDelay = Time.time + 0.1f;
-                foreach (var rig in VRRigCache.ActiveRigs.Where(rig => !rig.isLocal && rig.transform.position.x < -5))
-                {
-                    BetaSetVelocityPlayer(GetPlayerFromVRRig(rig), (rig.transform.position.y > 55f ? Vector3.right : Vector3.up) * 50f);
-                    RPCProtection();
-                }
-            }
-        }
+        public static void GuardianCrashAll() { }
 
         public static void DriverStatus(bool locked)
         {
@@ -663,134 +569,12 @@ namespace iiMenu.Mods
 
         private static long? id;
         private static float setMapDelay;
-        public static void VirtualStumpKickGun()
-        {
-            if (!PhotonNetwork.InRoom)
-            {
-                id = null;
-                return;
-            }
+        public static void VirtualStumpKickGun() { }
 
-            if (!PhotonNetwork.IsMasterClient)
-            {
-                NotificationManager.SendNotification("<color=grey>[</color><color=red>ERROR</color><color=grey>]</color> You are not master client.");
-                Toggle("Virtual Stump Kick All");
-                return;
-            }
-
-            if (id == null && Time.time > setMapDelay)
-            {
-                setMapDelay = Time.time + 1f;
-
-                if (CustomMapsTerminal.GetDriverID() != PhotonNetwork.LocalPlayer.ActorNumber)
-                {
-                    NotificationManager.SendNotification("<color=grey>[</color><color=purple>VSTUMP</color><color=grey>]</color> Gaining control of the terminal, please wait...");
-                    BecomeDriver();
-                    return;
-                }
-
-                if (CustomMapManager.IsRemotePlayerInVirtualStump(NetworkSystem.Instance.LocalPlayer.UserId))
-                {
-                    id = CustomMaps.Manager.currentMapId == 4977315 ? 5024157 : 4977315;
-
-                    CustomMapsTerminal.instance.mapTerminalNetworkObject.photonView.RPC("UpdateScreen_RPC", lockTarget.GetPhotonPlayer(), new object[]
-                    {
-                        6,
-                        id,
-                        CustomMapsTerminal.GetDriverID()
-                    });
-
-                    NotificationManager.SendNotification("<color=grey>[</color><color=green>SUCCESS</color><color=grey>]</color> Successfully assigned ID. You may now kick.");
-                }
-                else
-                    NotificationManager.SendNotification("<color=grey>[</color><color=red>ERROR</color><color=grey>]</color> Please temporarily enter the Virtual Stump.");
-            }
-
-            if (GetGunInput(false) && id != null)
-            {
-                var GunData = RenderGun();
-                RaycastHit Ray = GunData.Ray;
-
-                if (GetGunInput(true))
-                {
-                    VRRig gunTarget = iiMenu.Utilities.RigUtilities.GetRigFromHit(Ray);
-                    if (gunTarget && !gunTarget.IsLocal())
-                        CustomMapsTerminal.instance.mapTerminalNetworkObject.photonView.RPC("SetRoomMap_RPC", lockTarget.GetPhotonPlayer(), id.Value);
-                }
-            }
-        }
-
-        public static void VirtualStumpKickAll()
-        {
-            if (!PhotonNetwork.InRoom)
-            {
-                id = null;
-                return;
-            }
-
-            if (!PhotonNetwork.IsMasterClient)
-            {
-                NotificationManager.SendNotification("<color=grey>[</color><color=red>ERROR</color><color=grey>]</color> You are not master client.");
-                Toggle("Virtual Stump Kick All");
-                return;
-            }
-
-            if (id == null && Time.time > setMapDelay)
-            {
-                setMapDelay = Time.time + 1f;
-
-                if (CustomMapsTerminal.GetDriverID() != PhotonNetwork.LocalPlayer.ActorNumber)
-                {
-                    NotificationManager.SendNotification("<color=grey>[</color><color=purple>VSTUMP</color><color=grey>]</color> Gaining control of the terminal, please wait...");
-                    BecomeDriver();
-                    return;
-                }
-
-                if (CustomMapManager.IsRemotePlayerInVirtualStump(NetworkSystem.Instance.LocalPlayer.UserId))
-                {
-                    id = CustomMaps.Manager.currentMapId == 4977315 ? 5024157 : 4977315;
-
-                    CustomMapsTerminal.instance.mapTerminalNetworkObject.photonView.RPC("UpdateScreen_RPC", lockTarget.GetPhotonPlayer(), new object[]
-                    {
-                        6,
-                        id,
-                        CustomMapsTerminal.GetDriverID()
-                    });
-
-                    NotificationManager.SendNotification("<color=grey>[</color><color=green>SUCCESS</color><color=grey>]</color> Successfully assigned ID. You may now kick.");
-                }
-                else
-                    NotificationManager.SendNotification("<color=grey>[</color><color=red>ERROR</color><color=grey>]</color> Please temporarily enter the Virtual Stump.");
-            }
-
-            CustomMapsTerminal.instance.mapTerminalNetworkObject.photonView.RPC("SetRoomMap_RPC", RpcTarget.Others, id.Value);
-
-            NotificationManager.SendNotification("<color=grey>[</color><color=green>SUCCESS</color><color=grey>]</color> Successfully kicked others.");
-            Toggle("Virtual Stump Kick All");
-        }
+        public static void VirtualStumpKickAll() { }
 
         public const int ItemCrashCount = 500;
-        public static void GameEntityCrash(GameEntityManager manager, object target, Vector3? targetPosition = null)
-        {
-            if (manager == null)
-                return;
-
-            targetPosition ??= GorillaTagger.Instance.bodyCollider.transform.position;
-
-            int[] objectIds = manager.itemPrefabFactory.Keys.ToArray();
-            int[] ids = new int[ItemCrashCount];
-            Vector3[] positions = new Vector3[ItemCrashCount];
-            Quaternion[] rotations = new Quaternion[ItemCrashCount];
-
-            for (int i = 0; i < ItemCrashCount; i++)
-            {
-                ids[i] = objectIds[Random.Range(0, objectIds.Length)];
-                positions[i] = targetPosition.Value;
-                rotations[i] = Quaternion.identity;
-            }
-
-            CreateItems(target, ids, positions, rotations, manager: manager);
-        }
+        public static void GameEntityCrash(GameEntityManager manager, object target, Vector3? targetPosition = null) { }
 
         public static int masterVisualizationType;
         public static void MasterVisualizationType(bool positive = true)
@@ -848,95 +632,17 @@ namespace iiMenu.Mods
             }
         }
 
-        public static void VirtualStumpCrashGun()
-        {
-            if (GetGunInput(false))
-            {
-                var GunData = RenderGun();
-                RaycastHit Ray = GunData.Ray;
+        public static void VirtualStumpCrashGun() { }
 
-                if (gunLocked && lockTarget != null)
-                    GameEntityCrash(ManagerRegistry.CustomMaps.GameEntityManager, lockTarget.GetPhotonPlayer(), lockTarget.transform.position);
+        public static void VirtualStumpCrashAll() { }
 
-                if (GetGunInput(true))
-                {
-                    VRRig gunTarget = iiMenu.Utilities.RigUtilities.GetRigFromHit(Ray);
-                    if (gunTarget && !gunTarget.IsLocal())
-                    {
-                        gunLocked = true;
-                        lockTarget = gunTarget;
-                    }
-                }
-            }
-            else
-            {
-                if (gunLocked)
-                    gunLocked = false;
-            }
-        }
+        public static void GhostReactorCrashGun() { }
 
-        public static void VirtualStumpCrashAll() =>
-            GameEntityCrash(ManagerRegistry.CustomMaps.GameEntityManager, RpcTarget.Others);
+        public static void GhostReactorCrashAll() { }
 
-        public static void GhostReactorCrashGun()
-        {
-            if (GetGunInput(false))
-            {
-                var GunData = RenderGun();
-                RaycastHit Ray = GunData.Ray;
+        public static void SuperInfectionCrashGun() { }
 
-                if (gunLocked && lockTarget != null) 
-                    GameEntityCrash(ManagerRegistry.GhostReactor.GameEntityManager, lockTarget.GetPhotonPlayer(), lockTarget.transform.position);
-
-                if (GetGunInput(true))
-                {
-                    VRRig gunTarget = iiMenu.Utilities.RigUtilities.GetRigFromHit(Ray);
-                    if (gunTarget && !gunTarget.IsLocal())
-                    {
-                        gunLocked = true;
-                        lockTarget = gunTarget;
-                    }
-                }
-            }
-            else
-            {
-                if (gunLocked)
-                    gunLocked = false;
-            }
-        }
-
-        public static void GhostReactorCrashAll() =>
-            GameEntityCrash(ManagerRegistry.GhostReactor.GameEntityManager, RpcTarget.Others);
-
-        public static void SuperInfectionCrashGun()
-        {
-            if (GetGunInput(false))
-            {
-                var GunData = RenderGun();
-                RaycastHit Ray = GunData.Ray;
-
-                if (gunLocked && lockTarget != null)
-                    GameEntityCrash(ManagerRegistry.SuperInfection.GameEntityManager, lockTarget.GetPhotonPlayer(), lockTarget.transform.position);
-
-                if (GetGunInput(true))
-                {
-                    VRRig gunTarget = iiMenu.Utilities.RigUtilities.GetRigFromHit(Ray);
-                    if (gunTarget && !gunTarget.IsLocal())
-                    {
-                        gunLocked = true;
-                        lockTarget = gunTarget;
-                    }
-                }
-            }
-            else
-            {
-                if (gunLocked)
-                    gunLocked = false;
-            }
-        }
-
-        public static void SuperInfectionCrashAll() =>
-            GameEntityCrash(ManagerRegistry.SuperInfection.GameEntityManager, RpcTarget.Others);
+        public static void SuperInfectionCrashAll() { }
 
         public static void SuperInfectionBreakAudioGun()
         {
@@ -969,118 +675,9 @@ namespace iiMenu.Mods
             CreateItem(RpcTarget.Others, GadgetByName["WristJetGadgetPropellor"], GorillaTagger.Instance.bodyCollider.transform.position, RandomQuaternion(), Vector3.zero, Vector3.zero, 0L, ManagerRegistry.SuperInfection.GameEntityManager);
 
         private static float reportDelay;
-        public static void DelayBanGun()
-        {
-            if (GetGunInput(false))
-            {
-                var GunData = RenderGun();
-                RaycastHit Ray = GunData.Ray;
+        public static void DelayBanGun() { }
 
-                if (GetGunInput(true))
-                {
-                    VRRig gunTarget = iiMenu.Utilities.RigUtilities.GetRigFromHit(Ray);
-                    if (gunTarget && !gunTarget.IsLocal() && !gunLocked)
-                    {
-                        gunLocked = true;
-                        lockTarget = gunTarget;
-
-                        if (VRRig.LocalRig.IsTagged())
-                        {
-                            NotificationManager.SendNotification("<color=grey>[</color><color=red>ERROR</color><color=grey>]</color> You must not be tagged.");
-                            return;
-                        }
-
-                        if (!lockTarget.IsTagged())
-                        {
-                            NotificationManager.SendNotification("<color=grey>[</color><color=red>ERROR</color><color=grey>]</color> The target must be tagged.");
-                            return;
-                        }
-
-                        if (PhotonNetwork.IsMasterClient)
-                        {
-                            NotificationManager.SendNotification("<color=grey>[</color><color=red>ERROR</color><color=grey>]</color> You must not be master client.");
-                            return;
-                        }
-
-                        if (Time.time > reportDelay)
-                        {
-                            reportDelay = Time.time + 0.5f;
-                            GorillaPlayerScoreboardLine.ReportPlayer(GetPlayerFromVRRig(lockTarget).UserId, GorillaPlayerLineButton.ButtonType.Cheating, GetPlayerFromVRRig(lockTarget).NickName);
-                        }
-                        
-                        SerializePatch.OverrideSerialization = () =>
-                        {
-                            GetPlayerFromVRRig(lockTarget);
-                            MassSerialize(true, new[] { GorillaTagger.Instance.myVRRig.GetView });
-
-                            Vector3 positionArchive = VRRig.LocalRig.transform.position;
-                            SendSerialize(GorillaTagger.Instance.myVRRig.GetView, new RaiseEventOptions { TargetActors = PhotonNetwork.PlayerList.Where(plr => !(new[] { PhotonNetwork.MasterClient.ActorNumber, GetPlayerFromVRRig(lockTarget).ActorNumber }).Contains(plr.ActorNumber)).Select(plr => plr.ActorNumber).ToArray() });
-
-                            VRRig.LocalRig.transform.position = new Vector3(99999f, 99999f, 99999f);
-                            SendSerialize(GorillaTagger.Instance.myVRRig.GetView, new RaiseEventOptions { TargetActors = new[] { PhotonNetwork.MasterClient.ActorNumber } });
-
-                            VRRig.LocalRig.transform.position = lockTarget.rightHandTransform.position;
-                            SendSerialize(GorillaTagger.Instance.myVRRig.GetView, new RaiseEventOptions { TargetActors = new[] { GetPlayerFromVRRig(lockTarget).ActorNumber } });
-
-                            RPCProtection();
-                            VRRig.LocalRig.transform.position = positionArchive;
-
-                            return false;
-                        };
-                    }
-                }
-            }
-            else
-            {
-                if (gunLocked)
-                {
-                    gunLocked = false;
-                    SerializePatch.OverrideSerialization = null;
-                }
-            }
-        }
-
-        public static void DelayBanAll()
-        {
-            SerializePatch.OverrideSerialization = () =>
-            {
-                if (VRRig.LocalRig.IsTagged())
-                {
-                    NotificationManager.SendNotification("<color=grey>[</color><color=red>ERROR</color><color=grey>]</color> You must not be tagged.");
-                    return true;
-                }
-
-                if (PhotonNetwork.IsMasterClient)
-                {
-                    NotificationManager.SendNotification("<color=grey>[</color><color=red>ERROR</color><color=grey>]</color> You must not be master client.");
-                    return true;
-                }
-
-                GetPlayerFromVRRig(lockTarget);
-                MassSerialize(true, new[] { GorillaTagger.Instance.myVRRig.GetView });
-
-                Vector3 positionArchive = VRRig.LocalRig.transform.position;
-                SendSerialize(GorillaTagger.Instance.myVRRig.GetView, new RaiseEventOptions { TargetActors = PhotonNetwork.PlayerList.Where(player => !player.IsMasterClient && player.VRRig().IsTagged()).Select(player => player.ActorNumber).ToArray() });
-
-                VRRig.LocalRig.transform.position = new Vector3(99999f, 99999f, 99999f);
-                SendSerialize(GorillaTagger.Instance.myVRRig.GetView, new RaiseEventOptions { TargetActors = new[] { PhotonNetwork.MasterClient.ActorNumber } });
-
-                foreach (NetPlayer player in NetworkSystem.Instance.PlayerListOthers)
-                {
-                    VRRig rig = GetVRRigFromPlayer(player);
-                    if (!player.IsMasterClient && rig.IsTagged())
-                    {
-                        VRRig.LocalRig.transform.position = rig.rightHandTransform.position;
-                        SendSerialize(GorillaTagger.Instance.myVRRig.GetView, new RaiseEventOptions { TargetActors = new[] { player.ActorNumber } });
-                    }
-                }
-
-                RPCProtection();
-                VRRig.LocalRig.transform.position = positionArchive;
-
-                return false;
-            };
-        }
+        public static void DelayBanAll() { }
 
         public static void ObliteratePlayer(NetPlayer target)
         {
@@ -1137,47 +734,7 @@ namespace iiMenu.Mods
             }
         }
 
-        public static void ForceGrab()
-        {
-            VRRig.LocalRig.enabled = true;
-            foreach (VRRig rig in VRRigCache.ActiveRigs)
-            {
-                if (rig.IsLocal()) continue;
-                if ((rig.leftMiddle.calcT > 0.8f && rig.leftHandLink.grabbedPlayer == null) || (rig.rightMiddle.calcT > 0.8f && rig.rightHandLink.grabbedPlayer == null))
-                {
-                    bool isLeftHand = rig.leftMiddle.calcT > 0.8f;
-
-                    VRRig.LocalRig.enabled = false;
-                    VRRig.LocalRig.transform.position = rig.transform.position - Vector3.up * 0.5f;
-                    VRRig.LocalRig.transform.rotation = Quaternion.identity;
-
-                    VRMap targetHand = isLeftHand ? VRRig.LocalRig.leftHand : VRRig.LocalRig.rightHand;
-                    targetHand.rigTarget.transform.position = isLeftHand ? rig.leftHandTransform.position : rig.rightHandTransform.position;
-                    targetHand.rigTarget.transform.rotation = isLeftHand ? rig.leftHandTransform.rotation : rig.rightHandTransform.rotation;
-
-                    VRRig.LocalRig.leftIndex.calcT = 1f;
-                    VRRig.LocalRig.leftMiddle.calcT = 1f;
-                    VRRig.LocalRig.leftThumb.calcT = 1f;
-
-                    VRRig.LocalRig.leftIndex.LerpFinger(1f, false);
-                    VRRig.LocalRig.leftMiddle.LerpFinger(1f, false);
-                    VRRig.LocalRig.leftThumb.LerpFinger(1f, false);
-
-                    VRRig.LocalRig.rightIndex.calcT = 1f;
-                    VRRig.LocalRig.rightMiddle.calcT = 1f;
-                    VRRig.LocalRig.rightThumb.calcT = 1f;
-
-                    VRRig.LocalRig.rightIndex.LerpFinger(1f, false);
-                    VRRig.LocalRig.rightMiddle.LerpFinger(1f, false);
-                    VRRig.LocalRig.rightThumb.LerpFinger(1f, false);
-
-                    TakeMyHand_HandLink link = isLeftHand ? VRRig.LocalRig.leftHandLink : VRRig.LocalRig.rightHandLink;
-                    link.LocalCreateLink(isLeftHand ? rig.leftHandLink : rig.rightHandLink); // recheck kingofnetflix
-
-                    break;
-                }
-            }
-        }
+        public static void ForceGrab() { }
 
         public static void TowardsPositionOnGrab(Vector3 position)
         {
@@ -1216,40 +773,9 @@ namespace iiMenu.Mods
 
         private static float propHuntSpazDelay;
         private static bool propHuntSpazMode;
-        public static void SpazPropHuntObjects()
-        {
-            if (Time.time > propHuntSpazDelay)
-            {
-                propHuntSpazDelay = Time.time + 0.1f;
-                propHuntSpazMode = !propHuntSpazMode;
+        public static void SpazPropHuntObjects() { }
 
-                if (!NetworkSystem.Instance.IsMasterClient) { NotificationManager.SendNotification("<color=grey>[</color><color=red>ERROR</color><color=grey>]</color> You are not master client."); return; }
-
-                if (PhotonNetwork.InRoom && GorillaGameManager.instance.GameType() == GameModeType.PropHunt)
-                {
-                    GorillaPropHuntGameManager hauntManager = (GorillaPropHuntGameManager)GorillaGameManager.instance;
-                    hauntManager._ph_timeRoundStartedMillis = propHuntSpazMode ? 1 : 2;
-                    hauntManager._ph_randomSeed = Random.Range(1, int.MaxValue);
-                }
-            }
-        }
-
-        public static void SpazPropHunt()
-        {
-            if (Time.time > propHuntSpazDelay)
-            {
-                propHuntSpazDelay = Time.time + 0.1f;
-                propHuntSpazMode = !propHuntSpazMode;
-
-                if (!NetworkSystem.Instance.IsMasterClient) { NotificationManager.SendNotification("<color=grey>[</color><color=red>ERROR</color><color=grey>]</color> You are not master client."); return; }
-
-                if (PhotonNetwork.InRoom && GorillaGameManager.instance.GameType() == GameModeType.PropHunt)
-                {
-                    GorillaPropHuntGameManager hauntManager = (GorillaPropHuntGameManager)GorillaGameManager.instance;
-                    hauntManager._ph_timeRoundStartedMillis = propHuntSpazMode ? 0 : 1;
-                }
-            }
-        }
+        public static void SpazPropHunt() { }
 
         public static float ghostReactorDelay;
         public static float throwDelay;
@@ -2367,63 +1893,9 @@ namespace iiMenu.Mods
             }
         }
 
-        public static void BlasterKickGun()
-        {
-            if (GetGunInput(false))
-            {
-                var GunData = RenderGun();
-                RaycastHit Ray = GunData.Ray;
+        public static void BlasterKickGun() { }
 
-                if (gunLocked && lockTarget != null)
-                    BetaFireBlaster(lockTarget.transform.position, lockTarget.transform.position.z < -28.5f ? (new Vector3(-47.82025f, 6.460508f, -29.04836f) - lockTarget.transform.position).normalized : lockTarget.transform.position.z < -23f ? new Vector3(-50f, 0f, 50f) : Vector3.left);
-
-                if (GetGunInput(true))
-                {
-                    VRRig gunTarget = iiMenu.Utilities.RigUtilities.GetRigFromHit(Ray);
-                    if (gunTarget && !gunTarget.IsLocal())
-                    {
-                        gunLocked = true;
-                        lockTarget = gunTarget;
-                    }
-                }
-            }
-            else
-            {
-                if (gunLocked)
-                    gunLocked = false;
-            }
-        }
-
-        public static void BlasterKickAll()
-        {
-            if (GetBlaster() == null)
-                SerializePatch.OverrideSerialization = null;
-            else SerializePatch.OverrideSerialization ??= () => {
-                MassSerialize(true, new[] { GorillaTagger.Instance.myVRRig.GetView });
-
-                Vector3 archivePos = VRRig.LocalRig.transform.position;
-
-                foreach (NetPlayer Player in NetworkSystem.Instance.PlayerListOthers)
-                {
-                    VRRig targetRig = GetVRRigFromPlayer(Player);
-
-                    VRRig.LocalRig.transform.position = targetRig.transform.position - Vector3.up;
-                    SendSerialize(GorillaTagger.Instance.myVRRig.GetView, new RaiseEventOptions { TargetActors = new[] { Player.ActorNumber } });
-                }
-
-                RPCProtection();
-
-                VRRig.LocalRig.transform.position = archivePos;
-
-                return false;
-            };
-
-            foreach (NetPlayer Player in NetworkSystem.Instance.PlayerListOthers)
-            {
-                VRRig targetRig = GetVRRigFromPlayer(Player);
-                BetaFireBlaster(targetRig.transform.position, targetRig.transform.position.z < -28.5f ? (new Vector3(-47.82025f, 6.460508f, -29.04836f) - targetRig.transform.position).normalized : targetRig.transform.position.z < -23f ? new Vector3(-50f, 0f, 50f) : Vector3.left, Player, true);
-            }
-        }
+        public static void BlasterKickAll() { }
 
         public static void BlasterCrashGun()
         {
@@ -2623,67 +2095,315 @@ namespace iiMenu.Mods
             }
         }
 
-        public static HalloweenGhostChaser _lucy;
+
+        public static bool OwnsGhost(Photon.Pun.PhotonView view)
+        {
+            if (view == null) return false;
+            if (!view.IsMine)
+            {
+                view.RequestOwnership();
+                return false;
+            }
+            return true;
+        }
+
+        private static float lastLucyTime;
+        private static HalloweenGhostChaser _lucy;
         public static HalloweenGhostChaser Lucy
         {
             get 
             {
-                _lucy ??= GetObject("Environment Objects/05Maze_PersistentObjects/2025_Halloween1_PersistentObjects/Halloween Ghosts/Lucy/Halloween Ghost/FloatingChaseSkeleton").GetComponent<HalloweenGhostChaser>();
+                if (_lucy == null || UnityEngine.Time.time > lastLucyTime + 1f)
+                {
+                    lastLucyTime = UnityEngine.Time.time;
+                    HalloweenGhostChaser best = null;
+                    foreach (var lucy in UnityEngine.Resources.FindObjectsOfTypeAll<HalloweenGhostChaser>())
+                    {
+                        if (lucy.gameObject.scene.isLoaded)
+                        {
+                            best = lucy;
+                            if (lucy.gameObject.activeInHierarchy) break;
+                        }
+                    }
+                    _lucy = best;
+                }
                 return _lucy;
             }
-            set => _lucy = value;
         }
 
-        public static LurkerGhost _lurker;
+        private static float lastLurkerTime;
+        private static LurkerGhost _lurker;
         public static LurkerGhost Lurker
         {
             get
             {
-                _lurker ??= GetObject("Environment Objects/05Maze_PersistentObjects/2025_Halloween1_PersistentObjects/Halloween Ghosts/Lurker Ghost/GhostLurker_Prefab").GetComponent<LurkerGhost>();
+                if (_lurker == null || UnityEngine.Time.time > lastLurkerTime + 1f)
+                {
+                    lastLurkerTime = UnityEngine.Time.time;
+                    LurkerGhost best = null;
+                    foreach (var lurker in UnityEngine.Resources.FindObjectsOfTypeAll<LurkerGhost>())
+                    {
+                        if (lurker.gameObject.scene.isLoaded)
+                        {
+                            best = lurker;
+                            if (lurker.gameObject.activeInHierarchy) break;
+                        }
+                    }
+                    _lurker = best;
+                }
                 return _lurker;
             }
-            set => _lurker = value;
         }
 
-        public static void SpawnBlueLucy()
+        private static bool lucyEspApplied = false;
+
+        public static void LucyESP()
         {
-            HalloweenGhostChaser hgc = Lucy;
-            if (hgc.IsMine)
+            if (lucyEspApplied) return;
+            var lucy = Lucy;
+            if (lucy != null && lucy.ghostBody != null)
             {
-                hgc.timeGongStarted = Time.time;
-                hgc.currentState = HalloweenGhostChaser.ChaseState.Gong;
-                hgc.isSummoned = false;
+                foreach (var renderer in lucy.ghostBody.GetComponentsInChildren<Renderer>(true))
+                {
+                    renderer.material.shader = Shader.Find("GUI/Text Shader");
+                    renderer.material.color = Color.magenta;
+                }
+                lucyEspApplied = true;
             }
-            else NotificationManager.SendNotification("<color=grey>[</color><color=red>ERROR</color><color=grey>]</color> You are not master client.");
+        }
+
+        public static void SpawnLucy()
+        {
+            foreach (var lucy in UnityEngine.Resources.FindObjectsOfTypeAll<HalloweenGhostChaser>())
+            {
+                if (lucy.gameObject.scene.isLoaded && !lucy.gameObject.name.ToLower().Contains("bayou"))
+                {
+                    if (OwnsGhost(lucy.GetView))
+                    {
+                        lucy.currentState = HalloweenGhostChaser.ChaseState.Gong;
+                        lucy.isSummoned = true;
+                    }
+                    return;
+                }
+            }
         }
 
         public static void SpawnRedLucy()
         {
-            HalloweenGhostChaser hgc = Lucy;
-            if (hgc.IsMine)
+            foreach (var lucy in UnityEngine.Resources.FindObjectsOfTypeAll<HalloweenGhostChaser>())
             {
-                hgc.timeGongStarted = Time.time;
-                hgc.currentState = HalloweenGhostChaser.ChaseState.Gong;
-                hgc.isSummoned = true;
+                if (lucy.gameObject.scene.isLoaded && lucy.gameObject.name.ToLower().Contains("bayou"))
+                {
+                    if (OwnsGhost(lucy.GetView))
+                    {
+                        lucy.currentState = HalloweenGhostChaser.ChaseState.Gong;
+                        lucy.isSummoned = true;
+                    }
+                    return;
+                }
             }
-            else NotificationManager.SendNotification("<color=grey>[</color><color=red>ERROR</color><color=grey>]</color> You are not master client.");
         }
+
+        public static void DisableLucyESP()
+        {
+            var lucy = Lucy;
+            if (lucy != null && lucy.ghostBody != null && lucy.ghostMaterial != null)
+            {
+                foreach (var renderer in lucy.ghostBody.GetComponentsInChildren<Renderer>())
+                {
+                    renderer.material = lucy.ghostMaterial;
+                }
+            }
+            lucyEspApplied = false;
+        }
+
+        public static void AntiLucy()
+        {
+            var lucy = Lucy;
+            if (lucy != null)
+            {
+                if (Vector3.Distance(lucy.transform.position, GorillaTagger.Instance.headCollider.transform.position) < 5f)
+                {
+                    lucy.transform.position = GorillaTagger.Instance.headCollider.transform.position + (GorillaTagger.Instance.headCollider.transform.forward * 10f);
+                }
+            }
+        }
+
+        public static void FreezeLucy()
+        {
+            var lucy = Lucy;
+            if (lucy != null)
+            {
+                lucy.currentSpeed = 0f;
+            }
+        }
+
+        public static void UnfreezeLucy()
+        {
+            var lucy = Lucy;
+            if (lucy != null)
+            {
+                lucy.currentSpeed = 6f;
+            }
+        }
+
+        public static void BreakLucy()
+        {
+            SpazLucy();
+            lucyDelay = 0f;
+        }
+
+        public static float lucyOrbitAngle;
+        public static void LucyOrbit()
+        {
+            HalloweenGhostChaser hgc = Lucy;
+            if (hgc != null && OwnsGhost(hgc.GetView))
+            {
+                lucyOrbitAngle += Time.deltaTime * 180f;
+                Vector3 offset = Quaternion.Euler(0f, lucyOrbitAngle, 0f) * (Vector3.forward * 3f);
+                hgc.transform.position = GorillaTagger.Instance.headCollider.transform.position + offset + Vector3.up * 0.5f;
+                hgc.transform.LookAt(GorillaTagger.Instance.headCollider.transform.position);
+            }
+            
+        }
+
+        public static void LucyOrbitGun()
+        {
+            if (GetGunInput(false))
+            {
+                var GunData = RenderGun();
+                RaycastHit Ray = GunData.Ray;
+
+                if (gunLocked && lockTarget != null)
+                {
+                    HalloweenGhostChaser hgc = Lucy;
+                    if (hgc != null && OwnsGhost(hgc.GetView))
+                    {
+                        lucyOrbitAngle += Time.deltaTime * 180f;
+                        Vector3 offset = Quaternion.Euler(0f, lucyOrbitAngle, 0f) * (Vector3.forward * 3f);
+                        hgc.transform.position = lockTarget.headMesh.transform.position + offset + Vector3.up * 0.5f;
+                        hgc.transform.LookAt(lockTarget.headMesh.transform.position);
+                    }
+                    
+                }
+
+                if (GetGunInput(true))
+                {
+                    VRRig gunTarget = iiMenu.Utilities.RigUtilities.GetRigFromHit(Ray);
+                    if (gunTarget && !gunTarget.IsLocal())
+                    {
+                        gunLocked = true;
+                        lockTarget = gunTarget;
+                    }
+                }
+            }
+            else
+            {
+                if (gunLocked)
+                    gunLocked = false;
+            }
+        }
+
+        public static void LucyBodyguard()
+        {
+            HalloweenGhostChaser hgc = Lucy;
+            if (hgc != null && OwnsGhost(hgc.GetView))
+            {
+                VRRig closestThreat = null;
+                float closestDist = 5f;
+                foreach (VRRig rig in VRRigCache.ActiveRigs)
+                {
+                    if (rig != null && !rig.IsLocal())
+                    {
+                        float d = Vector3.Distance(GorillaTagger.Instance.headCollider.transform.position, rig.transform.position);
+                        if (d < closestDist)
+                        {
+                            closestDist = d;
+                            closestThreat = rig;
+                        }
+                    }
+                }
+
+                if (closestThreat != null)
+                    LucyAttack(closestThreat.GetPlayer());
+                else
+                {
+                    Vector3 guardPos = GorillaTagger.Instance.headCollider.transform.position + GorillaTagger.Instance.headCollider.transform.forward * 2f;
+                    hgc.transform.position = Vector3.MoveTowards(hgc.transform.position, guardPos, Time.deltaTime * 8f);
+                }
+            }
+            
+        }
+
+        public static void LucyFlingGun()
+        {
+            if (GetGunInput(false))
+            {
+                var GunData = RenderGun();
+                RaycastHit Ray = GunData.Ray;
+
+                if (gunLocked && lockTarget != null)
+                {
+                    HalloweenGhostChaser hgc = Lucy;
+                    if (hgc != null && OwnsGhost(hgc.GetView))
+                    {
+                        hgc.transform.position = lockTarget.transform.position - Vector3.up * 1.5f;
+                        hgc.currentState = HalloweenGhostChaser.ChaseState.Grabbing;
+                        hgc.grabTime = Time.time;
+                        hgc.targetPlayer = lockTarget.GetPlayer();
+                        hgc.currentSpeed = 50f;
+                    }
+                    
+                }
+
+                if (GetGunInput(true))
+                {
+                    VRRig gunTarget = iiMenu.Utilities.RigUtilities.GetRigFromHit(Ray);
+                    if (gunTarget && !gunTarget.IsLocal())
+                    {
+                        gunLocked = true;
+                        lockTarget = gunTarget;
+                    }
+                }
+            }
+            else
+            {
+                if (gunLocked)
+                    gunLocked = false;
+            }
+        }
+
+        public static void RideLucy()
+        {
+            HalloweenGhostChaser hgc = Lucy;
+            if (hgc != null)
+            {
+                GorillaTagger.Instance.rigidbody.linearVelocity = Vector3.zero;
+                GorillaTagger.Instance.transform.position = (hgc.skullTransform != null ? hgc.skullTransform.position : hgc.transform.position) + Vector3.up * 0.3f;
+            }
+        }
+
 
         public static void DespawnLucy()
         {
-            HalloweenGhostChaser hgc = Lucy;
-            if (hgc.IsMine)
+            foreach (var hgc in UnityEngine.Resources.FindObjectsOfTypeAll<HalloweenGhostChaser>())
             {
-                hgc.currentState = HalloweenGhostChaser.ChaseState.Dormant;
-                hgc.isSummoned = false;
+                if (hgc.gameObject.scene.isLoaded && OwnsGhost(hgc.GetView))
+                {
+                    hgc.currentState = HalloweenGhostChaser.ChaseState.Dormant;
+                    hgc.isSummoned = false;
+                }
             }
-            else NotificationManager.SendNotification("<color=grey>[</color><color=red>ERROR</color><color=grey>]</color> You are not master client.");
         }
+
+
+
+
 
         public static void LucyChase(NetPlayer player)
         {
             HalloweenGhostChaser hgc = Lucy;
-            if (hgc.IsMine)
+            if (hgc != null && OwnsGhost(hgc.GetView))
             {
                 hgc.currentState = HalloweenGhostChaser.ChaseState.Chasing;
                 hgc.targetPlayer = player;
@@ -2712,7 +2432,7 @@ namespace iiMenu.Mods
         public static void LucyAttack(NetPlayer player)
         {
             HalloweenGhostChaser hgc = Lucy;
-            if (hgc.IsMine)
+            if (hgc != null && OwnsGhost(hgc.GetView))
             {
                 if (Time.time > hgc.grabTime + hgc.grabDuration + 0.1f)
                 {
@@ -2767,7 +2487,7 @@ namespace iiMenu.Mods
                 if (gunLocked && lockTarget != null)
                 {
                     HalloweenGhostChaser hgc = Lucy;
-                    if (hgc.IsMine)
+            if (hgc != null && OwnsGhost(hgc.GetView))
                     {
                         if (Time.time > lucyDelay)
                         {
@@ -2811,7 +2531,7 @@ namespace iiMenu.Mods
                 };
             }
 
-            if (hgc.IsMine)
+            if (hgc != null && OwnsGhost(hgc.GetView))
             {
                 if (Time.time > hgc.grabTime + hgc.grabDuration + 0.1f)
                 {
@@ -2820,7 +2540,7 @@ namespace iiMenu.Mods
                         hgc.currentState = HalloweenGhostChaser.ChaseState.Grabbing;
                         hgc.grabTime = Time.time;
                         hgc.targetPlayer = player;
-                        SendSerialize(Lucy.GetView, new RaiseEventOptions { TargetActors = new[] { player.ActorNumber } });
+                        SendSerialize(hgc.GetView, new RaiseEventOptions { TargetActors = new[] { player.ActorNumber } });
                     }
                 }
             }
@@ -2832,7 +2552,7 @@ namespace iiMenu.Mods
         public static void SpazLucy()
         {
             HalloweenGhostChaser hgc = Lucy;
-            if (hgc.IsMine)
+            if (hgc != null && OwnsGhost(hgc.GetView))
             {
                 if (Time.time > lucyDelay)
                 {
@@ -2842,13 +2562,13 @@ namespace iiMenu.Mods
                     lucyDelay = Time.time + 0.1f;
                 }
             }
-            else NotificationManager.SendNotification("<color=grey>[</color><color=red>ERROR</color><color=grey>]</color> You are not master client.");
+            
         }
 
         public static void AnnoyingLucy()
         {
             HalloweenGhostChaser hgc = Lucy;
-            if (hgc.IsMine)
+            if (hgc != null && OwnsGhost(hgc.GetView))
             {
                 if (Time.time > lucyDelay)
                 {
@@ -2859,7 +2579,7 @@ namespace iiMenu.Mods
                     lucyDelay = Time.time + 0.1f;
                 }
             }
-            else NotificationManager.SendNotification("<color=grey>[</color><color=red>ERROR</color><color=grey>]</color> You are not master client.");
+            
         }
 
         public static void BecomeLucy()
@@ -2892,9 +2612,9 @@ namespace iiMenu.Mods
 
                 if (GetGunInput(true))
                 {
-                    if (Lucy.IsMine)
+                    if (Lucy != null && OwnsGhost(Lucy.GetView))
                         Lucy.transform.position = NewPointer.transform.position + Vector3.up;
-                    else NotificationManager.SendNotification("<color=grey>[</color><color=red>ERROR</color><color=grey>]</color> You are not master client.");
+                    
                 }
             }
         }
@@ -2902,24 +2622,24 @@ namespace iiMenu.Mods
         public static void FastLucy()
         {
             HalloweenGhostChaser hgc = Lucy;
-            if (hgc.IsMine)
+            if (hgc != null && OwnsGhost(hgc.GetView))
                 hgc.currentSpeed = 10f;
-            else NotificationManager.SendNotification("<color=grey>[</color><color=red>ERROR</color><color=grey>]</color> You are not master client.");
+            
         }
 
         public static void SlowLucy()
         {
             HalloweenGhostChaser hgc = Lucy;
-            if (hgc.IsMine)
+            if (hgc != null && OwnsGhost(hgc.GetView))
                 hgc.currentSpeed = 1f;
-            else NotificationManager.SendNotification("<color=grey>[</color><color=red>ERROR</color><color=grey>]</color> You are not master client.");
+            
         }
 
         public static void SpawnLurker()
         {
-            if (Lurker.IsMine)
+            if (Lurker != null && OwnsGhost(Lurker.GetView))
                 Lurker.currentState = LurkerGhost.ghostState.patrol;
-            else NotificationManager.SendNotification("<color=grey>[</color><color=red>ERROR</color><color=grey>]</color> You are not master client.");
+            
         }
 
         public static void MoveLurkerGun()
@@ -2931,25 +2651,25 @@ namespace iiMenu.Mods
 
                 if (GetGunInput(true))
                 {
-                    if (Lurker.IsMine)
+                    if (Lurker != null && OwnsGhost(Lurker.GetView))
                         Lurker.transform.position = NewPointer.transform.position + Vector3.up;
-                    else NotificationManager.SendNotification("<color=grey>[</color><color=red>ERROR</color><color=grey>]</color> You are not master client.");
+                    
                 }
             }
         }
 
         public static void DespawnLurker()
         {
-            if (Lurker.IsMine)
+            if (Lurker != null && OwnsGhost(Lurker.GetView))
             {
                 Lurker.currentState = LurkerGhost.ghostState.patrol;
             }
-            else NotificationManager.SendNotification("<color=grey>[</color><color=red>ERROR</color><color=grey>]</color> You are not master client.");
+            
         }
 
         public static void LurkerAttack(NetPlayer player)
         {
-            if (Lurker.IsMine)
+            if (Lurker != null && OwnsGhost(Lurker.GetView))
             {
                 if (Lurker.targetPlayer != player)
                 {
@@ -2960,7 +2680,7 @@ namespace iiMenu.Mods
                 Lurker.currentState = LurkerGhost.ghostState.possess;
                 Lurker.targetPlayer = player;
             }
-            else NotificationManager.SendNotification("<color=grey>[</color><color=red>ERROR</color><color=grey>]</color> You are not master client.");
+            
         }
 
         public static void LurkerAttackGun()
@@ -3000,7 +2720,7 @@ namespace iiMenu.Mods
                 };
             }
 
-            if (Lurker.IsMine)
+            if (Lurker != null && OwnsGhost(Lurker.GetView))
             {
                 if (Lurker.currentState != LurkerGhost.ghostState.possess)
                 {
@@ -3008,7 +2728,7 @@ namespace iiMenu.Mods
                     {
                         Lurker.currentState = LurkerGhost.ghostState.possess;
                         Lurker.targetPlayer = player;
-                        SendSerialize(Lucy.GetView, new RaiseEventOptions { TargetActors = new[] { player.ActorNumber } });
+                        SendSerialize(Lurker.GetView, new RaiseEventOptions { TargetActors = new[] { player.ActorNumber } });
                     }
                 }
             }
@@ -3019,7 +2739,7 @@ namespace iiMenu.Mods
         public static float lurkerDelay;
         public static void SpazLurker()
         {
-            if (Lurker.IsMine)
+            if (Lurker != null && OwnsGhost(Lurker.GetView))
             {
                 if (Time.time > lurkerDelay)
                 {
@@ -3028,24 +2748,24 @@ namespace iiMenu.Mods
                     lurkerDelay = Time.time + 0.1f;
                 }
             }
-            else NotificationManager.SendNotification("<color=grey>[</color><color=red>ERROR</color><color=grey>]</color> You are not master client.");
+            
         }
 
         public static void BreakLurker()
         {
-            if (Lurker.IsMine)
+            if (Lurker != null && OwnsGhost(Lurker.GetView))
             {
                 Lurker.currentState = Lurker.currentState == LurkerGhost.ghostState.charge ? LurkerGhost.ghostState.possess : LurkerGhost.ghostState.charge;
                 Lurker.targetPlayer = GetRandomPlayer(true);
 
                 SendSerialize(Lurker.GetView);
             }
-            else NotificationManager.SendNotification("<color=grey>[</color><color=red>ERROR</color><color=grey>]</color> You are not master client.");
+            
         }
 
         public static void AnnoyingLurker()
         {
-            if (Lurker.IsMine)
+            if (Lurker != null && OwnsGhost(Lurker.GetView))
             {
                 if (Time.time > lurkerDelay)
                 {
@@ -3054,7 +2774,7 @@ namespace iiMenu.Mods
                     lurkerDelay = Time.time + 0.1f;
                 }
             }
-            else NotificationManager.SendNotification("<color=grey>[</color><color=red>ERROR</color><color=grey>]</color> You are not master client.");
+            
         }
 
         public static void BecomeLurker()
@@ -3314,43 +3034,9 @@ namespace iiMenu.Mods
             }
         }
 
-        public static void BlockCrashGun()
-        {
-            if (GetGunInput(false))
-            {
-                var GunData = RenderGun();
-                RaycastHit Ray = GunData.Ray;
+        public static void BlockCrashGun() { }
 
-                if (gunLocked && lockTarget != null)
-                {
-                    if (!NetworkSystem.Instance.IsMasterClient) { NotificationManager.SendNotification("<color=grey>[</color><color=red>ERROR</color><color=grey>]</color> You are not master client."); return; }
-                    Fun.RequestCreatePiece(1934114066, new Vector3(-127.6248f, 16.99441f, -217.2094f), Quaternion.identity, 0, NetPlayerToPlayer(GetPlayerFromVRRig(lockTarget)), false, true);
-                }
-                if (GetGunInput(true))
-                {
-                    VRRig gunTarget = iiMenu.Utilities.RigUtilities.GetRigFromHit(Ray);
-                    if (gunTarget && !gunTarget.IsLocal())
-                    {
-                        gunLocked = true;
-                        lockTarget = gunTarget;
-                    }
-                }
-            }
-            else
-            {
-                if (gunLocked)
-                    gunLocked = false;
-            }
-        }
-
-        public static void BlockCrashAll()
-        {
-            if (rightTrigger > 0.5f)
-            {
-                if (!NetworkSystem.Instance.IsMasterClient) { NotificationManager.SendNotification("<color=grey>[</color><color=red>ERROR</color><color=grey>]</color> You are not master client."); return; }
-                Fun.RequestCreatePiece(1934114066, new Vector3(-127.6248f, 16.99441f, -217.2094f), Quaternion.identity, 0, RpcTarget.Others, false, true);
-            }
-        }
+        public static void BlockCrashAll() { }
 
         private static int archiveIncrement;
         public static int GetProjectileIncrement(Vector3 Position, Vector3 Velocity, float Scale)
@@ -5145,24 +4831,7 @@ namespace iiMenu.Mods
             }
         }
 
-        public static void AntiStump()
-        {
-            if (Time.time > flingDelay)
-            {
-                foreach (VRRig rig in VRRigCache.ActiveRigs)
-                {
-                    if (!rig.isLocal)
-                    {
-                        Vector3 stump = new Vector3(-66f, 12f, -79f);
-                        if (Vector3.Distance(stump, rig.transform.position) < 3f)
-                        {
-                            BetaSetVelocityPlayer(GetPlayerFromVRRig(rig), (rig.transform.position - stump).normalized * 20f);
-                            flingDelay = Time.time + 0.2f;
-                        }
-                    }
-                }
-            }
-        }
+        public static void AntiStump() { }
         
         private static float slamDel;
         private static bool flip;
@@ -5982,53 +5651,9 @@ namespace iiMenu.Mods
             }
         }
 
-        public static void CityKickGun()
-        {
-            if (GetGunInput(false))
-            {
-                var GunData = RenderGun();
-                RaycastHit Ray = GunData.Ray;
+        public static void CityKickGun() { }
 
-                if (gunLocked && lockTarget != null)
-                    SendBarrelProjectile(lockTarget.transform.position + (lockTarget.transform.position - new Vector3(-71.14215f, 13.73829f, -95.17883f)).normalized * 0.1f, (new Vector3(-71.14215f, 13.73829f, -95.17883f) - lockTarget.transform.position).normalized * 5000f, Quaternion.identity, new RaiseEventOptions { TargetActors = new[] { NetPlayerToPlayer(GetPlayerFromVRRig(lockTarget)).ActorNumber } });
-
-                if (GetGunInput(true))
-                {
-                    VRRig gunTarget = iiMenu.Utilities.RigUtilities.GetRigFromHit(Ray);
-                    if (gunTarget && !gunTarget.IsLocal())
-                    {
-                        gunLocked = true;
-                        lockTarget = gunTarget;
-                    }
-                }
-            }
-            else
-            {
-                if (gunLocked)
-                {
-                    gunLocked = false;
-                    VRRig.LocalRig.enabled = true;
-                }
-            }
-        }
-
-        public static void CityKickAll()
-        {
-            SerializePatch.OverrideSerialization = () => false;
-
-            foreach (VRRig TargetRig in VRRigCache.ActiveRigs)
-            {
-                if (TargetRig.IsTagged()) continue;
-
-                SendBarrelProjectile(TargetRig.transform.position + (TargetRig.transform.position - new Vector3(-71.14215f, 13.73829f, -95.17883f)).normalized * 0.1f, (new Vector3(-71.14215f, 13.73829f, -95.17883f) - TargetRig.transform.position).normalized * 5000f, Quaternion.identity, new RaiseEventOptions { TargetActors = new[] { GetPlayerFromVRRig(TargetRig).ActorNumber } });
-
-                if (Time.time > barrelAllDelay)
-                    throwableProjectileTimeout = 0f;
-            }
-
-            if (Time.time > barrelAllDelay)
-                barrelAllDelay = Time.time + 0.3f;
-        }
+        public static void CityKickAll() { }
 
         private static float notifyTime;
         public static bool IsModded(bool notify)
@@ -6302,146 +5927,9 @@ namespace iiMenu.Mods
         }
 
         public static Coroutine kickCoroutine;
-        public static IEnumerator KickMasterClient()
-        {
-            ButtonInfo button = Buttons.GetIndex("Kick Master Client");
-            if (!NetworkSystem.Instance.InRoom)
-            {
-                NotificationManager.SendNotification("<color=grey>[</color><color=red>ERROR</color><color=grey>]</color> You are not in a room.");
-                kickCoroutine = null;
-                yield break;
-            }
+        public static IEnumerator KickMasterClient() { yield break; }
 
-            if (NetworkSystem.Instance.IsMasterClient)
-            {
-				NotificationManager.SendNotification("<color=grey>[</color><color=red>ERROR</color><color=grey>]</color> You are master client! You have no one to kick.");
-				kickCoroutine = null;
-                yield break;
-            }
-
-            SerializePatch.OverrideSerialization = () => false;
-
-            Player player = PhotonNetwork.MasterClient;
-            VRRig rig = GetVRRigFromPlayer(PhotonNetwork.MasterClient);
-            string name = $"<color=#{(rig != null ? ColorUtility.ToHtmlStringRGBA(rig.GetColor()) : "white")}>{player.NickName}</color>";
-            NotificationManager.SendNotification($"<color=grey>[</color><color=purple>KICK</color><color=grey>]</color> Kicking {name}.");
-            float time;
-            RPCProtection();
-            kick:
-            {
-                time = Time.time + 10f;
-                int view = PhotonNetwork.AllocateViewID(0);
-                for (int i = 0; i < 3965; i++)
-                {
-                    PhotonNetwork.NetworkingClient.OpRaiseEvent(202, new Hashtable
-                    {
-                        { 0, "GameMode" },
-                        { 6, PhotonNetwork.ServerTimestamp },
-                        { 7, view }
-                    }, new RaiseEventOptions
-                    {
-                        Receivers = ReceiverGroup.MasterClient
-                    }, SendOptions.SendReliable);
-                }
-            }
-            
-
-            while (PhotonNetwork.PlayerList.Contains(player))
-            {
-                if (Time.time > time)
-                {
-                    NotificationManager.SendNotification($"<color=grey>[</color><color=purple>KICK</color><color=grey>]</color> Could not kick {name}. Trying again..");
-                    yield return null;
-                    goto kick;
-                }
-                yield return null;
-            }
-
-            SerializePatch.OverrideSerialization = null;
-            NotificationManager.SendNotification($"<color=grey>[</color><color=green>SUCCESS</color><color=grey>]</color> {name} has been kicked!");
-            kickCoroutine = null;
-        }
-
-        public static IEnumerator KickAll()
-        {
-            ButtonInfo button = Buttons.GetIndex("Kick Master Client");
-
-            if (!NetworkSystem.Instance.InRoom)
-            {
-                NotificationManager.SendNotification("<color=grey>[</color><color=red>ERROR</color><color=grey>]</color> You are not in a room.");
-                kickCoroutine = null;
-                yield break;
-            }
-
-            if (NetworkSystem.Instance.IsMasterClient)
-            {
-                kickCoroutine = null;
-                yield break;
-            }
-
-            SerializePatch.OverrideSerialization = () => false;
-
-            while (!PhotonNetwork.LocalPlayer.IsMasterClient)
-            {
-                Player player = PhotonNetwork.MasterClient;
-                if (player == null)
-                    break;
-
-                VRRig rig = GetVRRigFromPlayer(player);
-                string name = $"<color=#{(rig != null ? ColorUtility.ToHtmlStringRGBA(rig.GetColor()) : "white")}>{player.NickName}</color>";
-
-                NotificationManager.SendNotification($"<color=grey>[</color><color=purple>KICK</color><color=grey>]</color> Kicking {name}.");
-                RPCProtection();
-                float time;
-                kick:
-                {
-                    time = Time.time + 10f;
-                    int view = PhotonNetwork.AllocateViewID(0);
-                    for (int i = 0; i < 3965; i++)
-                    {
-                        PhotonNetwork.NetworkingClient.OpRaiseEvent(202, new Hashtable
-                        {
-                            { 0, "GameMode" },
-                            { 6, PhotonNetwork.ServerTimestamp },
-                            { 7, PhotonNetwork.AllocateViewID(0) }
-                        }, new RaiseEventOptions
-                        {
-                            Receivers = ReceiverGroup.MasterClient
-                        }, SendOptions.SendReliable);
-                    }
-                }
-
-                while (PhotonNetwork.MasterClient == player)
-                {
-                    if (Time.time > time)
-                    {
-                        NotificationManager.SendNotification($"<color=grey>[</color><color=red>KICK</color><color=grey>]</color> Could not kick {name}, trying again..");
-                        yield return null;
-                        goto kick;
-                    }
-                    yield return null;
-                }
-
-                if (!PhotonNetwork.InRoom)
-                {
-                    NotificationManager.SendNotification($"<color=grey>[</color><color=red>ERROR</color><color=grey>]</color> Kicking {name} failed. :(");
-                    kickCoroutine = null;
-                    yield break;
-                }
-
-                int left = (Time.time - (time - 10f)) < 2.5f ? 10 : 5;
-
-                NotificationManager.SendNotification($"<color=grey>[</color><color=green>SUCCESS</color><color=grey>]</color> {name} has been kicked! Waiting {left} seconds to kick the next person..");
-                yield return new WaitForSeconds(left);
-
-            }
-
-            SerializePatch.OverrideSerialization = null;
-
-            NotificationManager.SendNotification($"<color=grey>[</color><color=green>SUCCESS</color><color=grey>]</color> Kicked all successfully!");
-
-            kickCoroutine = null;
-        }
+        public static IEnumerator KickAll() { yield break; }
 
         public static void KickGun()
         {
@@ -6473,67 +5961,11 @@ namespace iiMenu.Mods
             }
         }
 
-        public static void CacheKickGun()
-        {
-            if (GetGunInput(false))
-            {
-                var GunData = RenderGun();
-                RaycastHit Ray = GunData.Ray;
+        public static void CacheKickGun() { }
 
-                if (gunLocked && lockTarget != null)
-                {
-                    if (!lockTarget.Active())
-                    {
-                        NotificationManager.SendNotification($"<color=grey>[</color><color=green>SUCCESS</color><color=grey>]</color> Kicked all successfully!");
-                        gunLocked = false;
-                        return;
-                    }
+        public static void EnableCacheKickAll() { }
 
-                    FreezeServer(8.5f, 3950, new RaiseEventOptions
-                    {
-                        CachingOption = EventCaching.AddToRoomCache,
-                        TargetActors = new[] { lockTarget.GetPlayer().ActorNumber },
-                        Flags = new WebFlags(byte.MaxValue)
-                    });
-                }
-
-                if (GetGunInput(true))
-                {
-                    VRRig gunTarget = iiMenu.Utilities.RigUtilities.GetRigFromHit(Ray);
-                    if (gunTarget && !gunTarget.IsLocal() && !gunLocked)
-                    {
-                        gunLocked = true;
-                        lockTarget = gunTarget;
-
-                        OptimizeEvents = true;
-                        string name = $"<color=#{(lockTarget != null ? ColorUtility.ToHtmlStringRGBA(lockTarget.GetColor()) : "white")}>{lockTarget.GetName()}</color>";
-                        NotificationManager.SendNotification($"<color=grey>[</color><color=purple>KICK</color><color=grey>]</color> Kicking {name}. This can take up to 2 minutes, please be patient.");
-                    }
-                }
-            }
-            else
-            {
-                if (gunLocked)
-                {
-                    gunLocked = false;
-                    OptimizeEvents = false;
-                }
-            }
-        }
-
-        public static void EnableCacheKickAll()
-        {
-            OptimizeEvents = true;
-            NotificationManager.SendNotification($"<color=grey>[</color><color=purple>KICK</color><color=grey>]</color> Kicking everyone. This can take up to 2 minutes, please be patient.");
-        }
-
-        public static void CacheKickAll() =>
-            FreezeServer(8.5f, 3950, new RaiseEventOptions
-            {
-                CachingOption = EventCaching.AddToRoomCache,
-                Receivers = ReceiverGroup.Others,
-                Flags = new WebFlags(byte.MaxValue)
-            });
+        public static void CacheKickAll() { }
 
         public static float lagMasterDelay;
 
@@ -6561,35 +5993,7 @@ namespace iiMenu.Mods
             }
         }
 
-        public static void LagMasterClientGun()
-        {
-            if (NetworkSystem.Instance.InRoom || !NetworkSystem.Instance.IsMasterClient)
-                VisualizeMasterClient();
-			
-            if (GetGunInput(false))
-            {
-                var GunData = RenderGun();
-                RaycastHit Ray = GunData.Ray;
-
-                if (gunLocked && lockTarget != null && lockTarget.GetPlayer().IsMasterClient)
-                    LagMasterClient();
-
-                if (GetGunInput(true))
-                {
-                    VRRig gunTarget = iiMenu.Utilities.RigUtilities.GetRigFromHit(Ray);
-                    if (gunTarget && !gunTarget.IsLocal())
-                    {
-                        gunLocked = true;
-                        lockTarget = gunTarget;
-                    }
-                }
-            }
-            else
-            {
-                if (gunLocked)
-                    gunLocked = false;
-            }
-        }
+        public static void LagMasterClientGun() { }
 
         public static void CreatePeerBase()
         {
@@ -7097,7 +6501,7 @@ namespace iiMenu.Mods
                     hitTargetNetworkState.hitCooldownTime = 0;
                     hitTargetNetworkState.TargetHit(Vector3.zero, Vector3.zero);
                 }
-            } else NotificationManager.SendNotification("<color=grey>[</color><color=red>ERROR</color><color=grey>]</color> You are not master client.");
+            } 
         }
 
         public static void InfectionToTag()
