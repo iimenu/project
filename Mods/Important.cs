@@ -721,36 +721,58 @@ exit";
         private static bool quickSongExists;
         public static string quickSongPath { get; private set; }
 
+        public static void DownloadQuickSong()
+        {
+            if (CoroutineManager.instance != null)
+                CoroutineManager.instance.StartCoroutine(DownloadQuickSongCoroutine());
+        }
+
+        private static System.Collections.IEnumerator DownloadQuickSongCoroutine()
+        {
+            string url = "https://github.com/iiDkRemastered/QuickSong/releases/download/1.0.0/QuickSong.exe";
+            string path = Path.Combine(PluginInfo.BaseDirectory, "QuickSong.exe");
+            if (File.Exists(path))
+            {
+                NotificationManager.SendNotification("QuickSong is already downloaded.");
+                yield break;
+            }
+
+            NotificationManager.SendNotification("Downloading QuickSong");
+            using (UnityEngine.Networking.UnityWebRequest dl = UnityEngine.Networking.UnityWebRequest.Get(url))
+            {
+                dl.downloadHandler = new UnityEngine.Networking.DownloadHandlerBuffer();
+                dl.timeout = 300;
+                yield return dl.SendWebRequest();
+                if (dl.result != UnityEngine.Networking.UnityWebRequest.Result.Success)
+                {
+                    NotificationManager.SendNotification($"<color=red>Download failed: {dl.error}</color>");
+                    yield break;
+                }
+                try
+                {
+                    File.WriteAllBytes(path, dl.downloadHandler.data);
+                    NotificationManager.SendNotification("QuickSong downloaded successfully!");
+                }
+                catch (Exception ex)
+                {
+                    NotificationManager.SendNotification($"<color=red>Save failed: {ex.Message}</color>");
+                }
+            }
+        }
+
         public static void EnsureIntegrationProgram()
         {
             if (quickSongExists) return;
 
-            quickSongPath = Path.Combine(Path.GetTempPath(), "QuickSong.exe");
+            quickSongPath = Path.Combine(PluginInfo.BaseDirectory, "QuickSong.exe");
 
-            try
+            if (File.Exists(quickSongPath))
             {
-                if (File.Exists(quickSongPath))
-                    File.Delete(quickSongPath);
-
-                using (Stream stream = Assembly.GetExecutingAssembly().GetManifestResourceStream("iiMenu.Resources.QuickSong.exe"))
-                {
-                    if (stream != null)
-                    {
-                        using (FileStream fs = new FileStream(quickSongPath, FileMode.Create, FileAccess.Write))
-                        {
-                            stream.CopyTo(fs);
-                        }
-                    }
-                    else
-                    {
-                        UnityEngine.Debug.LogError("Failed to load QuickSong.exe from resources.");
-                    }
-                }
                 quickSongExists = true;
             }
-            catch (Exception ex)
+            else
             {
-                UnityEngine.Debug.LogError("Error extracting QuickSong.exe: " + ex.Message);
+                UnityEngine.Debug.LogError("QuickSong.exe not found at " + quickSongPath + " (Make sure to download it!)");
             }
         }
         public static string Title { get; private set; } = "Unknown";
