@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <AssemblyName>ii.Reborn</AssemblyName>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
@@ -573,5 +573,4 @@
     <Reference Include="ZString">
       <HintPath>$(ProjectDir)References\Managed\ZString.dll</HintPath>
     </Reference>
-  </ItemGroup>
-</Project>
+  </ItemGroup></Project>
