@@ -19,7 +19,7 @@ namespace iiMenu
         public const string BaseDirectory = "iiReborn";
         public const string LegacyBaseDirectory = "iisStupidMenu"; // ii Reborn has no affiliation with nor endorsement by Goldentrophy Software or its name, "ii's Stupid Menu". this is purely a database migration path
         public const string ClientResourcePath = "iiMenu.Resources.Client";
-        public const string ServerResourcePath = "https://raw.githubusercontent.com/iireborn/menu/main/Resources/Server";
+        public const string ServerResourcePath = "https://raw.githubusercontent.com/iimenu/project/main/Resources/Server";
 
         public const string DiscordAppId = "1550339122777030756";
 
