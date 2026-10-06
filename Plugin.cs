@@ -74,10 +74,10 @@ namespace iiMenu
     Compiled {PluginInfo.BuildTimestamp}
     
     This program comes with ABSOLUTELY NO WARRANTY;
-    for details see `https://github.com/iireborn/menu/GPL/WARRANTY`
+    for details see `https://github.com/iimenu/project/GPL/WARRANTY`
     
     This is free software, and you are welcome to redistribute it under certain conditions;
-    see `https://github.com/iireborn/menu/GPL/REDISTRIBUTION` for details.
+    see `https://github.com/iimenu/project/GPL/REDISTRIBUTION` for details.
 ");
 
             MigrateLegacyBaseDirectory();
