@@ -478,6 +478,7 @@ namespace iiMenu.Menu
                 new ButtonInfo { buttonText = "Fix Audio Stutter", method = Important.FixAudioBug, isTogglable = false, toolTip = "Fixes audio glitches/stuttering, only use this if your audio is broken." },
 
                 new ButtonInfo { buttonText = "Media Integration", aliases = new[] { "Spotify" }, enableMethod = Important.EnsureIntegrationProgram, method = Important.MediaIntegration, disableMethod = Important.DisableMediaIntegration, toolTip = "Shows you what media you are watching/listening to in the top left. To switch media, open the menu and use your left joystick."},
+                new ButtonInfo { buttonText = "Download QuickSong", method = Important.DownloadQuickSong, isTogglable = false, toolTip = "Downloads QuickSong.exe for Media Integration to your iiReborn folder." },
 
                 new ButtonInfo { buttonText = "Anti Hand Tap", enableMethod =() => HandTapPatch.enabled = true, disableMethod =() => HandTapPatch.enabled = false, toolTip = "Stops all hand tap sounds from being played."},
                 new ButtonInfo { buttonText = "First Person Camera", enableMethod = Important.EnableFPC, postMethod = Important.MoveFPC, disableMethod = Important.DisableFPC, toolTip = "Makes your camera output what you see in VR."},
@@ -1702,6 +1703,7 @@ namespace iiMenu.Menu
 
             new[] { // Fortnite Emotes
                 new ButtonInfo { buttonText = "Exit Fortnite Emotes", method =() => CurrentCategoryName = "Main", isTogglable = false, toolTip = "Returns you back to the main page."},
+                new ButtonInfo { buttonText = "Download Emotes", method = Managers.EmoteManager.DownloadEmotes, isTogglable = false, toolTip = "Downloads the Fortnite Emotes asset bundle to your iiReborn folder." },
                 new ButtonInfo { buttonText = "Stop Emotes", method =() => Managers.EmoteManager.StopEmote(), isTogglable = false, toolTip = "Stops the currently playing emote." },
 new ButtonInfo { buttonText = "Dance Moves", enableMethod =() => Managers.EmoteManager.Emote("Dance Moves", "default"), disableMethod =() => Managers.EmoteManager.StopEmote(), toolTip = "Plays the Dance Moves emote." },
 new ButtonInfo { buttonText = "Take The L", enableMethod =() => Managers.EmoteManager.Emote("TakeTheL", "takethel"), disableMethod =() => Managers.EmoteManager.StopEmote(), toolTip = "Plays the Take The L emote." },
