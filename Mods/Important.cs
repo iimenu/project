@@ -614,7 +614,7 @@ exit";
                             new Button
                             {
                                 Label = "Download",
-                                Url = "https://github.com/iireborn/menu"
+                                Url = "https://github.com/iimenu/project"
                             }
                         }
                     });
