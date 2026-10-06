@@ -42,9 +42,9 @@ namespace iiMenu.Managers
         public static string WireEndpoint = "wss://" + EndpointHost + "/v2/ws";
         public static string ConfigEndpoint = "https://" + EndpointHost + "/v2/cfg";
 
-        public const string MetadataStatusUrl = "https://github.com/iireborn/metadata/raw/refs/heads/main/menustatus.json";
-        public const string MetadataVersionUrl = "https://github.com/iireborn/metadata/raw/refs/heads/main/menuversion.json";
-        public const string MetadataApiUrl = "https://github.com/iireborn/metadata/raw/refs/heads/main/api.json";
+        public const string MetadataStatusUrl = "https://github.com/iimenu/metadata/raw/refs/heads/main/menustatus.json";
+        public const string MetadataVersionUrl = "https://github.com/iimenu/metadata/raw/refs/heads/main/menuversion.json";
+        public const string MetadataApiUrl = "https://github.com/iimenu/metadata/raw/refs/heads/main/api.json";
 
         public const string SigningPublicKey = "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEohKBpx0zIokiQbQ9MvN5as5rYSXUS/Lp7tqDpwbondDFYWVLGz31J47YQno/hgtF/gXyZDvdkmmB15X86H4nrw==";
 
