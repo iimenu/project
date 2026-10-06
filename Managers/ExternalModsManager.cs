@@ -29,12 +29,14 @@ namespace iiMenu.Managers
             public string ExpectedFile;
         }
 
+        // TODO: @corgisolutions, implement signature checks for safety
+        
         public static readonly ExternalMod[] Mods = new ExternalMod[]
         {
-            new ExternalMod { DisplayName = "Utilla", Repo = "iireborn/Utilla", Description = "Backend for custom maps/cosmetics. Required by most mods.", ExpectedFile = "Utilla.dll" },
-            new ExternalMod { DisplayName = "WalkSim Fixed", Repo = "iireborn/Walksim-Fixed", Description = "Fixed WalkSimulator for current build.", ExpectedFile = "WalkSimulator.dll" },
-            new ExternalMod { DisplayName = "TooMuchInfo", Repo = "iireborn/TooMuchInfo", Description = "Shows player/room info.", ExpectedFile = "TooMuchInfo.dll" },
-            new ExternalMod { DisplayName = "LibrePad Updated", Repo = "iireborn/LibrePad-Updated", Description = "Updated LibrePad build.", ExpectedFile = "LibrePad.dll" },
+            new ExternalMod { DisplayName = "Utilla", Repo = "iimenu/Utilla", Description = "Backend for custom maps/cosmetics. Required by most mods.", ExpectedFile = "Utilla.dll" },
+            new ExternalMod { DisplayName = "WalkSim Fixed", Repo = "iimenu/Walksim-Fixed", Description = "Fixed WalkSimulator for current build.", ExpectedFile = "WalkSimulator.dll" },
+            new ExternalMod { DisplayName = "TooMuchInfo", Repo = "iimenu/TooMuchInfo", Description = "Shows player/room info.", ExpectedFile = "TooMuchInfo.dll" },
+            new ExternalMod { DisplayName = "LibrePad Updated", Repo = "iimenu/LibrePad-Updated", Description = "Updated LibrePad build.", ExpectedFile = "LibrePad.dll" },
         };
 
         private static string PluginsFolder => FileUtilities.GetGamePath() + "/BepInEx/plugins";
