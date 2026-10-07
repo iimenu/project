@@ -77,7 +77,6 @@ namespace iiMenu.Menu
 
                 new ButtonInfo { buttonText = "Keybind Settings", method =() => CurrentCategoryName = "Keybind Settings", isTogglable = false, toolTip = "Opens the settings for the keybinds."},
                 new ButtonInfo { buttonText = "Rebind Settings", method =() => CurrentCategoryName = "Rebind Settings", isTogglable = false, toolTip = "Opens the settings for rebinds."},
-                new ButtonInfo { buttonText = "Plugin Settings", method =() => CurrentCategoryName = "Plugin Settings", isTogglable = false, toolTip = "Opens the settings for the plugins."},
 
                 new ButtonInfo { buttonText = "Soundboard Settings", method =() => CurrentCategoryName = "Soundboard Settings", isTogglable = false, toolTip = "Opens the settings for the soundboard."},
 
@@ -2475,7 +2474,6 @@ new ButtonInfo { buttonText = "Miku", enableMethod =() => Managers.EmoteManager.
 
                 new ButtonInfo { buttonText = "Show Public Room Code", enableMethod =() => Important.showPublicRoomCode = true, disableMethod =() => Important.showPublicRoomCode = false, toolTip = "Shows the room code on your Discord RPC. Private rooms are ALWAYS hidden regardless of this setting."}
             },
-
             new[] { // Fun Settings [36]
                 new ButtonInfo { buttonText = "Exit Fun Settings", method =() => CurrentCategoryName = "Settings", isTogglable = false, toolTip = "Returns you back to the settings menu."},
 

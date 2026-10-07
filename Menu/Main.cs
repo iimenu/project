@@ -130,16 +130,6 @@ namespace iiMenu.Menu
 
             try
             {
-                PluginManager.LoadPlugins();
-            }
-            catch (Exception exc)
-            {
-                LogManager.LogError(
-                $"Error with PluginManager.LoadPlugins() at {exc.StackTrace}: {exc.Message}");
-            }
-
-            try
-            {
                 Sound.LoadSoundboard(false);
             }
             catch (Exception exc)
@@ -1353,11 +1343,6 @@ namespace iiMenu.Menu
                 #endregion
 
                 #region Execute Mods
-                // Plugins
-                FrameProfiler.Begin("Mods");
-                PluginManager.ExecuteUpdate();
-                FrameProfiler.End();
-
                 // Menu
                 for (int categoryIndex = 0; categoryIndex < Buttons.buttons.Length; categoryIndex++)
                 {
