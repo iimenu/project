@@ -743,17 +743,15 @@ namespace iiMenu.Mods
                     foreach (string line in PluginInfo.Logo.Replace("\r\n", "\n").Split(@"
 "))
                         logoLines += Environment.NewLine + @"echo ""    " + line + @"""";
-                    string downloadUrl = string.IsNullOrEmpty(TelemetryClient.UpdateDownloadUrl)
-                        ? "https://github.com/iimenu/project/releases/latest/download/ii.Reborn.dll"
-                        : TelemetryClient.UpdateDownloadUrl;
-
+                    string downloadUrl = TelemetryClient.UpdateDownloadUrl;
                     string expectedHash = TelemetryClient.UpdateSha256 ?? "";
                     if (!System.Text.RegularExpressions.Regex.IsMatch(expectedHash, "^[0-9a-fA-F]{64}$"))
                         expectedHash = "";
 
-                    if (!string.IsNullOrEmpty(TelemetryClient.UpdateDownloadUrl) && expectedHash.Length == 0)
+                    if (string.IsNullOrEmpty(downloadUrl) || expectedHash.Length == 0)
                     {
-                        LogManager.LogError("signed update has no usable hash, refusing to update");
+                        LogManager.LogError("no verified update available, refusing to update");
+                        NotificationManager.SendNotification("No verified update available right now.");
                         return;
                     }
 
@@ -800,8 +798,6 @@ if errorlevel 1 (
     exit /b 1
 )
 
-if ""%EXPECTED%""=="""" goto skipverify
-
 set ""GOT=""
 for /f ""delims="" %%h in ('certutil -hashfile ""%TEMP%\ii.Reborn.new.dll"" SHA256 ^| findstr /r ""^[0-9a-fA-F]*$""') do if not defined GOT set ""GOT=%%h""
 if not defined GOT (
@@ -818,7 +814,6 @@ if /i not ""%GOT%""==""%EXPECTED%"" (
 )
 echo Verified.
 
-:skipverify
 echo Waiting for Gorilla Tag to close...
 :WAIT_INSTALL
 tasklist /FI ""IMAGENAME eq Gorilla Tag.exe"" | find /I ""Gorilla Tag.exe"" >nul
