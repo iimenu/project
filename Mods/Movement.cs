@@ -1,4 +1,4 @@
-﻿/*
+/*
  * ii Reborn
  * Portions Copyright (C) 2025–2026 Goldentrophy Software
  * Licensed under GNU GPL v3.0-or-later — see LICENSE and NOTICE.
@@ -2697,7 +2697,7 @@ namespace iiMenu.Mods
                 checkpoint.GetComponent<Renderer>().material.color = backgroundColor.GetCurrentColor();
 
                 GameObject textObject = checkpoint.transform.Find("Label").gameObject;
-                textObject.transform.LookAt(Camera.main.transform.position);
+                textObject.transform.LookAt(iiMenu.Menu.Main.MainCam.transform.position);
                 textObject.transform.Rotate(0f, 180f, 0f);
             }
 

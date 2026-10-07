@@ -62,6 +62,17 @@ namespace iiMenu.Menu
     {
         public static GameObject TelemetryObject;
 
+        private static Camera _mainCam;
+        public static Camera MainCam
+        {
+            get
+            {
+                if (_mainCam == null)
+                    _mainCam = Camera.main;
+                return _mainCam;
+            }
+        }
+
         /// Runs on first frame of <see cref="GTPlayer.LateUpdate"/> after menu is launched
         public static void OnLaunch()
         {
@@ -566,7 +577,9 @@ namespace iiMenu.Menu
                 }
 
                 if (watermarkImage != null)
-                    watermarkImage.GetComponent<RectTransform>().localRotation = Quaternion.Euler(new Vector3(0f, 90f, 90f - (rockWatermark ? (Mathf.Sin(Time.time * 2f) * 10f) : 0f)));
+                {
+                    watermarkImage.GetComponent<RectTransform>().localRotation = Quaternion.Euler(new Vector3(0f, 90f, 90f - ((rockWatermark && themeType != 69) ? (Mathf.Sin(Time.time * 2f) * 10f) : 0f)));
+                }
 
                 if (animatedTitle && title != null)
                 {
@@ -2768,13 +2781,20 @@ namespace iiMenu.Menu
 
                     RectTransform imageTransform = watermarkImage.GetComponent<RectTransform>();
                     imageTransform.localPosition = Vector3.zero;
-                    imageTransform.sizeDelta = new Vector2(.15f, .15f);
-
-                    imageTransform.localPosition = new Vector3(0.04f, 0f, 0f);
+                    if (themeType == 69)
+                    {
+                        imageTransform.sizeDelta = new Vector2(.05f, .05f);
+                        imageTransform.localPosition = new Vector3(0.060f, -0.114f, 0.161f);
+                    }
+                    else
+                    {
+                        imageTransform.sizeDelta = new Vector2(.15f, .15f);
+                        imageTransform.localPosition = new Vector3(0.04f, 0f, 0f);
+                    }
 
                     FollowMenuSettings(watermarkImage);
 
-                    imageTransform.localRotation = Quaternion.Euler(new Vector3(0f, 90f, 90f - (rockWatermark ? (Mathf.Sin(Time.time * 2f) * 10f) : 0f)));
+                    imageTransform.localRotation = Quaternion.Euler(new Vector3(0f, 90f, 90f - ((rockWatermark && themeType != 69) ? (Mathf.Sin(Time.time * 2f) * 10f) : 0f)));
 
                     if (customWatermark == null)
                         watermarkImage.AddComponent<UIColorChanger>().colors = textColors[0];
@@ -3155,7 +3175,7 @@ namespace iiMenu.Menu
                             logoMat.mainTextureScale = new Vector2(-1, 1);
                             logoMat.mainTextureOffset = new Vector2(1, 0);
                             logoQuad.GetComponent<Renderer>().material = logoMat;
-                            logoQuad.AddComponent<UIColorChanger>().colors = textColors[1];
+                            logoQuad.AddComponent<ColorChanger>().colors = textColors[1];
                             FollowMenuSettings(logoQuad);
                         }
 
@@ -6374,6 +6394,15 @@ namespace iiMenu.Menu
                 if (doButtonsVibrate)
                     GorillaTagger.Instance.StartVibration(rightHand, GorillaTagger.Instance.tagHapticStrength / 2f, GorillaTagger.Instance.tagHapticDuration / 2f);
 
+                if (themeType == 69)
+                {
+                    AudioSource audioSource = rightHand ? VRRig.LocalRig.leftHandPlayer : VRRig.LocalRig.rightHandPlayer;
+                    audioSource.volume = buttonClickVolume / 10f;
+                    audioSource.PlayOneShot(LoadSoundFromURL($"{PluginInfo.ServerResourcePath}/Audio/Menu/Buttons/poopsound.ogg", "Audio/Menu/Buttons/poopsound.ogg"), 5f);
+                    rightHand = archiveRightHand;
+                    return;
+                }
+
                 if (exclusivePageSounds && buttonText != null && (buttonText == "PreviousPage" || buttonText == "NextPage"))
                 {
                     string url = buttonText == "PreviousPage" ? "prev.ogg" : buttonText == "NextPage" ? "next.ogg" : null;
@@ -6420,6 +6449,7 @@ namespace iiMenu.Menu
                         { 29, "hl1" },
                         { 30, "mine" },
                         { 31, "sensation" },
+                        { 32, "poopsound" },
                     };
 
                     try
@@ -6435,7 +6465,8 @@ namespace iiMenu.Menu
 
                     AudioSource audioSource = rightHand ? VRRig.LocalRig.leftHandPlayer : VRRig.LocalRig.rightHandPlayer;
                     audioSource.volume = buttonClickVolume / 10f;
-                    audioSource.PlayOneShot(LoadSoundFromURL($"{PluginInfo.ServerResourcePath}/Audio/Menu/Buttons/{namesToIds[buttonClickIndex]}.ogg", $"Audio/Menu/Buttons/{namesToIds[buttonClickIndex]}.ogg"));
+                    float volumeScale = (buttonClickIndex == 32) ? 5f : 1f;
+                    audioSource.PlayOneShot(LoadSoundFromURL($"{PluginInfo.ServerResourcePath}/Audio/Menu/Buttons/{namesToIds[buttonClickIndex]}.ogg", $"Audio/Menu/Buttons/{namesToIds[buttonClickIndex]}.ogg"), volumeScale);
                 }
             } catch { }
             rightHand = archiveRightHand;

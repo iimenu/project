@@ -718,140 +718,42 @@ exit";
             return true;
         }
 
-        private static bool quickSongExists;
-        public static string quickSongPath { get; private set; }
 
-        public static void DownloadQuickSong()
+
+
+        public static string Title => iiMenu.Managers.SmtcReader.Current().Title;
+        public static string Artist => iiMenu.Managers.SmtcReader.Current().Artist;
+        public static bool Paused => iiMenu.Managers.SmtcReader.Current().Paused;
+        public static bool ValidData => iiMenu.Managers.SmtcReader.Current().HasData;
+        public static float StartTime => iiMenu.Managers.SmtcReader.Current().Start;
+        public static float EndTime => iiMenu.Managers.SmtcReader.Current().End;
+        public static float ElapsedTime => iiMenu.Managers.SmtcReader.Current().Position;
+        
+        public static void EnsureIntegrationProgram() { iiMenu.Managers.SmtcReader.Begin(); }
+        public static System.Collections.IEnumerator UpdateDataCoroutinePublic(float delay = 0f) { yield break; }
+        public static void DownloadQuickSong() {}
+
+        private static byte[] lastArtBytes;
+        private static UnityEngine.Texture2D _icon = new UnityEngine.Texture2D(2, 2);
+        public static UnityEngine.Texture2D Icon
         {
-            if (CoroutineManager.instance != null)
-                CoroutineManager.instance.StartCoroutine(DownloadQuickSongCoroutine());
-        }
-
-        private static System.Collections.IEnumerator DownloadQuickSongCoroutine()
-        {
-            string url = "https://github.com/iiDkRemastered/QuickSong/releases/download/1.0.0/QuickSong.exe";
-            string path = Path.Combine(PluginInfo.BaseDirectory, "QuickSong.exe");
-            if (File.Exists(path))
+            get
             {
-                NotificationManager.SendNotification("QuickSong is already downloaded.");
-                yield break;
-            }
-
-            NotificationManager.SendNotification("Downloading QuickSong");
-            using (UnityEngine.Networking.UnityWebRequest dl = UnityEngine.Networking.UnityWebRequest.Get(url))
-            {
-                dl.downloadHandler = new UnityEngine.Networking.DownloadHandlerBuffer();
-                dl.timeout = 300;
-                yield return dl.SendWebRequest();
-                if (dl.result != UnityEngine.Networking.UnityWebRequest.Result.Success)
+                var snap = iiMenu.Managers.SmtcReader.Current();
+                if (snap.Art != lastArtBytes)
                 {
-                    NotificationManager.SendNotification($"<color=red>Download failed: {dl.error}</color>");
-                    yield break;
+                    lastArtBytes = snap.Art;
+                    if (snap.Art != null)
+                    {
+                        if (_icon == null) _icon = new UnityEngine.Texture2D(2, 2);
+                        bool success = _icon.LoadImage(snap.Art);
+                        if (!success) { UnityEngine.Debug.LogError("Failed to LoadImage for SMTC Art! Length: " + snap.Art.Length); }
+                    }
+                    else
+                        _icon = null;
                 }
-                try
-                {
-                    File.WriteAllBytes(path, dl.downloadHandler.data);
-                    NotificationManager.SendNotification("QuickSong downloaded successfully!");
-                }
-                catch (Exception ex)
-                {
-                    NotificationManager.SendNotification($"<color=red>Save failed: {ex.Message}</color>");
-                }
+                return _icon;
             }
-        }
-
-        public static void EnsureIntegrationProgram()
-        {
-            if (quickSongExists) return;
-
-            quickSongPath = Path.Combine(PluginInfo.BaseDirectory, "QuickSong.exe");
-
-            if (File.Exists(quickSongPath))
-            {
-                quickSongExists = true;
-            }
-            else
-            {
-                UnityEngine.Debug.LogError("QuickSong.exe not found at " + quickSongPath + " (Make sure to download it!)");
-            }
-        }
-        public static string Title { get; private set; } = "Unknown";
-        public static string Artist { get; private set; } = "Unknown";
-        public static Texture2D Icon { get; private set; } = new Texture2D(2, 2);
-        public static bool Paused { get; private set; } = true;
-
-        public static float StartTime { get; private set; }
-        public static float EndTime { get; private set; }
-        public static float ElapsedTime { get; private set; }
-
-        public static bool ValidData { get; private set; }
-
-        public static async Task UpdateDataAsync()
-        {
-            ProcessStartInfo psi = new ProcessStartInfo
-            {
-                FileName = quickSongPath,
-                Arguments = "-all",
-                UseShellExecute = false,
-                RedirectStandardOutput = true,
-                CreateNoWindow = true
-            };
-
-            using Process proc = new Process { StartInfo = psi };
-            proc.Start();
-            string output = await proc.StandardOutput.ReadToEndAsync();
-
-            await Task.Run(() => proc.WaitForExit());
-
-            Paused = true;
-            Title = "Unknown";
-            Artist = "Unknown";
-
-            StartTime = 0f;
-            EndTime = 0f;
-            ElapsedTime = 0f;
-
-            try
-            {
-                if (string.IsNullOrWhiteSpace(output))
-                {
-                    Title = "Not Playing";
-                    Artist = "Open Music App";
-                    return;
-                }
-
-                Dictionary<string, object> data = JsonConvert.DeserializeObject<Dictionary<string, object>>(output);
-                Title = (string)data["Title"];
-                Artist = (string)data["Artist"];
-
-                StartTime = Convert.ToSingle(data["StartTime"]);
-                EndTime = Convert.ToSingle(data["EndTime"]);
-                ElapsedTime = Convert.ToSingle(data["ElapsedTime"]);
-
-                Paused = (string)data["Status"] != "Playing";
-                Icon.LoadImage(Convert.FromBase64String((string)data["ThumbnailBase64"]));
-
-                ValidData = true;
-            }
-            catch (Exception ex)
-            {
-                Title = "Error";
-                Artist = string.IsNullOrWhiteSpace(output) ? "No Output" : output.Substring(0, Math.Min(output.Length, 30));
-                UnityEngine.Debug.LogError("QuickSong Parse Error: " + ex.Message + "\nOutput: " + output);
-            }
-        }
-
-        private static IEnumerator UpdateDataCoroutine(float delay = 0f)
-        {
-            yield return new WaitForSeconds(delay);
-
-            _ = UpdateDataAsync();
-            yield return null;
-        }
-
-        public static IEnumerator UpdateDataCoroutinePublic(float delay = 0f)
-        {
-            return UpdateDataCoroutine(delay);
         }
 
         // Credits to The-Graze/MusicControls for control methods
@@ -868,21 +770,21 @@ exit";
 
         public static void PreviousTrack()
         {
-            CoroutineManager.instance.StartCoroutine(UpdateDataCoroutine(0.1f));
-            ElapsedTime = 0f;
+            
+            
             SendKey(VirtualKeyCodes.PREVIOUS_TRACK);
         }
 
         public static void PauseTrack()
         {
-            Paused = !Paused;
+            
             SendKey(VirtualKeyCodes.PLAY_PAUSE);
         }
 
         public static void SkipTrack()
         {
-            CoroutineManager.instance.StartCoroutine(UpdateDataCoroutine(0.1f));
-            ElapsedTime = 0f;
+            
+            
             SendKey(VirtualKeyCodes.NEXT_TRACK);
         }
 
@@ -978,22 +880,12 @@ exit";
 
         public static void MediaIntegration()
         {
-            if (quickSongExists)
+            iiMenu.Managers.SmtcReader.Begin();
+            var snap = iiMenu.Managers.SmtcReader.Current();
+            
+
             {
-                if (mediaIcon == null)
-                {
-                    mediaIcon = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                    Object.Destroy(mediaIcon.GetComponent<Collider>());
 
-                    if (mediaIconMaterial == null)
-                        mediaIconMaterial = new Material(LoadAsset<Shader>("Chams"));
-
-                    mediaIcon.GetComponent<Renderer>().material = mediaIconMaterial;
-                }
-
-                mediaIcon.transform.localScale = new Vector3(0.25f, 0.25f, 0.01f) * VRRig.LocalRig.scaleFactor;
-                mediaIcon.transform.position = GorillaTagger.Instance.headCollider.transform.TransformPoint(new Vector3(-0.5f, 0.2f, 1f));
-                mediaIcon.transform.LookAt(GorillaTagger.Instance.headCollider.transform.position);
 
                 if (mediaText == null)
                 {
@@ -1016,25 +908,21 @@ exit";
 
                 mediaText.transform.localScale = Vector3.one * VRRig.LocalRig.scaleFactor;
                 mediaText.transform.position = GorillaTagger.Instance.headCollider.transform.TransformPoint(new Vector3(-0.35f, 0.2f, 1f));
-                mediaText.transform.LookAt(Camera.main.transform.position);
+                mediaText.transform.LookAt(iiMenu.Menu.Main.MainCam.transform.position);
                 mediaText.transform.Rotate(0f, 180f, 0f);
                 mediaText.transform.position += mediaText.transform.right * mediaText.bounds.size.x;
 
                 FollowMenuSettings(mediaText);
 
-                float clampedElapsed = Mathf.Clamp(ElapsedTime, StartTime, EndTime);
+                float clampedElapsed = Mathf.Clamp(snap.Position, snap.Start, snap.End);
                 mediaText.text =
-                    $@"{Artist} - {Title}
-{(Paused ? "  <sprite name=\"Pause\"> " : "")}{Mathf.Floor(clampedElapsed / 60)}:{Mathf.Floor(clampedElapsed % 60):00} - {Mathf.Floor(EndTime / 60)}:{Mathf.Floor(EndTime % 60):00}";
+                    $@"{snap.Artist} - {snap.Title}
+{(snap.Paused ? "  <sprite name=\"Pause\"> " : "")}{Mathf.Floor(clampedElapsed / 60)}:{Mathf.Floor(clampedElapsed % 60):00} - {Mathf.Floor(snap.End / 60)}:{Mathf.Floor(snap.End % 60):00}";
 
-                if (Time.time > updateDataDelay)
-                {
-                    updateDataDelay = Time.time + 5f;
-                    CoroutineManager.instance.StartCoroutine(UpdateDataCoroutine());
-                }
 
-                if (!Paused)
-                    ElapsedTime += Time.deltaTime;
+
+                if (!snap.Paused)
+                    
 
                 if (Time.time > inputDelay)
                 {
@@ -1058,17 +946,13 @@ exit";
                     }
                 }
 
-                Texture2D targetIcon = Icon == null || !ValidData ? null : Icon;
-                Renderer icon = mediaIcon.GetComponent<Renderer>();
 
-                if (icon.material.GetTexture("_MainTex") != targetIcon)
-                    icon.material.SetTexture("_MainTex", targetIcon);
             }
         }
 
         public static void DisableMediaIntegration()
         {
-            quickSongExists = false;
+            iiMenu.Managers.SmtcReader.End();
 
             if (mediaIcon != null)
                 Object.Destroy(mediaIcon);
@@ -1347,7 +1231,7 @@ exit";
             foreach (Camera c in Camera.allCameras)
                 if (c.isActiveAndEnabled && c.stereoTargetEye == StereoTargetEyeMask.None && c.targetTexture == null) { cam = c; break; }
             
-            cam = cam ?? Camera.main ?? (Camera.allCamerasCount > 0 ? Camera.allCameras[0] : null);
+            cam = cam ?? iiMenu.Menu.Main.MainCam ?? (Camera.allCamerasCount > 0 ? Camera.allCameras[0] : null);
             if (cam == null) return;
 
             Ray ray = cam.ScreenPointToRay(Mouse.current.position.ReadValue());

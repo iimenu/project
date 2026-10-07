@@ -68,7 +68,20 @@ namespace iiMenu.Mods
             foreach (var clutter in alienClutters)
             {
                 if (clutter != null)
-                    clutter.SetActive(false);
+                {
+                    for (int i = 0; i < clutter.transform.childCount; i++)
+                    {
+                        Transform child = clutter.transform.GetChild(i);
+                        if (child.name.ToLower().Contains("broom"))
+                        {
+                            child.gameObject.SetActive(true);
+                        }
+                        else
+                        {
+                            child.gameObject.SetActive(false);
+                        }
+                    }
+                }
             }
         }
 
@@ -79,7 +92,12 @@ namespace iiMenu.Mods
                 foreach (var clutter in alienClutters)
                 {
                     if (clutter != null)
-                        clutter.SetActive(true);
+                    {
+                        for (int i = 0; i < clutter.transform.childCount; i++)
+                        {
+                            clutter.transform.GetChild(i).gameObject.SetActive(true);
+                        }
+                    }
                 }
             }
         }
@@ -913,12 +931,12 @@ namespace iiMenu.Mods
 
                 Renderer renderer = gameObject.GetComponent<Renderer>();
 
-                Vector3 toTarget = position - Camera.main.transform.position;
+                Vector3 toTarget = position - iiMenu.Menu.Main.MainCam.transform.position;
                 toTarget.Normalize();
 
-                Vector3 camForward = Camera.main.transform.forward.normalized;
-                Vector3 camRight = Camera.main.transform.right.normalized;
-                Vector3 camUp = Camera.main.transform.up.normalized;
+                Vector3 camForward = iiMenu.Menu.Main.MainCam.transform.forward.normalized;
+                Vector3 camRight = iiMenu.Menu.Main.MainCam.transform.right.normalized;
+                Vector3 camUp = iiMenu.Menu.Main.MainCam.transform.up.normalized;
 
                 float x = Vector3.Dot(toTarget, camRight);
                 float y = Vector3.Dot(toTarget, camUp);
@@ -927,13 +945,13 @@ namespace iiMenu.Mods
 
                 float ringRadius = 0.2f;
                 Vector3 ringOffset = (camRight * dirInPlane.x + camUp * dirInPlane.y) * ringRadius;
-                Vector3 ringCenter = Camera.main.transform.position + camForward * 0.5f;
+                Vector3 ringCenter = iiMenu.Menu.Main.MainCam.transform.position + camForward * 0.5f;
 
                 Vector3 finalPos = ringCenter + ringOffset;
                 gameObject.transform.position = finalPos;
 
-                gameObject.transform.rotation = Quaternion.LookRotation(finalPos - Camera.main.transform.position, -Camera.main.transform.up);
-                Camera.main.transform.forward.X_Z();
+                gameObject.transform.rotation = Quaternion.LookRotation(finalPos - iiMenu.Menu.Main.MainCam.transform.position, -iiMenu.Menu.Main.MainCam.transform.up);
+                iiMenu.Menu.Main.MainCam.transform.forward.X_Z();
 
                 float t = Mathf.Lerp(1f, 0f, Time.time - timestamp);
 
@@ -1034,7 +1052,7 @@ namespace iiMenu.Mods
             TextMeshPro.SafeSetText(text);
 
             go.transform.position = (leftHand ? GorillaTagger.Instance.leftHandTransform : GorillaTagger.Instance.rightHandTransform).position + Vector3.up * (GetLabelDistance(leftHand) * (scaleWithPlayer ? GTPlayer.Instance.scale : 1f));
-            go.transform.LookAt(Camera.main.transform.position);
+            go.transform.LookAt(iiMenu.Menu.Main.MainCam.transform.position);
             go.transform.Rotate(0f, 180f, 0f);
         }
 
@@ -1217,10 +1235,10 @@ namespace iiMenu.Mods
 
         public static void EnableDebugHUD()
         {
-            if (Camera.main == null)
+            if (iiMenu.Menu.Main.MainCam == null)
                 return;
 
-            Transform debugCanvas = Camera.main.transform.Find("DebugCanvas");
+            Transform debugCanvas = iiMenu.Menu.Main.MainCam.transform.Find("DebugCanvas");
             DebugHudStats debugStats = debugCanvas != null ? debugCanvas.GetComponent<DebugHudStats>() : null;
             if (debugStats == null)
                 return;
@@ -1243,10 +1261,10 @@ namespace iiMenu.Mods
 
         public static void DisableDebugHUD()
         {
-            if (Camera.main == null)
+            if (iiMenu.Menu.Main.MainCam == null)
                 return;
 
-            Transform debugCanvas = Camera.main.transform.Find("DebugCanvas");
+            Transform debugCanvas = iiMenu.Menu.Main.MainCam.transform.Find("DebugCanvas");
             DebugHudStats debugStats = debugCanvas != null ? debugCanvas.GetComponent<DebugHudStats>() : null;
             if (debugStats != null)
                 debugStats.gameObject.SetActive(false);
@@ -1949,7 +1967,7 @@ namespace iiMenu.Mods
                 nameTag.transform.localScale = new Vector3(0.25f, 0.25f, 0.25f) * vrrig.scaleFactor;
 
                 nameTag.transform.position = GetNameTagPosition(vrrig);
-                nameTag.transform.LookAt(Camera.main.transform.position);
+                nameTag.transform.LookAt(iiMenu.Menu.Main.MainCam.transform.position);
                 nameTag.transform.Rotate(0f, 180f, 0f);
             }
         }
@@ -2004,7 +2022,7 @@ namespace iiMenu.Mods
                         nameTag.transform.localScale = new Vector3(0.25f, 0.25f, 0.25f) * vrrig.scaleFactor;
 
                         nameTag.transform.position = GetNameTagPosition(vrrig);
-                        nameTag.transform.LookAt(Camera.main.transform.position);
+                        nameTag.transform.LookAt(iiMenu.Menu.Main.MainCam.transform.position);
                         nameTag.transform.Rotate(0f, 180f, 0f);
                     }
                 } catch { }
@@ -2061,7 +2079,7 @@ namespace iiMenu.Mods
                         nameTag.transform.localScale = new Vector3(0.25f, 0.25f, 0.25f) * vrrig.scaleFactor;
 
                         nameTag.transform.position = GetNameTagPosition(vrrig);
-                        nameTag.transform.LookAt(Camera.main.transform.position);
+                        nameTag.transform.LookAt(iiMenu.Menu.Main.MainCam.transform.position);
                         nameTag.transform.Rotate(0f, 180f, 0f);
                     }
                 } catch { }
@@ -2118,7 +2136,7 @@ namespace iiMenu.Mods
                         nameTag.transform.localScale = new Vector3(0.25f, 0.25f, 0.25f) * vrrig.scaleFactor;
 
                         nameTag.transform.position = GetNameTagPosition(vrrig);
-                        nameTag.transform.LookAt(Camera.main.transform.position);
+                        nameTag.transform.LookAt(iiMenu.Menu.Main.MainCam.transform.position);
                         nameTag.transform.Rotate(0f, 180f, 0f);
                     }
                 } catch { }
@@ -2175,7 +2193,7 @@ namespace iiMenu.Mods
                         nameTag.transform.localScale = new Vector3(0.25f, 0.25f, 0.25f) * vrrig.scaleFactor;
 
                         nameTag.transform.position = GetNameTagPosition(vrrig);
-                        nameTag.transform.LookAt(Camera.main.transform.position);
+                        nameTag.transform.LookAt(iiMenu.Menu.Main.MainCam.transform.position);
                         nameTag.transform.Rotate(0f, 180f, 0f);
                     }
                 }
@@ -2245,7 +2263,7 @@ namespace iiMenu.Mods
                             nameTag.transform.localScale = new Vector3(0.25f, 0.25f, 0.25f) * vrrig.scaleFactor;
 
                             nameTag.transform.position = GetNameTagPosition(vrrig);
-                            nameTag.transform.LookAt(Camera.main.transform.position);
+                            nameTag.transform.LookAt(iiMenu.Menu.Main.MainCam.transform.position);
                             nameTag.transform.Rotate(0f, 180f, 0f);
                         }
                     }
@@ -2317,7 +2335,7 @@ namespace iiMenu.Mods
                             nameTag.transform.localScale = new Vector3(0.25f, 0.25f, 0.25f) * vrrig.scaleFactor;
 
                             nameTag.transform.position = GetNameTagPosition(vrrig);
-                            nameTag.transform.LookAt(Camera.main.transform.position);
+                            nameTag.transform.LookAt(iiMenu.Menu.Main.MainCam.transform.position);
                             nameTag.transform.Rotate(0f, 180f, 0f);
                         }
                     }
@@ -2376,7 +2394,7 @@ namespace iiMenu.Mods
                         nameTag.transform.localScale = new Vector3(0.25f, 0.25f, 0.25f) * vrrig.scaleFactor;
 
                         nameTag.transform.position = GetNameTagPosition(vrrig);
-                        nameTag.transform.LookAt(Camera.main.transform.position);
+                        nameTag.transform.LookAt(iiMenu.Menu.Main.MainCam.transform.position);
                         nameTag.transform.Rotate(0f, 180f, 0f);
                     }
                 }
@@ -2434,7 +2452,7 @@ namespace iiMenu.Mods
                         nameTag.transform.localScale = new Vector3(0.25f, 0.25f, 0.25f) * vrrig.scaleFactor;
 
                         nameTag.transform.position = GetNameTagPosition(vrrig);
-                        nameTag.transform.LookAt(Camera.main.transform.position);
+                        nameTag.transform.LookAt(iiMenu.Menu.Main.MainCam.transform.position);
                         nameTag.transform.Rotate(0f, 180f, 0f);
                     }
                 }
@@ -2495,7 +2513,7 @@ namespace iiMenu.Mods
                         nameTag.transform.localScale = new Vector3(0.25f, 0.25f, 0.25f) * vrrig.scaleFactor;
 
                         nameTag.transform.position = GetNameTagPosition(vrrig);
-                        nameTag.transform.LookAt(Camera.main.transform.position);
+                        nameTag.transform.LookAt(iiMenu.Menu.Main.MainCam.transform.position);
                         nameTag.transform.Rotate(0f, 180f, 0f);
                     }
                 } catch { }
@@ -2563,7 +2581,7 @@ namespace iiMenu.Mods
                         nameTag.transform.localScale = new Vector3(0.25f, 0.25f, 0.25f) * vrrig.scaleFactor;
 
                         nameTag.transform.position = GetNameTagPosition(vrrig);
-                        nameTag.transform.LookAt(Camera.main.transform.position);
+                        nameTag.transform.LookAt(iiMenu.Menu.Main.MainCam.transform.position);
                         nameTag.transform.Rotate(0f, 180f, 0f);
                     }
                 } catch { }
@@ -2746,7 +2764,7 @@ namespace iiMenu.Mods
                             nameTag.transform.localScale = new Vector3(0.25f, 0.25f, 0.25f) * vrrig.scaleFactor;
 
                             nameTag.transform.position = GetNameTagPosition(vrrig);
-                            nameTag.transform.LookAt(Camera.main.transform.position);
+                            nameTag.transform.LookAt(iiMenu.Menu.Main.MainCam.transform.position);
                             nameTag.transform.Rotate(0f, 180f, 0f);
                         }
                     }
@@ -2829,7 +2847,7 @@ namespace iiMenu.Mods
                         nameTag.transform.localScale = new Vector3(0.25f, 0.25f, 0.25f) * vrrig.scaleFactor;
 
                         nameTag.transform.position = GetNameTagPosition(vrrig);
-                        nameTag.transform.LookAt(Camera.main.transform.position);
+                        nameTag.transform.LookAt(iiMenu.Menu.Main.MainCam.transform.position);
                         nameTag.transform.Rotate(0f, 180f, 0f);
                     }
                 }
@@ -2991,7 +3009,7 @@ namespace iiMenu.Mods
                             nameTag.transform.localScale = new Vector3(0.25f, 0.25f, 0.25f) * vrrig.scaleFactor;
 
                             nameTag.transform.position = GetNameTagPosition(vrrig);
-                            nameTag.transform.LookAt(Camera.main.transform.position);
+                            nameTag.transform.LookAt(iiMenu.Menu.Main.MainCam.transform.position);
                             nameTag.transform.Rotate(0f, 180f, 0f);
                         }
                     }
@@ -3083,7 +3101,7 @@ namespace iiMenu.Mods
                             nameTag.transform.localScale = new Vector3(0.25f, 0.25f, 0.25f) * vrrig.scaleFactor;
 
                             nameTag.transform.position = GetNameTagPosition(vrrig);
-                            nameTag.transform.LookAt(Camera.main.transform.position);
+                            nameTag.transform.LookAt(iiMenu.Menu.Main.MainCam.transform.position);
                             nameTag.transform.Rotate(0f, 180f, 0f);
                         }
                     }
@@ -3279,11 +3297,11 @@ namespace iiMenu.Mods
                         Vector3 tagPosition = GetNameTagPosition(vrrig);
 
                         textCont.transform.position = tagPosition;
-                        textCont.transform.LookAt(Camera.main.transform.position);
+                        textCont.transform.LookAt(iiMenu.Menu.Main.MainCam.transform.position);
                         textCont.transform.Rotate(0f, 180f, 0f);
 
                         bgCont.transform.position = tagPosition - textCont.transform.forward * 0.01f;
-                        bgCont.transform.LookAt(Camera.main.transform.position);
+                        bgCont.transform.LookAt(iiMenu.Menu.Main.MainCam.transform.position);
                         bgCont.transform.Rotate(0f, 180f, 0f);
                     }
                 }
@@ -3376,7 +3394,7 @@ namespace iiMenu.Mods
 
                 Vector3 tagPosition = GetNameTagPosition(vrrig);
                 container.transform.position = tagPosition;
-                container.transform.LookAt(Camera.main.transform.position);
+                container.transform.LookAt(iiMenu.Menu.Main.MainCam.transform.position);
                 container.transform.Rotate(0f, 180f, 0f);
 
                 container.layer = hoc ? 19 : container.layer; 
@@ -3456,7 +3474,7 @@ namespace iiMenu.Mods
 
                         nameTag.transform.localScale = new Vector3(0.25f, 0.25f, 0.25f) * vrrig.scaleFactor;
                         nameTag.transform.position = GetNameTagPosition(vrrig);
-                        nameTag.transform.LookAt(Camera.main.transform.position);
+                        nameTag.transform.LookAt(iiMenu.Menu.Main.MainCam.transform.position);
                         nameTag.transform.Rotate(0f, 180f, 0f);
                     }
                 }
@@ -4518,7 +4536,7 @@ namespace iiMenu.Mods
                 Vector3 toTarget = rig.transform.position - GorillaTagger.Instance.headCollider.transform.position;
                 float angle = Vector3.Angle(GorillaTagger.Instance.headCollider.transform.forward, toTarget);
 
-                bool enabled = angle <= Camera.main.fieldOfView / 1.75f;
+                bool enabled = angle <= iiMenu.Menu.Main.MainCam.fieldOfView / 1.75f;
                 enabled &= Vector3.Distance(rig.transform.position, GorillaTagger.Instance.headCollider.transform.position) < 35f && Vector3.Distance(rig.headMesh.transform.position, GorillaTagger.Instance.headCollider.transform.position) < 35f && Vector3.Distance(rig.leftHandTransform.position, GorillaTagger.Instance.headCollider.transform.position) < 35f && Vector3.Distance(rig.rightHandTransform.position, GorillaTagger.Instance.headCollider.transform.position) < 35f;
 
                 wireframe.enabled = enabled;
@@ -4583,7 +4601,7 @@ namespace iiMenu.Mods
                 Vector3 toTarget = rig.transform.position - GorillaTagger.Instance.headCollider.transform.position;
                 float angle = Vector3.Angle(GorillaTagger.Instance.headCollider.transform.forward, toTarget);
 
-                enabled &= angle <= Camera.main.fieldOfView / 1.75f;
+                enabled &= angle <= iiMenu.Menu.Main.MainCam.fieldOfView / 1.75f;
                 enabled &= Vector3.Distance(rig.transform.position, GorillaTagger.Instance.headCollider.transform.position) < 35f && Vector3.Distance(rig.headMesh.transform.position, GorillaTagger.Instance.headCollider.transform.position) < 35f && Vector3.Distance(rig.leftHandTransform.position, GorillaTagger.Instance.headCollider.transform.position) < 35f && Vector3.Distance(rig.rightHandTransform.position, GorillaTagger.Instance.headCollider.transform.position) < 35f;
 
                 wireframe.enabled = enabled;
@@ -4655,7 +4673,7 @@ namespace iiMenu.Mods
                 Vector3 toTarget = rig.transform.position - GorillaTagger.Instance.headCollider.transform.position;
                 float angle = Vector3.Angle(GorillaTagger.Instance.headCollider.transform.forward, toTarget);
 
-                enabled &= angle <= Camera.main.fieldOfView / 1.75f;
+                enabled &= angle <= iiMenu.Menu.Main.MainCam.fieldOfView / 1.75f;
                 enabled &= Vector3.Distance(rig.transform.position, GorillaTagger.Instance.headCollider.transform.position) < 35f && Vector3.Distance(rig.headMesh.transform.position, GorillaTagger.Instance.headCollider.transform.position) < 35f && Vector3.Distance(rig.leftHandTransform.position, GorillaTagger.Instance.headCollider.transform.position) < 35f && Vector3.Distance(rig.rightHandTransform.position, GorillaTagger.Instance.headCollider.transform.position) < 35f;
 
                 wireframe.enabled = enabled;
@@ -6136,7 +6154,7 @@ namespace iiMenu.Mods
                 nameTagText.gameObject.transform.position = playerRig.transform.position + new Vector3(0f, -0.2f, 0f);
                 nameTagText.color = tagColor;
 
-                _ = $"{Vector3.Distance(Camera.main.transform.position, playerRig.transform.position):F1}m";
+
 
                 foreach (Transform transform in nameTagText.gameObject.GetComponentsInChildren<Transform>()) //background color
                 {
@@ -6204,7 +6222,7 @@ namespace iiMenu.Mods
                 nameTagText.gameObject.transform.position = playerRig.transform.position + new Vector3(0f, -0.2f, 0f);
                 nameTagText.color = tagColor;
 
-                _ = $"{Vector3.Distance(Camera.main.transform.position, playerRig.transform.position):F1}m";
+
 
                 foreach (Transform transform in nameTagText.gameObject.GetComponentsInChildren<Transform>()) //background color
                 {
@@ -6268,7 +6286,7 @@ namespace iiMenu.Mods
                     nameTagText.gameObject.transform.position = playerRig.transform.position + new Vector3(0f, -0.2f, 0f);
                     nameTagText.color = tagColor;
 
-                    _ = $"{Vector3.Distance(Camera.main.transform.position, playerRig.transform.position):F1}m";
+
 
                     foreach (Transform transform in nameTagText.gameObject.GetComponentsInChildren<Transform>()) // Background color
                     {
@@ -6298,7 +6316,7 @@ namespace iiMenu.Mods
                     nameTagText.gameObject.transform.position = playerRig.transform.position + new Vector3(0f, -0.2f, 0f);
                     nameTagText.color = tagColor;
 
-                    _ = $"{Vector3.Distance(Camera.main.transform.position, playerRig.transform.position):F1}m";
+
 
                     foreach (Transform transform in nameTagText.gameObject.GetComponentsInChildren<Transform>()) // Background color
                     {
@@ -6338,7 +6356,7 @@ namespace iiMenu.Mods
                     continue;
 
                 pooled.gameObject.SetActive(true);
-                pooled.gameObject.transform.LookAt(Camera.main.transform.position);
+                pooled.gameObject.transform.LookAt(iiMenu.Menu.Main.MainCam.transform.position);
                 pooled.gameObject.transform.Rotate(0f, 180f, 0f);
 
                 pooled.SafeSetFontStyle(activeFontStyle);
@@ -6565,6 +6583,143 @@ namespace iiMenu.Mods
             line.endWidth = lineWidth;
             line.SetPosition(0, GorillaTagger.Instance.rightHandTransform.position);
             line.SetPosition(1, lucy.skullTransform != null ? lucy.skullTransform.position : lucy.transform.position);
+        }
+
+        public static void LucySkeletonESP()
+        {
+            if (DoPerformanceCheck()) return;
+            HalloweenGhostChaser lucy = Overpowered.Lucy;
+            if (lucy == null || lucy.ghostBody == null) return;
+            
+            bool followMenuTheme = Buttons.GetIndex("Follow Menu Theme").enabled;
+            bool transparentTheme = Buttons.GetIndex("Transparent Theme").enabled;
+            float lineWidth = (Buttons.GetIndex("Thin Tracers").enabled ? 0.0075f : 0.025f) * (scaleWithPlayer ? GTPlayer.Instance.scale : 1f);
+            Color lineColor = lucy.isSummoned ? Color.red : Color.cyan;
+            if (followMenuTheme) lineColor = backgroundColor.GetCurrentColor();
+            if (transparentTheme) lineColor.a = 0.5f;
+
+            DrawTransformBones(lucy.ghostBody.transform, lineColor, lineWidth);
+        }
+
+        private static void DrawTransformBones(Transform parent, Color color, float width)
+        {
+            for (int i = 0; i < parent.childCount; i++)
+            {
+                Transform child = parent.GetChild(i);
+                LineRenderer line = GetLineRender();
+                line.startColor = color;
+                line.endColor = color;
+                line.startWidth = width;
+                line.endWidth = width;
+                line.SetPosition(0, parent.position);
+                line.SetPosition(1, child.position);
+                DrawTransformBones(child, color, width);
+            }
+        }
+
+        public static void LucyLookTracer()
+        {
+            if (DoPerformanceCheck()) return;
+            HalloweenGhostChaser lucy = Overpowered.Lucy;
+            if (lucy == null || lucy.skullTransform == null) return;
+            
+            bool followMenuTheme = Buttons.GetIndex("Follow Menu Theme").enabled;
+            bool transparentTheme = Buttons.GetIndex("Transparent Theme").enabled;
+            float lineWidth = (Buttons.GetIndex("Thin Tracers").enabled ? 0.0075f : 0.025f) * (scaleWithPlayer ? GTPlayer.Instance.scale : 1f);
+            Color lineColor = lucy.isSummoned ? Color.red : Color.cyan;
+            if (followMenuTheme) lineColor = backgroundColor.GetCurrentColor();
+            if (transparentTheme) lineColor.a = 0.5f;
+
+            LineRenderer line = GetLineRender();
+            line.startColor = lineColor;
+            line.endColor = lineColor;
+            line.startWidth = lineWidth;
+            line.endWidth = lineWidth;
+            line.SetPosition(0, lucy.skullTransform.position);
+            line.SetPosition(1, lucy.skullTransform.position + lucy.skullTransform.forward * 5f);
+        }
+
+        private static GameObject lucyStateText;
+        public static void LucyStateESP()
+        {
+            if (DoPerformanceCheck()) return;
+            HalloweenGhostChaser lucy = Overpowered.Lucy;
+            if (lucy == null || lucy.skullTransform == null) 
+            {
+                DisableLucyStateESP();
+                return;
+            }
+
+            if (lucyStateText == null)
+            {
+                lucyStateText = new GameObject("LucyStateText");
+                TextMeshPro tmpro = lucyStateText.AddComponent<TextMeshPro>();
+                tmpro.fontSize = 2.4f;
+                tmpro.alignment = TextAlignmentOptions.Center;
+                tmpro.SafeSetFontStyle(activeFontStyle);
+                tmpro.SafeSetFont(activeFont);
+            }
+
+            bool followMenuTheme = Buttons.GetIndex("Follow Menu Theme").enabled;
+            bool transparentTheme = Buttons.GetIndex("Transparent Theme").enabled;
+            Color color = lucy.isSummoned ? Color.red : Color.cyan;
+            if (followMenuTheme) color = backgroundColor.GetCurrentColor();
+            if (transparentTheme) color.a = 0.5f;
+
+            TextMeshPro tmp = lucyStateText.GetComponent<TextMeshPro>();
+            tmp.color = color;
+            float distance = Vector3.Distance(GorillaTagger.Instance.headCollider.transform.position, lucy.skullTransform.position);
+            string state = lucy.isSummoned ? "Summoned" : lucy.currentState.ToString();
+            tmp.SafeSetText($"[Lucy]\nDist: {distance:F1}m\nState: {state}");
+            
+            lucyStateText.transform.position = lucy.skullTransform.position + new Vector3(0f, 0.4f, 0f);
+            lucyStateText.transform.LookAt(GorillaTagger.Instance.headCollider.transform);
+            lucyStateText.transform.Rotate(0, 180, 0);
+        }
+
+        public static void DisableLucyStateESP()
+        {
+            if (lucyStateText != null)
+            {
+                Object.Destroy(lucyStateText);
+                lucyStateText = null;
+            }
+        }
+
+        public static void LucyToTargetESP()
+        {
+            if (DoPerformanceCheck()) return;
+            HalloweenGhostChaser lucy = Overpowered.Lucy;
+            if (lucy == null || lucy.skullTransform == null) return;
+            
+            Transform targetTransform = null;
+            var targetField = Traverse.Create(lucy).Field("targetPlayer");
+            if (targetField.FieldExists())
+            {
+                var targetPlayer = targetField.GetValue<Photon.Realtime.Player>();
+                if (targetPlayer != null)
+                {
+                    var rig = GetVRRigFromPlayer(targetPlayer);
+                    if (rig != null) targetTransform = rig.transform;
+                }
+            }
+
+            if (targetTransform == null) return;
+
+            bool followMenuTheme = Buttons.GetIndex("Follow Menu Theme").enabled;
+            bool transparentTheme = Buttons.GetIndex("Transparent Theme").enabled;
+            float lineWidth = (Buttons.GetIndex("Thin Tracers").enabled ? 0.0075f : 0.025f) * (scaleWithPlayer ? GTPlayer.Instance.scale : 1f);
+            Color lineColor = lucy.isSummoned ? Color.red : Color.cyan;
+            if (followMenuTheme) lineColor = backgroundColor.GetCurrentColor();
+            if (transparentTheme) lineColor.a = 0.5f;
+
+            LineRenderer line = GetLineRender();
+            line.startColor = lineColor;
+            line.endColor = lineColor;
+            line.startWidth = lineWidth;
+            line.endWidth = lineWidth;
+            line.SetPosition(0, lucy.skullTransform.position);
+            line.SetPosition(1, targetTransform.position);
         }
 
         public static void RainbowLucy()

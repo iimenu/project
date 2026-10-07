@@ -60,7 +60,7 @@ namespace iiMenu.Managers
             if (System.IO.File.Exists(fnPath))
             {
                 if (assetBundle == null)
-                    assetBundle = AssetBundle.LoadFromFile(fnPath);
+                    assetBundle = AssetBundle.LoadFromMemory(System.IO.File.ReadAllBytes(fnPath));
                 if (assetBundle != null)
                     gameObject = Object.Instantiate<GameObject>(assetBundle.LoadAsset<GameObject>(assetName));
             }
@@ -101,7 +101,7 @@ namespace iiMenu.Managers
                 if (System.IO.File.Exists(fnPath))
                 {
                     if (assetBundle == null)
-                        assetBundle = AssetBundle.LoadFromFile(fnPath);
+                        assetBundle = AssetBundle.LoadFromMemory(System.IO.File.ReadAllBytes(fnPath));
                     
                     if (assetBundle != null)
                     {
@@ -181,6 +181,8 @@ namespace iiMenu.Managers
         }
 
         public static Vector3 archivePosition;
+        public static Vector3 archiveCamPos;
+        public static Quaternion archiveCamRot;
 
         public static void Emote(string emoteName, string emoteSound, float animationTime = -1f, bool looping = false)
         {
@@ -200,14 +202,27 @@ namespace iiMenu.Managers
             Play2DAudio(LoadSoundFromResource("play"), 0.5f);
 
             if (Kyle == null) archivePosition = GorillaTagger.Instance.transform.position;
-            GorillaLocomotion.GTPlayer.Instance.GetControllerTransform(false).parent.rotation *= Quaternion.Euler(0f, 180f, 0f);
 
             Kyle = LoadAsset("Rig"); 
             Transform bodyPivot = VRRig.LocalRig.transform.Find("rig/body_pivot") ?? VRRig.LocalRig.transform;
             Kyle.transform.position = bodyPivot.position - new Vector3(0f, 1.15f, 0f);
             Kyle.transform.rotation = bodyPivot.rotation;
 
-            GorillaTagger.Instance.transform.position = World2Player(Kyle.transform.position + (Kyle.transform.forward * 1.5f) + new Vector3(0f, 1.15f, 0f)) + new Vector3(0f, 0.5f, 0f);
+            if (GameObject.Find("EmoteCameraOffset") == null) {
+                GameObject camOffset = new GameObject("EmoteCameraOffset");
+                Transform mainCam = GorillaTagger.Instance.mainCamera.transform;
+                archiveCamPos = mainCam.localPosition;
+                archiveCamRot = mainCam.localRotation;
+                
+                camOffset.transform.SetParent(mainCam.parent, false);
+                camOffset.transform.position = mainCam.position;
+                camOffset.transform.rotation = mainCam.rotation;
+                mainCam.SetParent(camOffset.transform, true);
+                
+                camOffset.transform.position += Kyle.transform.forward * 1.5f + new Vector3(0f, 0.5f, 0f);
+                camOffset.transform.rotation *= Quaternion.Euler(0f, 180f, 0f);
+            }
+
             GorillaTagger.Instance.rigidbody.linearVelocity = Vector3.zero;
 
             Kyle.transform.Find("KyleRobot/RobotKile").gameObject.GetComponent<Renderer>().renderingLayerMask = 0;
@@ -292,8 +307,17 @@ namespace iiMenu.Managers
                             GorillaTagger.Instance.myRecorder.RestartRecording(true);
                         }
 
-                        GorillaTagger.Instance.transform.position = EmoteManager.archivePosition;
-                        GorillaLocomotion.GTPlayer.Instance.GetControllerTransform(false).parent.rotation *= Quaternion.Euler(0f, 180f, 0f);
+                        GameObject camOffset = GameObject.Find("EmoteCameraOffset");
+                        if (camOffset != null) {
+                            Transform mainCam = GorillaTagger.Instance.mainCamera.transform;
+                            mainCam.SetParent(camOffset.transform.parent, true);
+                            mainCam.localPosition = archiveCamPos;
+                            mainCam.localRotation = archiveCamRot;
+                            Object.Destroy(camOffset);
+                        }
+
+                        // GorillaTagger.Instance.transform.position = EmoteManager.archivePosition;
+                        // GorillaLocomotion.GTPlayer.Instance.GetControllerTransform(false).parent.rotation *= Quaternion.Euler(0f, 180f, 0f);
                     }
                 }
             }

@@ -45,7 +45,7 @@ namespace iiMenu.Managers
 
         private const string BufferClassName = "Windows.Storage.Streams.Buffer";
         private static readonly Guid BufferFactoryIid = new Guid("71AF914D-C10F-484B-BC50-14BC623B3A27");
-        private static readonly Guid BufferByteAccessIid = new Guid("905A0FEF-BC53-11DF-8C49-001E4FC68AD1");
+        private static readonly Guid BufferByteAccessIid = new Guid("905a0fef-bc53-11df-8c49-001e4fc686da");
         private const int ArtMaxBytes = 8388608;
 
         private const int StatusStarted = 0;
@@ -295,20 +295,20 @@ namespace iiMenu.Managers
                     if (hr == unchecked((int)0x80040154))
                     {
                         permanent = true;
-                        Note("unsupported os");
+                        
 #if DEBUG
                         LogManager.Log("smtc unavailable on this os");
 #endif
                     }
                     else
-                        Note($"activate 0x{hr:X8}");
+                        
                     return IntPtr.Zero;
                 }
 
                 hr = Slot<GetOp>(factory, SlotRequestAsync)(factory, out IntPtr op);
                 if (hr != 0 || op == IntPtr.Zero)
                 {
-                    Note($"requestasync 0x{hr:X8}");
+                    
                     return IntPtr.Zero;
                 }
 
@@ -316,16 +316,16 @@ namespace iiMenu.Managers
                 {
                     if (WaitOp(op, AcquireTimeoutMs) != 0)
                     {
-                        Note("requestasync timeout");
+                        
                         return IntPtr.Zero;
                     }
                     hr = Slot<GetOp>(op, SlotAsyncResults)(op, out IntPtr result);
                     if (hr != 0 || result == IntPtr.Zero)
                     {
-                        Note($"manager results 0x{hr:X8}");
+                        
                         return IntPtr.Zero;
                     }
-                    Note("manager acquired");
+                    
                     return result;
                 }
                 finally
@@ -346,7 +346,7 @@ namespace iiMenu.Managers
             int hr = Slot<GetOp>(manager, SlotManagerGetCurrentSession)(manager, out IntPtr session);
             if (hr != 0)
             {
-                Note($"getcurrentsession 0x{hr:X8}");
+                
                 return null;
             }
 
@@ -355,7 +355,7 @@ namespace iiMenu.Managers
                 try
                 {
                     if (Slot<GetInt32>(view, SlotViewSize)(view, out int count) == 0)
-                        Note($"no current, sessions {count}");
+                        
                     if (Slot<ViewGetAt>(view, SlotViewGetAt)(view, 0, out IntPtr first) == 0 && first != IntPtr.Zero)
                         session = first;
                 }
@@ -367,7 +367,7 @@ namespace iiMenu.Managers
 
             if (session == IntPtr.Zero)
             {
-                Note("no session");
+                
                 return new Snapshot { HasData = false, Title = "Unknown", Artist = "Unknown", Paused = true };
             }
 
@@ -395,9 +395,7 @@ namespace iiMenu.Managers
                                 Marshal.Release(props);
                             }
                         }
-                        else
-                            Note("props fetch failed");
-                    }
+                        }
                     finally
                     {
                         Marshal.Release(propOp);
@@ -436,7 +434,7 @@ namespace iiMenu.Managers
                 }
 
                 snapshot.HasData = true;
-                Note("ok");
+                
                 return snapshot;
             }
             finally
@@ -446,95 +444,77 @@ namespace iiMenu.Managers
         }
         private static byte[] ReadThumbnail(IntPtr props)
         {
-            if (Slot<GetOp>(props, SlotPropThumbnail)(props, out IntPtr reference) != 0 || reference == IntPtr.Zero)
-                return null;
-
+            if (Slot<GetOp>(props, SlotPropThumbnail)(props, out IntPtr reference) != 0 || reference == IntPtr.Zero) {  return null; }
             try
             {
-                if (Slot<GetOp>(reference, SlotReferenceOpenRead)(reference, out IntPtr openOp) != 0 || openOp == IntPtr.Zero)
-                    return null;
-
+                if (Slot<GetOp>(reference, SlotReferenceOpenRead)(reference, out IntPtr openOp) != 0 || openOp == IntPtr.Zero) {  return null; }
                 try
                 {
-                    if (WaitOp(openOp, FetchTimeoutMs) != 0)
-                        return null;
-                    if (Slot<GetOp>(openOp, SlotOpWithProgressResults)(openOp, out IntPtr stream) != 0 || stream == IntPtr.Zero)
-                        return null;
-
+                    if (WaitOp(openOp, FetchTimeoutMs) != 0) {  return null; }
+                    if (Slot<GetOp>(openOp, 8)(openOp, out IntPtr stream) != 0 || stream == IntPtr.Zero) {  return null; }
                     try
                     {
-                        if (Slot<GetSize>(stream, SlotStreamSize)(stream, out long size) != 0 || size <= 0 || size > ArtMaxBytes)
-                            return null;
-
-                        if (Slot<GetStreamAt>(stream, SlotStreamGetInput)(stream, 0, out IntPtr input) != 0 || input == IntPtr.Zero)
-                            return null;
-
+                        Guid rasIid = new Guid("905a0fe1-bc53-11df-8c49-001e4fc686da");
+                        if (System.Runtime.InteropServices.Marshal.QueryInterface(stream, ref rasIid, out IntPtr ras) != 0 || ras == IntPtr.Zero) {  return null; }
                         try
                         {
-                            IntPtr buffer = CreateBuffer((uint)size);
-                            if (buffer == IntPtr.Zero)
-                                return null;
-
+                            if (Slot<GetSize>(ras, SlotStreamSize)(ras, out long size) != 0 || size <= 0 || size > ArtMaxBytes) { Note("thumb size fail size=" + size); return null; }
+                            if (Slot<GetStreamAt>(ras, SlotStreamGetInput)(ras, 0, out IntPtr input) != 0 || input == IntPtr.Zero) {  return null; }
                             try
                             {
-                                if (Slot<ReadInto>(input, SlotInputRead)(input, buffer, (uint)size, 0, out IntPtr readOp) != 0 || readOp == IntPtr.Zero)
-                                    return null;
-
-                                IntPtr resultBuffer = IntPtr.Zero;
+                                IntPtr buffer = CreateBuffer((uint)size);
+                                if (buffer == IntPtr.Zero) {  return null; }
                                 try
                                 {
-                                    if (WaitOp(readOp, FetchTimeoutMs) != 0)
-                                        return null;
-                                    if (Slot<GetOp>(readOp, SlotOpWithProgressResults)(readOp, out resultBuffer) != 0 || resultBuffer == IntPtr.Zero)
-                                        return null;
-                                    return CopyBuffer(resultBuffer);
+                                    if (Slot<ReadInto>(input, SlotInputRead)(input, buffer, (uint)size, 0, out IntPtr readOp) != 0 || readOp == IntPtr.Zero) {  return null; }
+                                    IntPtr resultBuffer = IntPtr.Zero;
+                                    try
+                                    {
+                                        if (WaitOp(readOp, FetchTimeoutMs) != 0) {  return null; }
+                                        if (Slot<GetOp>(readOp, 10)(readOp, out resultBuffer) != 0 || resultBuffer == IntPtr.Zero) {  return null; }
+                                        byte[] finalArt = CopyBuffer(buffer);
+                                        return finalArt;
+                                        return finalArt;
+                                    }
+                                    finally { if (resultBuffer != IntPtr.Zero && resultBuffer != buffer) System.Runtime.InteropServices.Marshal.Release(resultBuffer); System.Runtime.InteropServices.Marshal.Release(readOp); }
                                 }
-                                finally
-                                {
-                                    if (resultBuffer != IntPtr.Zero && resultBuffer != buffer)
-                                        Marshal.Release(resultBuffer);
-                                    Marshal.Release(readOp);
-                                }
+                                finally { System.Runtime.InteropServices.Marshal.Release(buffer); }
                             }
-                            finally
-                            {
-                                Marshal.Release(buffer);
-                            }
+                            finally { System.Runtime.InteropServices.Marshal.Release(input); }
                         }
-                        finally
-                        {
-                            Marshal.Release(input);
-                        }
+                        finally { System.Runtime.InteropServices.Marshal.Release(ras); }
                     }
-                    finally
-                    {
-                        Marshal.Release(stream);
-                    }
+                    finally { System.Runtime.InteropServices.Marshal.Release(stream); }
                 }
-                finally
-                {
-                    Marshal.Release(openOp);
-                }
+                finally { System.Runtime.InteropServices.Marshal.Release(openOp); }
             }
-            finally
-            {
-                Marshal.Release(reference);
-            }
+            finally { System.Runtime.InteropServices.Marshal.Release(reference); }
+            return null;
         }
 
         private static byte[] CopyBuffer(IntPtr buffer)
         {
             if (Slot<GetInt32>(buffer, SlotBufferLength)(buffer, out int length) != 0 || length <= 0 || length > ArtMaxBytes)
+            {
+                
                 return null;
+            }
 
             Guid iid = BufferByteAccessIid;
-            if (Marshal.QueryInterface(buffer, ref iid, out IntPtr byteAccess) != 0 || byteAccess == IntPtr.Zero)
+            int qiRes = Marshal.QueryInterface(buffer, ref iid, out IntPtr byteAccess);
+            if (qiRes != 0 || byteAccess == IntPtr.Zero)
+            {
+                
                 return null;
+            }
 
             try
             {
                 if (Slot<GetOp>(byteAccess, SlotByteAccess)(byteAccess, out IntPtr data) != 0 || data == IntPtr.Zero)
+                {
+                    
                     return null;
+                }
 
                 byte[] art = new byte[length];
                 Marshal.Copy(data, art, 0, length);

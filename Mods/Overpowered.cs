@@ -468,7 +468,9 @@ namespace iiMenu.Mods
         public static void DriverStatus(bool locked)
         {
             if (PhotonNetwork.IsMasterClient)
-                CustomMapsTerminal.instance.mapTerminalNetworkObject.SendRPC("SetTerminalControlStatus_RPC", true, locked, PhotonNetwork.LocalPlayer.ActorNumber);
+            {
+                // CustomMapsTerminal.instance.mapTerminalNetworkObject.SendRPC("SetTerminalControlStatus_RPC", true, locked, PhotonNetwork.LocalPlayer.ActorNumber);
+            }
             else
                 NotificationManager.SendNotification("<color=grey>[</color><color=red>ERROR</color><color=grey>]</color> You are not master client.");
         }
@@ -481,8 +483,8 @@ namespace iiMenu.Mods
                 if (Time.time > spazDriverDelay)
                 {
                     spazDriverDelay = Time.time + 0.1f;
-                    CustomMapsTerminal.instance.mapTerminalNetworkObject.SendRPC("SetTerminalControlStatus_RPC", true, true, PhotonNetwork.LocalPlayer.ActorNumber);
-                    CustomMapsTerminal.instance.mapTerminalNetworkObject.SendRPC("SetTerminalControlStatus_RPC", true, false, PhotonNetwork.LocalPlayer.ActorNumber);
+                    // CustomMapsTerminal.instance.mapTerminalNetworkObject.SendRPC("SetTerminalControlStatus_RPC", true, true, PhotonNetwork.LocalPlayer.ActorNumber);
+                    // CustomMapsTerminal.instance.mapTerminalNetworkObject.SendRPC("SetTerminalControlStatus_RPC", true, false, PhotonNetwork.LocalPlayer.ActorNumber);
                 }
             }
         }
@@ -497,7 +499,9 @@ namespace iiMenu.Mods
                 if (gunLocked && lockTarget != null)
                 {
                     if (PhotonNetwork.IsMasterClient)
-                        CustomMapsTerminal.instance.mapTerminalNetworkObject.SendRPC("SetTerminalControlStatus_RPC", true, locked, lockTarget.GetPlayer().ActorNumber);
+                    {
+                        // CustomMapsTerminal.instance.mapTerminalNetworkObject.SendRPC("SetTerminalControlStatus_RPC", true, locked, lockTarget.GetPlayer().ActorNumber);
+                    }
                 }
 
                 if (GetGunInput(true))
@@ -531,8 +535,8 @@ namespace iiMenu.Mods
                         if (Time.time > spazDriverDelay)
                         {
                             spazDriverDelay = Time.time + 0.1f;
-                            CustomMapsTerminal.instance.mapTerminalNetworkObject.SendRPC("SetTerminalControlStatus_RPC", true, true, lockTarget.GetPlayer().ActorNumber);
-                            CustomMapsTerminal.instance.mapTerminalNetworkObject.SendRPC("SetTerminalControlStatus_RPC", true, false, lockTarget.GetPlayer().ActorNumber);
+                            // CustomMapsTerminal.instance.mapTerminalNetworkObject.SendRPC("SetTerminalControlStatus_RPC", true, true, lockTarget.GetPlayer().ActorNumber);
+                            // CustomMapsTerminal.instance.mapTerminalNetworkObject.SendRPC("SetTerminalControlStatus_RPC", true, false, lockTarget.GetPlayer().ActorNumber);
                         }
                     }
                 }
@@ -557,14 +561,16 @@ namespace iiMenu.Mods
         public static void BecomeDriver()
         {
             if (PhotonNetwork.IsMasterClient)
-                CustomMapsTerminal.instance.mapTerminalNetworkObject.SendRPC("SetTerminalControlStatus_RPC", true, true, PhotonNetwork.LocalPlayer.ActorNumber);
+            {
+                // CustomMapsTerminal.instance.mapTerminalNetworkObject.SendRPC("SetTerminalControlStatus_RPC", true, true, PhotonNetwork.LocalPlayer.ActorNumber);
+            }
             else
             {
                 NotificationManager.SendNotification("<color=grey>[</color><color=red>ERROR</color><color=grey>]</color> You are not master client.");
                 return;
             }
 
-            CustomMapsTerminal.instance.mapTerminalNetworkObject.photonView.OwnerActorNr = PhotonNetwork.LocalPlayer.ActorNumber;
+            // CustomMapsTerminal.instance.mapTerminalNetworkObject.photonView.OwnerActorNr = PhotonNetwork.LocalPlayer.ActorNumber;
         }
 
         private static long? id;
@@ -2176,7 +2182,7 @@ namespace iiMenu.Mods
         {
             foreach (var lucy in UnityEngine.Resources.FindObjectsOfTypeAll<HalloweenGhostChaser>())
             {
-                if (lucy.gameObject.scene.isLoaded && !lucy.gameObject.name.ToLower().Contains("bayou"))
+                if (lucy.gameObject.scene.isLoaded && lucy.gameObject.name.ToLower().Contains("cave"))
                 {
                     if (OwnsGhost(lucy.GetView))
                     {
@@ -2264,7 +2270,54 @@ namespace iiMenu.Mods
                 hgc.transform.position = GorillaTagger.Instance.headCollider.transform.position + offset + Vector3.up * 0.5f;
                 hgc.transform.LookAt(GorillaTagger.Instance.headCollider.transform.position);
             }
-            
+        }
+
+        public static float lucyVerticalOrbitAngle;
+        public static void LucyOrbitVertical()
+        {
+            HalloweenGhostChaser hgc = Lucy;
+            if (hgc != null && OwnsGhost(hgc.GetView))
+            {
+                lucyVerticalOrbitAngle += Time.deltaTime * 180f;
+                Vector3 offset = Quaternion.Euler(lucyVerticalOrbitAngle, 0f, 0f) * (Vector3.forward * 3f);
+                hgc.transform.position = GorillaTagger.Instance.headCollider.transform.position + offset;
+                hgc.transform.LookAt(GorillaTagger.Instance.headCollider.transform.position);
+            }
+        }
+
+        public static float lucyCrownOrbitAngle;
+        public static void LucyCrown()
+        {
+            HalloweenGhostChaser hgc = Lucy;
+            if (hgc != null && OwnsGhost(hgc.GetView))
+            {
+                lucyCrownOrbitAngle += Time.deltaTime * 360f;
+                Vector3 offset = Quaternion.Euler(0f, lucyCrownOrbitAngle, 0f) * (Vector3.forward * 0.6f);
+                hgc.transform.position = GorillaTagger.Instance.headCollider.transform.position + offset + Vector3.up * 0.6f;
+                hgc.transform.LookAt(GorillaTagger.Instance.headCollider.transform.position + Vector3.up * 0.6f);
+            }
+        }
+
+        public static void HelicopterLucy()
+        {
+            HalloweenGhostChaser hgc = Lucy;
+            if (hgc != null && OwnsGhost(hgc.GetView))
+            {
+                hgc.transform.Rotate(Vector3.up * (Time.deltaTime * 1000f));
+            }
+        }
+
+        public static void HandGrabLucy()
+        {
+            HalloweenGhostChaser hgc = Lucy;
+            if (hgc != null && OwnsGhost(hgc.GetView))
+            {
+                if (ControllerInputPoller.instance.rightControllerGripFloat > 0.5f)
+                {
+                    hgc.transform.position = GorillaTagger.Instance.rightHandTransform.position;
+                    hgc.transform.rotation = GorillaTagger.Instance.rightHandTransform.rotation;
+                }
+            }
         }
 
         public static void LucyOrbitGun()
