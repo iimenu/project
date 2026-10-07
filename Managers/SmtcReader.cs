@@ -1,3 +1,9 @@
+/*
+ * Copyright (C) 2026 @corgisolutions
+ * Licensed under GNU GPL v3.0-or-later — see LICENSE and NOTICE.
+ * Do not remove this notice.
+ */
+
 using System;
 using System.Runtime.InteropServices;
 using System.Threading;
