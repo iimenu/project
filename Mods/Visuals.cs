@@ -708,6 +708,78 @@ namespace iiMenu.Mods
                 renderer.material = oldSkyMat;
         }
 
+        private static GameObject greenBox;
+        private static Vector3 preGreenScreenPos;
+        private static bool greenScreenActive;
+
+        public static void GreenScreen()
+        {
+            if (!greenScreenActive)
+            {
+                preGreenScreenPos = GorillaTagger.Instance.rigidbody.transform.position;
+                greenScreenActive = true;
+            }
+
+            Vector3 tpPos = new Vector3(0f, 200f, 0f);
+            TeleportPlayer(tpPos);
+            GorillaTagger.Instance.rigidbody.linearVelocity = Vector3.zero;
+
+            if (greenBox == null)
+            {
+                greenBox = new GameObject("GreenScreenBox");
+                greenBox.transform.position = tpPos;
+
+                Material greenMat = new Material(Shader.Find("GUI/Text Shader"));
+                greenMat.color = Color.green;
+
+                Vector3[] positions = {
+                    new Vector3(0, -5, 0),
+                    new Vector3(0, 5, 0),
+                    new Vector3(-5, 0, 0),
+                    new Vector3(5, 0, 0),
+                    new Vector3(0, 0, -5),
+                    new Vector3(0, 0, 5)
+                };
+
+                Vector3[] scales = {
+                    new Vector3(10, 1, 10),
+                    new Vector3(10, 1, 10),
+                    new Vector3(1, 10, 10),
+                    new Vector3(1, 10, 10),
+                    new Vector3(10, 10, 1),
+                    new Vector3(10, 10, 1)
+                };
+
+                for (int i = 0; i < 6; i++)
+                {
+                    GameObject wall = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                    wall.transform.SetParent(greenBox.transform);
+                    wall.transform.localPosition = positions[i];
+                    wall.transform.localScale = scales[i];
+                    wall.GetComponent<Renderer>().material = greenMat;
+                    
+                    if (i != 0) 
+                        Object.Destroy(wall.GetComponent<Collider>());
+                }
+            }
+        }
+
+        public static void FixGreenScreen()
+        {
+            if (greenScreenActive)
+            {
+                TeleportPlayer(preGreenScreenPos);
+                GorillaTagger.Instance.rigidbody.linearVelocity = Vector3.zero;
+                greenScreenActive = false;
+            }
+
+            if (greenBox != null)
+            {
+                Object.Destroy(greenBox);
+                greenBox = null;
+            }
+        }
+
         public static TrailRenderer trailRenderer;
         public static void DrawGun()
         {

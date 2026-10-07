@@ -373,7 +373,16 @@ namespace iiMenu.Menu
                     { 4, rightJoystickClick }
                 };
 
-                bool isKeyboardCondition = UnityInput.Current.GetKey(KeyCode.Q) || (inTextInput && isKeyboardPc);
+                if (canvasLayout && !XRSettings.isDeviceActive && UnityInput.Current.GetKeyDown(KeyCode.Q))
+                {
+                    pcKeyboardToggleState = !pcKeyboardToggleState;
+                }
+                if (!canvasLayout && !UnityInput.Current.GetKey(KeyCode.Q))
+                {
+                    pcKeyboardToggleState = false;
+                }
+                
+                bool isKeyboardCondition = (canvasLayout ? pcKeyboardToggleState : UnityInput.Current.GetKey(KeyCode.Q)) || (inTextInput && isKeyboardPc);
                 bool buttonCondition = rightHand ? rightInputs[menuButtonIndex] : leftInputs[menuButtonIndex];
 
                 if (oneHand)
@@ -477,7 +486,10 @@ namespace iiMenu.Menu
                     }
 
                     if (buttonCondition && menu != null)
+                    {
                         RecenterMenu();
+                        CanvasBridge.Tick();
+                    }
                 }
 
                 ProcessFirstPersonMouseClick();
@@ -794,7 +806,7 @@ namespace iiMenu.Menu
                         }
                     } else if (RecorderPatch.enabled)
                     {
-                        if (!Buttons.GetIndex("Microphone Feedback").enabled)
+                        if (!Buttons.GetIndex("Microphone Feedback").enabled && !Buttons.GetIndex("Debug Microphone").enabled)
                             GorillaTagger.Instance.myRecorder.DebugEchoMode = VoiceManager.Get().AudioClips.Any() || VoiceManager.Get().PostProcessors.Any();
 
                     }
@@ -2438,9 +2450,25 @@ namespace iiMenu.Menu
             }
         }
 
+        public static GameObject CreateCanvasHost()
+        {
+            if (menu == null)
+            {
+                menu = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                Destroy(menu.GetComponent<BoxCollider>());
+                Destroy(menu.GetComponent<Renderer>());
+                menu.transform.localScale = new Vector3(0.1f, 0.3f, 0.3825f);
+                menu.transform.localPosition = Vector3.zero;
+            }
+
+            CanvasBridge.Create();
+
+            return menu;
+        }
+
         public static GameObject CreateMenu()
         {
-            if (clickGUI)
+            if (clickGUI && !canvasLayout)
             {
                 menu = LoadObject<GameObject>("ClickGUI");
                 menu.transform.localScale *= (menuScale * (scaleWithPlayer ? GTPlayer.Instance.scale : 1f));
@@ -2451,6 +2479,9 @@ namespace iiMenu.Menu
 
                 return menu;
             }
+
+            if (canvasLayout)
+                return CreateCanvasHost();
 
             menu = GameObject.CreatePrimitive(PrimitiveType.Cube);
 
@@ -2860,7 +2891,7 @@ namespace iiMenu.Menu
 
                 searchBoxObject.transform.localScale = thinMenu ? new Vector3(0.09f, 0.9f, ButtonDistance * 0.8f) : new Vector3(0.09f, 1.3f, ButtonDistance * 0.8f);
 
-                searchBoxObject.transform.localPosition = new Vector3(0.56f, 0f, 0.28f - buttonOffset * ButtonDistance);
+                searchBoxObject.transform.localPosition = new Vector3(0.56f, 0f, (CurrentPrompt != null ? 0.342f : 0.28f) - buttonOffset * ButtonDistance);
 
                 ColorChanger colorChanger = searchBoxObject.AddComponent<ColorChanger>();
                 colorChanger.colors = buttonColors[0];
@@ -2897,7 +2928,7 @@ namespace iiMenu.Menu
                 if (NoAutoSizeText)
                     textTransform.sizeDelta = new Vector2(9f, 0.015f);
 
-                textTransform.localPosition = new Vector3(.064f, 0, .111f - buttonOffset * ButtonDistance / 2.6f);
+                textTransform.localPosition = new Vector3(.064f, 0, (CurrentPrompt != null ? 0.135f : 0.111f) - buttonOffset * ButtonDistance / 2.6f);
                 textTransform.rotation = Quaternion.Euler(new Vector3(180f, 90f, 90f));
 
                 FollowMenuSettings(keyboardInputObject);
@@ -3217,7 +3248,7 @@ namespace iiMenu.Menu
         private static Quaternion? recenterRotation;
         public static void RecenterMenu()
         {
-            bool isKeyboardCondition = UnityInput.Current.GetKey(KeyCode.Q) || (inTextInput && isKeyboardPc);
+            bool isKeyboardCondition = (canvasLayout ? pcKeyboardToggleState : UnityInput.Current.GetKey(KeyCode.Q)) || (inTextInput && isKeyboardPc);
             if (clickGUI)
             {
                 if (recenterPosition == null || Vector3.Distance(recenterPosition.Value, GorillaTagger.Instance.bodyCollider.transform.TransformPoint(new Vector3(0f, 0f, 1.5f))) > 1f)
@@ -3481,8 +3512,14 @@ namespace iiMenu.Menu
 
             CreateMenu();
 
-            if (dynamicAnimations)
+            if (canvasLayout)
+            {
+                CanvasBridge.SetOpen(true);
+            }
+            else if (dynamicAnimations)
+            {
                 CoroutineManager.instance.StartCoroutine(GrowCoroutine());
+            }
 
             if (particleSpawnEffect)
             {
@@ -3531,6 +3568,11 @@ namespace iiMenu.Menu
             {
                 OnMenuClosed?.Invoke();
             } catch { }
+
+            if (canvasLayout)
+            {
+                CanvasBridge.SetOpen(false);
+            }
 
             if (cursorFreedByMenu)
             {
@@ -3674,7 +3716,17 @@ namespace iiMenu.Menu
             }
             else
             {
-                CoroutineManager.instance.StartCoroutine(ShrinkCoroutine());
+                if (canvasLayout)
+                {
+                    CanvasBridge.SetOpen(false);
+
+                    Destroy(menu);
+                    menu = null;
+                }
+                else
+                {
+                    CoroutineManager.instance.StartCoroutine(ShrinkCoroutine());
+                }
 
                 Destroy(reference);
                 reference = null;
@@ -5847,6 +5899,99 @@ namespace iiMenu.Menu
             return notags.Replace(input, replace);
         }
 
+        public static string RowDescription(ButtonInfo info)
+        {
+            string source = info.toolTip;
+
+            if (string.IsNullOrWhiteSpace(source))
+                return string.Empty;
+
+            if (source.StartsWith("This button doesn't have a tooltip", StringComparison.OrdinalIgnoreCase))
+                return string.Empty;
+
+            string text = NoColorTags(source).Replace("\r", " ").Replace("\n", " ").Trim();
+
+            while (text.Contains("  "))
+                text = text.Replace("  ", " ");
+
+            if (text.EndsWith("."))
+                text = text.Substring(0, text.Length - 1);
+
+            const int limit = 68;
+
+            if (text.Length > limit)
+            {
+                int cut = text.LastIndexOf(' ', limit);
+
+                if (cut < limit / 2)
+                    cut = limit;
+
+                text = text.Substring(0, cut).TrimEnd() + "…";
+            }
+
+            return text;
+        }
+
+        public static bool SetButtonEnabled(string buttonText, bool value)
+        {
+            ButtonInfo target = Buttons.GetIndex(buttonText);
+
+            if (target == null || target.label || !target.isTogglable)
+                return false;
+
+            if (target.enabled == value)
+                return true;
+
+            Toggle(buttonText, false);
+            return true;
+        }
+
+        public static ButtonInfo[] SearchedRowSource()
+        {
+            List<ButtonInfo> found = new List<ButtonInfo>();
+
+            if (nonGlobalSearch && Buttons.CurrentCategoryName != "Main")
+            {
+                foreach (ButtonInfo info in Buttons.buttons[Buttons.CurrentCategoryIndex])
+                {
+                    try
+                    {
+                        List<string> texts = info.aliases == null ? new List<string>() : info.aliases.ToList();
+                        texts.Add(info.overlapText ?? info.buttonText);
+
+                        if (texts.Any(text => text.ClearTags().Replace(" ", "").ToLower()
+                            .Contains(keyboardInput.Replace(" ", "").ToLower())))
+                            found.Add(info);
+                    }
+                    catch { }
+                }
+
+                return found.ToArray();
+            }
+
+            foreach (ButtonInfo[] list in Buttons.buttons)
+            {
+                foreach (ButtonInfo info in list)
+                {
+                    try
+                    {
+                        if (info.detected && !allowDetected)
+                            continue;
+
+                        List<string> texts = info.aliases == null ? new List<string>() : info.aliases.ToList();
+                        texts.Add(info.overlapText ?? info.buttonText);
+
+                        if (texts.Any(text => text.ClearTags().Replace(" ", "").ToLower()
+                            .Contains(keyboardInput.Replace(" ", "").ToLower())))
+                            found.Add(info);
+                    }
+                    catch { }
+                }
+            }
+
+            return found.ToArray();
+        }
+
         private static Gradient richtextGradientGradient = new Gradient();
         public static string RichtextGradient(string input, GradientColorKey[] Colors)
         {
@@ -5949,8 +6094,12 @@ namespace iiMenu.Menu
 
         private static void OnPlayerJoin(NetPlayer Player)
         {
-            if (Player != NetworkSystem.Instance.LocalPlayer && !disablePlayerNotifications)
-                NotificationManager.SendNotification($"<color=grey>[</color><color=green>JOIN</color><color=grey>]</color> Name: {CleanPlayerName(Player.NickName)}");
+            if (Player != NetworkSystem.Instance.LocalPlayer)
+            {
+                latestJoinedPlayer = Player;
+                if (!disablePlayerNotifications)
+                    NotificationManager.SendNotification($"<color=grey>[</color><color=green>JOIN</color><color=grey>]</color> Name: {CleanPlayerName(Player.NickName)}");
+            }
         }
 
         private static void OnPlayerLeave(NetPlayer Player)
@@ -5958,12 +6107,19 @@ namespace iiMenu.Menu
             if (Player != NetworkSystem.Instance.LocalPlayer && !disablePlayerNotifications)
                 NotificationManager.SendNotification($"<color=grey>[</color><color=red>LEAVE</color><color=grey>]</color> Name: {CleanPlayerName(Player.NickName)}");
 
-            try
+            if (latestJoinedPlayer == Player)
+                latestJoinedPlayer = null;
+
+            /// we can't use GetPlayer if they already left so clean up instead
+            List<VRRig> keysToRemove = new List<VRRig>();
+            foreach (var key in playerPing.Keys)
             {
-                VRRig rig = RigUtilities.GetVRRigFromPlayer(Player.GetPlayer());
-                if (rig != null)
-                    playerPing.Remove(rig);
-            } catch { }
+                if (key == null) keysToRemove.Add(key);
+            }
+            foreach (var key in keysToRemove)
+            {
+                playerPing.Remove(key);
+            }
             try
             {
                 Visuals.CleanupPlayerLeave(Player);
@@ -6959,6 +7115,8 @@ jgs \_   _/ |Oo\
         public static bool openedwithright;
         public static bool oneHand;
         public static bool clickGUI;
+        public static bool canvasLayout = false;
+        public static bool pcKeyboardToggleState;
 
         public static int _pageSize = 8;
         public static int PageSize
@@ -7185,6 +7343,7 @@ jgs \_   _/ |Oo\
         public static bool disableMasterClientNotifications;
         public static bool disableRoomNotifications;
         public static bool disablePlayerNotifications;
+        public static NetPlayer latestJoinedPlayer;
         public static bool clearNotificationsOnDisconnect;
         public static string narratorName = "Default";
         public static int narratorIndex;

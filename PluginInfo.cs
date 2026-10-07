@@ -21,9 +21,9 @@ namespace iiMenu
         public const string ClientResourcePath = "iiMenu.Resources.Client";
         public const string ServerResourcePath = "https://raw.githubusercontent.com/iimenu/project/main/Resources/Server";
 
-        public const string DiscordAppId = "1550339122777030756";
+        public const string DiscordAppId = "1557107020060954684";
 
-        public const string DiscordLargeImageKey = "";
+        public const string DiscordLargeImageKey = "iilogo";
         public const string DiscordSmallImageKeyOnline = "";
         public const string DiscordSmallImageKeyOffline = "";
         

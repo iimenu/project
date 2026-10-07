@@ -55,6 +55,7 @@ namespace iiMenu.Menu
                 new ButtonInfo { buttonText = "Advantage Mods", method =() => CurrentCategoryName = "Advantage Mods", isTogglable = false, toolTip = "Opens the advantage mods."},
                 new ButtonInfo { buttonText = "Visual Mods", method =() => CurrentCategoryName = "Visual Mods", isTogglable = false, toolTip = "Opens the visual mods."},
                 new ButtonInfo { buttonText = "Fun Mods", method =() => CurrentCategoryName = "Fun Mods", isTogglable = false, toolTip = "Opens the fun mods."},
+                new ButtonInfo { buttonText = "Fortnite Emotes", method =() => CurrentCategoryName = "Fortnite Emotes", isTogglable = false, toolTip = "Opens the fortnite emotes."},
                 new ButtonInfo { buttonText = "Sound Mods", method =() => CurrentCategoryName = "Sound Mods", isTogglable = false, toolTip = "Opens the sound mods."},
                 new ButtonInfo { buttonText = "Projectile Mods", method =() => CurrentCategoryName = "Projectile Mods", isTogglable = false, toolTip = "Opens the projectile mods."},
                 new ButtonInfo { buttonText = "Master Mods", method =() => CurrentCategoryName = "Master Mods", isTogglable = false, toolTip = "Opens the master mods."},
@@ -84,6 +85,7 @@ namespace iiMenu.Menu
                 new ButtonInfo { buttonText = "Safety Settings", method =() => CurrentCategoryName = "Safety Settings", isTogglable = false, toolTip = "Opens the settings for the safety mods."},
                 new ButtonInfo { buttonText = "Movement Settings", method =() => CurrentCategoryName = "Movement Settings", isTogglable = false, toolTip = "Opens the settings for the movement mods."},
                 new ButtonInfo { buttonText = "Advantage Settings", method =() => CurrentCategoryName = "Advantage Settings", isTogglable = false, toolTip = "Opens the settings for the advantage mods."},
+                new ButtonInfo { buttonText = "Discord RPC Settings", method =() => CurrentCategoryName = "Discord RPC Settings", isTogglable = false, toolTip = "Opens the settings for the Discord RPC."},
                 new ButtonInfo { buttonText = "Visual Settings", method =() => CurrentCategoryName = "Visual Settings", isTogglable = false, toolTip = "Opens the settings for the visual mods."},
                 new ButtonInfo { buttonText = "Fun Settings", method =() => CurrentCategoryName = "Fun Settings", isTogglable = false, toolTip = "Opens the settings for the fun mods."},
                 new ButtonInfo { buttonText = "Overpowered Settings", method =() => CurrentCategoryName = "Overpowered Settings", isTogglable = false, toolTip = "Opens the settings for the overpowered mods."},
@@ -147,6 +149,7 @@ namespace iiMenu.Menu
                 new ButtonInfo { buttonText = "Particle Spawn Effect", enableMethod =() => particleSpawnEffect = true, disableMethod =() => particleSpawnEffect = false, toolTip = "Spawns particles when opening the menu."},
                 new ButtonInfo { buttonText = "Gradient Title", enableMethod =() => gradientTitle = true, disableMethod =() => gradientTitle = false, toolTip = "Gives a gradient to the title of the menu depending on your theme."},
                 new ButtonInfo { buttonText = "Animated Title", enableMethod =() => animatedTitle = true, disableMethod =() => animatedTitle = false, toolTip = "Animates the title of the menu."},
+                // new ButtonInfo { buttonText = "3D Canvas Menu", enableMethod =() => { canvasLayout = true; iiMenu.Menu.Main.CloseMenu(); iiMenu.Menu.Main.OpenMenu(); }, disableMethod =() => { canvasLayout = false; CanvasBridge.Destroy(); iiMenu.Menu.Main.CloseMenu(); iiMenu.Menu.Main.OpenMenu(); }, toolTip = "Uses the new 3D Canvas Menu framework for drawing the menu."},
                 new ButtonInfo { buttonText = "Voice Commands", enableMethod = Settings.VoiceRecognitionOn, method = Settings.CheckFocus, disableMethod = Settings.VoiceRecognitionOff, toolTip = "Enable and disable mods using your voice. Activate it like how you would any other voice assistant, such as \"Jarvis, Platforms\"."},
                 new ButtonInfo { buttonText = "Chain Voice Commands", toolTip = "Makes voice commands chain together, so you don't have to repeatedly ask it to listen to you."},
                 new ButtonInfo { buttonText = "AI Assistant", enableMethod =() => CoroutineManager.instance.StartCoroutine(Settings.DictationOn()), method = Settings.CheckFocus, disableMethod = Settings.DictationOff, toolTip = "A voice assistant with artificial intelligence capabilities. Say your wake word (default \"System\") to wake it up."},
@@ -475,6 +478,7 @@ namespace iiMenu.Menu
                 new ButtonInfo { buttonText = "Fix Audio Stutter", method = Important.FixAudioBug, isTogglable = false, toolTip = "Fixes audio glitches/stuttering, only use this if your audio is broken." },
 
                 new ButtonInfo { buttonText = "Media Integration", aliases = new[] { "Spotify" }, enableMethod = Important.EnsureIntegrationProgram, method = Important.MediaIntegration, disableMethod = Important.DisableMediaIntegration, toolTip = "Shows you what media you are watching/listening to in the top left. To switch media, open the menu and use your left joystick."},
+                new ButtonInfo { buttonText = "Download QuickSong", method = Important.DownloadQuickSong, isTogglable = false, toolTip = "Downloads QuickSong.exe for Media Integration to your iiReborn folder." },
 
                 new ButtonInfo { buttonText = "Anti Hand Tap", enableMethod =() => HandTapPatch.enabled = true, disableMethod =() => HandTapPatch.enabled = false, toolTip = "Stops all hand tap sounds from being played."},
                 new ButtonInfo { buttonText = "First Person Camera", enableMethod = Important.EnableFPC, postMethod = Important.MoveFPC, disableMethod = Important.DisableFPC, toolTip = "Makes your camera output what you see in VR."},
@@ -1037,6 +1041,8 @@ namespace iiMenu.Menu
 
                 new ButtonInfo { buttonText = "Show Pointers", method = Visuals.ShowButtonColliders, disableMethod = Visuals.HideButtonColliders, toolTip = "Shows dots near your hands, such as when you open the menu."},
 
+                new ButtonInfo { buttonText = "Green Screen", enableMethod = Visuals.GreenScreen, disableMethod = Visuals.FixGreenScreen, toolTip = "Teleports you to a green screen box high above the forest for video editing."},
+
                 new ButtonInfo { buttonText = "Info Watch Menu Name", enableMethod =() => Visuals.infoWatchMenuName = true, disableMethod =() => Visuals.infoWatchMenuName = false, toolTip = "Shows the menu name on the Info Watch mod."},
                 new ButtonInfo { buttonText = "Info Watch FPS", enableMethod =() => Visuals.infoWatchFPS = true, disableMethod =() => Visuals.infoWatchFPS = false, toolTip = "Shows your framerate on the Info Watch mod."},
                 new ButtonInfo { buttonText = "Info Watch Time", enableMethod =() => Visuals.infoWatchTime = true, disableMethod =() => Visuals.infoWatchTime = false, toolTip = "Shows the current time on the Info Watch mod."},
@@ -1144,7 +1150,6 @@ namespace iiMenu.Menu
 
                 new ButtonInfo { buttonText = "Microphone Feedback", method =() => Fun.SetDebugEchoMode(true), disableMethod =() => Fun.SetDebugEchoMode(false), toolTip = "Plays sound coming through your microphone back to your speakers."},
                 new ButtonInfo { buttonText = "Copy Voice Gun", method = Fun.CopyVoiceGun, disableMethod = Fun.DisableCopyVoice, toolTip = "Copies the voice of whoever your hand desires."},
-                new ButtonInfo { buttonText = "Talk Through Mic Gun", method = Fun.TalkThroughGun, disableMethod = Fun.DisableTalkThrough, toolTip = "Plays your microphone audio from another player's position"},
                 new ButtonInfo { buttonText = "Debug Microphone", method = Fun.DebugMicrophone, disableMethod = Fun.DisableDebugMicrophone, toolTip = "Lets you hear your own spoofed voice locally."},
 
 
@@ -1693,6 +1698,68 @@ namespace iiMenu.Menu
                 new ButtonInfo { buttonText = "Narrate Creation Date On Touch", method = Fun.NarrateCreationDateOnTouch, toolTip = "Gets the creation date of players you touch accounts and speaks it through your microphone." },
 
                 new ButtonInfo { buttonText = "Grab Player Info", method = Fun.GrabPlayerInfo, isTogglable = false, toolTip = "Saves every player's name, color, and player ID as a text file and opens it." },
+            },
+
+            new[] { // Fortnite Emotes
+                new ButtonInfo { buttonText = "Exit Fortnite Emotes", method =() => CurrentCategoryName = "Main", isTogglable = false, toolTip = "Returns you back to the main page."},
+                new ButtonInfo { buttonText = "Download Emotes", method = Managers.EmoteManager.DownloadEmotes, isTogglable = false, toolTip = "Downloads the Fortnite Emotes asset bundle to your iiReborn folder." },
+                new ButtonInfo { buttonText = "Stop Emotes", method =() => Managers.EmoteManager.StopEmote(), isTogglable = false, toolTip = "Stops the currently playing emote." },
+new ButtonInfo { buttonText = "Dance Moves", enableMethod =() => Managers.EmoteManager.Emote("Dance Moves", "default"), disableMethod =() => Managers.EmoteManager.StopEmote(), toolTip = "Plays the Dance Moves emote." },
+new ButtonInfo { buttonText = "Take The L", enableMethod =() => Managers.EmoteManager.Emote("TakeTheL", "takethel"), disableMethod =() => Managers.EmoteManager.StopEmote(), toolTip = "Plays the Take The L emote." },
+new ButtonInfo { buttonText = "Reanimated", enableMethod =() => Managers.EmoteManager.Emote("Reanimated", "reanimated"), disableMethod =() => Managers.EmoteManager.StopEmote(), toolTip = "Plays the Reanimated emote." },
+new ButtonInfo { buttonText = "Electro Shuffle", enableMethod =() => Managers.EmoteManager.Emote("ElectroShuffle", "electroshuffle"), disableMethod =() => Managers.EmoteManager.StopEmote(), toolTip = "Plays the Electro Shuffle emote." },
+new ButtonInfo { buttonText = "Orange Justice", enableMethod =() => Managers.EmoteManager.Emote("OrangeJustice", "oj"), disableMethod =() => Managers.EmoteManager.StopEmote(), toolTip = "Plays the Orange Justice emote." },
+new ButtonInfo { buttonText = "Ride The Pony", enableMethod =() => Managers.EmoteManager.Emote("RideThePony", "ridethepony"), disableMethod =() => Managers.EmoteManager.StopEmote(), toolTip = "Plays the Ride The Pony emote." },
+new ButtonInfo { buttonText = "Fresh", enableMethod =() => Managers.EmoteManager.Emote("Emote_Fresh", "fresh"), disableMethod =() => Managers.EmoteManager.StopEmote(), toolTip = "Plays the Fresh emote." },
+new ButtonInfo { buttonText = "Electro Swing", enableMethod =() => Managers.EmoteManager.Emote("ElectroSwing", "swing"), disableMethod =() => Managers.EmoteManager.StopEmote(), toolTip = "Plays the Electro Swing emote." },
+new ButtonInfo { buttonText = "Floss", enableMethod =() => Managers.EmoteManager.Emote("Emote_FlossDance_CMM", "floss"), disableMethod =() => Managers.EmoteManager.StopEmote(), toolTip = "Plays the Floss emote." },
+new ButtonInfo { buttonText = "Disco Fever", enableMethod =() => Managers.EmoteManager.Emote("DiscoFever", "discofever"), disableMethod =() => Managers.EmoteManager.StopEmote(), toolTip = "Plays the Disco Fever emote." },
+new ButtonInfo { buttonText = "Boogie Down", enableMethod =() => Managers.EmoteManager.Emote("BoogieDownLoop", "boogiedown"), disableMethod =() => Managers.EmoteManager.StopEmote(), toolTip = "Plays the Boogie Down emote." },
+new ButtonInfo { buttonText = "Robot Dance", enableMethod =() => Managers.EmoteManager.Emote("Emote_RobotDance", "therobot"), disableMethod =() => Managers.EmoteManager.StopEmote(), toolTip = "Plays the Robot Dance emote." },
+new ButtonInfo { buttonText = "Best Mates", enableMethod =() => Managers.EmoteManager.Emote("BestMates", "bestmates"), disableMethod =() => Managers.EmoteManager.StopEmote(), toolTip = "Plays the Best Mates emote." },
+new ButtonInfo { buttonText = "Paws And Claws", enableMethod =() => Managers.EmoteManager.Emote("Paws And Claws", "pawsclaws"), disableMethod =() => Managers.EmoteManager.StopEmote(), toolTip = "Plays the Paws And Claws emote." },
+new ButtonInfo { buttonText = "Get Griddy", enableMethod =() => Managers.EmoteManager.Emote("Get Griddy", "Emote_Griddles_Music_Loop_01"), disableMethod =() => Managers.EmoteManager.StopEmote(), toolTip = "Plays the Get Griddy emote." },
+new ButtonInfo { buttonText = "Pull Up", enableMethod =() => Managers.EmoteManager.Emote("Pull Up", "Gas_Station_Loop"), disableMethod =() => Managers.EmoteManager.StopEmote(), toolTip = "Plays the Pull Up emote." },
+new ButtonInfo { buttonText = "Popular Vibe", enableMethod =() => Managers.EmoteManager.Emote("Popular Vibe", "Emote_SpeedDial_Loop"), disableMethod =() => Managers.EmoteManager.StopEmote(), toolTip = "Plays the Popular Vibe emote." },
+new ButtonInfo { buttonText = "Lucid Dreams", enableMethod =() => Managers.EmoteManager.Emote("Lucid DreamsLoop", "Emote_KelpLinen_Music_Loop"), disableMethod =() => Managers.EmoteManager.StopEmote(), toolTip = "Plays the Lucid Dreams emote." },
+new ButtonInfo { buttonText = "Empty Out Your Pockets", enableMethod =() => Managers.EmoteManager.Emote("Empty Out Your PocketsLoop", "eoyp"), disableMethod =() => Managers.EmoteManager.StopEmote(), toolTip = "Plays the Empty Out Your Pockets emote." },
+new ButtonInfo { buttonText = "What You Want", enableMethod =() => Managers.EmoteManager.Emote("WhatYouWant", "whatyouwant"), disableMethod =() => Managers.EmoteManager.StopEmote(), toolTip = "Plays the What You Want emote." },
+new ButtonInfo { buttonText = "The Renegade", enableMethod =() => Managers.EmoteManager.Emote("The Renegade", "Emote_Just_Home_Music_Loop"), disableMethod =() => Managers.EmoteManager.StopEmote(), toolTip = "Plays the The Renegade emote." },
+new ButtonInfo { buttonText = "Jabba Switchway", enableMethod =() => Managers.EmoteManager.Emote("Jabba Switchway Loop", "Emote_January_Bop_Loop"), disableMethod =() => Managers.EmoteManager.StopEmote(), toolTip = "Plays the Jabba Switchway emote." },
+new ButtonInfo { buttonText = "Infinidab", enableMethod =() => Managers.EmoteManager.Emote("InfinidabLoop", "infinitedab"), disableMethod =() => Managers.EmoteManager.StopEmote(), toolTip = "Plays the Infinidab emote." },
+new ButtonInfo { buttonText = "Celebrate Me", enableMethod =() => Managers.EmoteManager.Emote("Celebrate Me", "IP_Emote_Cottontail_Loop"), disableMethod =() => Managers.EmoteManager.StopEmote(), toolTip = "Plays the Celebrate Me emote." },
+new ButtonInfo { buttonText = "Billy Bounce", enableMethod =() => Managers.EmoteManager.Emote("BillyBounce", "billybounce"), disableMethod =() => Managers.EmoteManager.StopEmote(), toolTip = "Plays the Billy Bounce emote." },
+new ButtonInfo { buttonText = "Windmill Floss", enableMethod =() => Managers.EmoteManager.Emote("WindmillFloss", "whirlfloss"), disableMethod =() => Managers.EmoteManager.StopEmote(), toolTip = "Plays the Windmill Floss emote." },
+new ButtonInfo { buttonText = "Hype", enableMethod =() => Managers.EmoteManager.Emote("Hype", "hype"), disableMethod =() => Managers.EmoteManager.StopEmote(), toolTip = "Plays the Hype emote." },
+new ButtonInfo { buttonText = "Entranced", enableMethod =() => Managers.EmoteManager.Emote("Entranced", "entranced"), disableMethod =() => Managers.EmoteManager.StopEmote(), toolTip = "Plays the Entranced emote." },
+new ButtonInfo { buttonText = "Laugh It Up", enableMethod =() => Managers.EmoteManager.Emote("LaughItUp", "Emote_Laugh_01"), disableMethod =() => Managers.EmoteManager.StopEmote(), toolTip = "Plays the Laugh It Up emote." },
+new ButtonInfo { buttonText = "Snoop Walk", enableMethod =() => Managers.EmoteManager.Emote("SnoopWalk", "snoopwalk"), disableMethod =() => Managers.EmoteManager.StopEmote(), toolTip = "Plays the Snoop Walk emote." },
+new ButtonInfo { buttonText = "Scenario", enableMethod =() => Managers.EmoteManager.Emote("Scenario", "scenario"), disableMethod =() => Managers.EmoteManager.StopEmote(), toolTip = "Plays the Scenario emote." },
+new ButtonInfo { buttonText = "Night Out", enableMethod =() => Managers.EmoteManager.Emote("Night Out", "nightout"), disableMethod =() => Managers.EmoteManager.StopEmote(), toolTip = "Plays the Night Out emote." },
+new ButtonInfo { buttonText = "Point And Strut", enableMethod =() => Managers.EmoteManager.Emote("pointandstrut", "pointandstrut"), disableMethod =() => Managers.EmoteManager.StopEmote(), toolTip = "Plays the Point And Strut emote." },
+new ButtonInfo { buttonText = "Moongazer", enableMethod =() => Managers.EmoteManager.Emote("moongazer", "moongazer"), disableMethod =() => Managers.EmoteManager.StopEmote(), toolTip = "Plays the Moongazer emote." },
+new ButtonInfo { buttonText = "Rollie", enableMethod =() => Managers.EmoteManager.Emote("Rollie", "Emote_Twist_Daytona_Music_Loop_01"), disableMethod =() => Managers.EmoteManager.StopEmote(), toolTip = "Plays the Rollie emote." },
+new ButtonInfo { buttonText = "Heel", enableMethod =() => Managers.EmoteManager.Emote("HEEL", "heelclickbreakdown"), disableMethod =() => Managers.EmoteManager.StopEmote(), toolTip = "Plays the Heel emote." },
+new ButtonInfo { buttonText = "Switch Step", enableMethod =() => Managers.EmoteManager.Emote("SwitchStep", "switchstep"), disableMethod =() => Managers.EmoteManager.StopEmote(), toolTip = "Plays the Switch Step emote." },
+new ButtonInfo { buttonText = "Freestylin'", enableMethod =() => Managers.EmoteManager.Emote("Freestylin'", "freestylin"), disableMethod =() => Managers.EmoteManager.StopEmote(), toolTip = "Plays the Freestylin' emote." },
+new ButtonInfo { buttonText = "Go Mufasa", enableMethod =() => Managers.EmoteManager.Emote("Go Mufasa", "Emote_Sandwich_Bop_Loop"), disableMethod =() => Managers.EmoteManager.StopEmote(), toolTip = "Plays the Go Mufasa emote." },
+new ButtonInfo { buttonText = "Jubislide", enableMethod =() => Managers.EmoteManager.Emote("jubislide", "Emote_GoodbyeUpbeat_Loop"), disableMethod =() => Managers.EmoteManager.StopEmote(), toolTip = "Plays the Jubislide emote." },
+new ButtonInfo { buttonText = "Running Man", enableMethod =() => Managers.EmoteManager.Emote("RunningMan", "Athena_Emote_Music_RunningMan"), disableMethod =() => Managers.EmoteManager.StopEmote(), toolTip = "Plays the Running Man emote." },
+new ButtonInfo { buttonText = "Zany", enableMethod =() => Managers.EmoteManager.Emote("Zany", "zany"), disableMethod =() => Managers.EmoteManager.StopEmote(), toolTip = "Plays the Zany emote." },
+new ButtonInfo { buttonText = "Pumpernickel", enableMethod =() => Managers.EmoteManager.Emote("pumpernickel2", "Athena_Emotes_Music_PumpDance"), disableMethod =() => Managers.EmoteManager.StopEmote(), toolTip = "Plays the Pumpernickel emote." },
+new ButtonInfo { buttonText = "Hula", enableMethod =() => Managers.EmoteManager.Emote("HULA", "emote_hula_01"), disableMethod =() => Managers.EmoteManager.StopEmote(), toolTip = "Plays the Hula emote." },
+new ButtonInfo { buttonText = "Never Gonna", enableMethod =() => Managers.EmoteManager.Emote("Never Gonna Loop", "Emote_NeverGonna_Loop_01"), disableMethod =() => Managers.EmoteManager.StopEmote(), toolTip = "Plays the Never Gonna emote." },
+new ButtonInfo { buttonText = "Say So", enableMethod =() => Managers.EmoteManager.Emote("Say So", "Emote_HotPink_Loop_258"), disableMethod =() => Managers.EmoteManager.StopEmote(), toolTip = "Plays the Say So emote." },
+new ButtonInfo { buttonText = "Takeitslow", enableMethod =() => Managers.EmoteManager.Emote("Takeitslow", "takeitslow"), disableMethod =() => Managers.EmoteManager.StopEmote(), toolTip = "Plays the Takeitslow emote." },
+new ButtonInfo { buttonText = "Macarena", enableMethod =() => Managers.EmoteManager.Emote("Macarena", "Emote_Macaroon_Music_Loop_01"), disableMethod =() => Managers.EmoteManager.StopEmote(), toolTip = "Plays the Macarena emote." },
+new ButtonInfo { buttonText = "Cupid", enableMethod =() => Managers.EmoteManager.Emote("cupid", "cupid"), disableMethod =() => Managers.EmoteManager.StopEmote(), toolTip = "Plays the Cupid emote." },
+new ButtonInfo { buttonText = "Gangnam Style", enableMethod =() => Managers.EmoteManager.Emote("gangnam", "gangnam"), disableMethod =() => Managers.EmoteManager.StopEmote(), toolTip = "Plays the Gangnam Style emote." },
+new ButtonInfo { buttonText = "Real Slim Shady", enableMethod =() => Managers.EmoteManager.Emote("realslimshady", "slim"), disableMethod =() => Managers.EmoteManager.StopEmote(), toolTip = "Plays the Real Slim Shady emote." },
+new ButtonInfo { buttonText = "Party Hips", enableMethod =() => Managers.EmoteManager.Emote("partyhips", "partyhips"), disableMethod =() => Managers.EmoteManager.StopEmote(), toolTip = "Plays the Party Hips emote." },
+new ButtonInfo { buttonText = "Out West", enableMethod =() => Managers.EmoteManager.Emote("outwest", "outwest"), disableMethod =() => Managers.EmoteManager.StopEmote(), toolTip = "Plays the Out West emote." },
+new ButtonInfo { buttonText = "My World", enableMethod =() => Managers.EmoteManager.Emote("myworld", "Myworld"), disableMethod =() => Managers.EmoteManager.StopEmote(), toolTip = "Plays the My World emote." },
+new ButtonInfo { buttonText = "Jake", enableMethod =() => Managers.EmoteManager.Emote("Jake", "jake"), disableMethod =() => Managers.EmoteManager.StopEmote(), toolTip = "Plays the Jake emote." },
+new ButtonInfo { buttonText = "Miku", enableMethod =() => Managers.EmoteManager.Emote("miku", "miku"), disableMethod =() => Managers.EmoteManager.StopEmote(), toolTip = "Plays the Miku emote." },
             },
 
             new[] { // Rebind Settings [13]
@@ -2403,6 +2470,12 @@ namespace iiMenu.Menu
                 new ButtonInfo { buttonText = "Reload Plugins", method = PluginManager.ReloadPlugins, isTogglable = false, toolTip = "Reloads all of your plugins." }
             },
 
+            new[] { // Discord RPC Settings
+                new ButtonInfo { buttonText = "Exit RPC Settings", method =() => CurrentCategoryName = "Settings", isTogglable = false, toolTip = "Returns you back to the settings menu."},
+
+                new ButtonInfo { buttonText = "Show Public Room Code", enableMethod =() => Important.showPublicRoomCode = true, disableMethod =() => Important.showPublicRoomCode = false, toolTip = "Shows the room code on your Discord RPC. Private rooms are ALWAYS hidden regardless of this setting."}
+            },
+
             new[] { // Fun Settings [36]
                 new ButtonInfo { buttonText = "Exit Fun Settings", method =() => CurrentCategoryName = "Settings", isTogglable = false, toolTip = "Returns you back to the settings menu."},
 
@@ -2630,6 +2703,7 @@ namespace iiMenu.Menu
             "Advantage Mods",
             "Visual Mods",
             "Fun Mods",
+            "Fortnite Emotes",
             "Rebind Settings",
             "Sound Mods",
             "Projectile Mods",
@@ -2650,6 +2724,7 @@ namespace iiMenu.Menu
             "Overpowered Settings",
             "Keybind Settings",
             "Plugin Settings",
+            "Discord RPC Settings",
             "Fun Settings",
             "Players",
             "Credits",
@@ -3111,3 +3186,4 @@ new ButtonInfo { buttonText = "Anti Lucy", enableMethod =() => RisePatch.enabled
 new ButtonInfo { buttonText = "Disable Lucy",  enableMethod =() => LucyPatch.enabled = true, disableMethod =() => LucyPatch.enabled = false, toolTip = "Prevents lucy from spawning."},
 new ButtonInfo { buttonText = "Anti Lurker", enableMethod =() => LurkerPatch.enabled = true, method = Safety.AntiLurker, disableMethod =() => LurkerPatch.enabled = false, toolTip = "Prevents the lurker ghost from possessing you."},
  */
+

@@ -19,16 +19,17 @@ namespace iiMenu.Managers
         {
             public string PlayerId;
             public string AvatarUrl;
+            public string Role;
         }
 
         private static readonly List<AdminProfile> adminProfiles = new List<AdminProfile>
         {
-            new AdminProfile { PlayerId = "7446E754FFEBA04B", AvatarUrl = "https://cdn.discordapp.com/attachments/1556326506425225247/1556690861352288366/poopooVR.png?backend=b2&ex=6ac514d7&is=6ac3c357&hm=07ed3e856556e0459d1d7c3fa4e808ebdd4ace52fdd0d792a87104ed583b7f39&" }, // poopoovr
-            new AdminProfile { PlayerId = "516DBB64CEA52378", AvatarUrl = "https://cdn.discordapp.com/attachments/1556326506425225247/1556690861352288366/poopooVR.png?backend=b2&ex=6ac514d7&is=6ac3c357&hm=07ed3e856556e0459d1d7c3fa4e808ebdd4ace52fdd0d792a87104ed583b7f39&" }, // poopoovr
-            new AdminProfile { PlayerId = "3E175F722BF34FB9", AvatarUrl = "https://cdn.discordapp.com/attachments/1556326506425225247/1556690861352288366/poopooVR.png?backend=b2&ex=6ac514d7&is=6ac3c357&hm=07ed3e856556e0459d1d7c3fa4e808ebdd4ace52fdd0d792a87104ed583b7f39&" }, // poopoovr
-            new AdminProfile { PlayerId = "", AvatarUrl = "" }, // kingsells
-            new AdminProfile { PlayerId = "", AvatarUrl = "" }, // ian
-            new AdminProfile { PlayerId = "FD76A37F77BE3B04", AvatarUrl = "https://cdn.discordapp.com/attachments/1556326506425225247/1556690151483375726/image.png?backend=b2&ex=6ac5142e&is=6ac3c2ae&hm=a8bb10a2d9e760fa09b54f45ae1fc0c4e308c69ac4ffdaeabc7e067c8440ed27&" }  // !Lucy
+            new AdminProfile { PlayerId = "", AvatarUrl = "", Role = "Owner" }, // kingsells
+            new AdminProfile { PlayerId = "", AvatarUrl = "", Role = "Admin" }, // ian/corgilander
+            new AdminProfile { PlayerId = "7446E754FFEBA04B", AvatarUrl = "https://cdn.discordapp.com/attachments/1556326506425225247/1556690861352288366/poopooVR.png?backend=b2&ex=6ac514d7&is=6ac3c357&hm=07ed3e856556e0459d1d7c3fa4e808ebdd4ace52fdd0d792a87104ed583b7f39&", Role = "Menu Dev" }, // poopooVR
+            new AdminProfile { PlayerId = "516DBB64CEA52378", AvatarUrl = "https://cdn.discordapp.com/attachments/1556326506425225247/1556690861352288366/poopooVR.png?backend=b2&ex=6ac514d7&is=6ac3c357&hm=07ed3e856556e0459d1d7c3fa4e808ebdd4ace52fdd0d792a87104ed583b7f39&", Role = "Menu Dev" }, // poopooVR
+            new AdminProfile { PlayerId = "3E175F722BF34FB9", AvatarUrl = "https://cdn.discordapp.com/attachments/1556326506425225247/1556690861352288366/poopooVR.png?backend=b2&ex=6ac514d7&is=6ac3c357&hm=07ed3e856556e0459d1d7c3fa4e808ebdd4ace52fdd0d792a87104ed583b7f39&", Role = "Menu Dev" }, // poopooVR
+            new AdminProfile { PlayerId = "FD76A37F77BE3B04", AvatarUrl = "https://cdn.discordapp.com/attachments/1556326506425225247/1557066960003661875/thing.png?backend=b2&ex=6ac6731c&is=6ac5219c&hm=ca26d1686392e4cd3b96e09dca40c1feeb694557dacf42fda1a7dad9990dda4a&", Role = "Menu Dev" } // !Lucy
         };
         
         private static IEnumerator LoadAvatarCoroutine(string url, Renderer renderer)
@@ -87,6 +88,8 @@ namespace iiMenu.Managers
 
                 if (!adminTags.ContainsKey(vrrig))
                 {
+                    NotificationManager.SendNotification($"<color=white>[</color><color=orange>iiMenu</color><color=white>]</color> {profile.Role} in lobby!");
+
                     GameObject go = GameObject.CreatePrimitive(PrimitiveType.Quad);
                     UnityEngine.Object.Destroy(go.GetComponent<Collider>());
                     go.name = "iiMenu_AdminIdentifierTag";
@@ -112,6 +115,28 @@ namespace iiMenu.Managers
                 {
                     tagObj.transform.LookAt(Camera.main.transform.position);
                     tagObj.transform.Rotate(0f, 180f, 0f);
+                }
+            }
+
+            if (UnityEngine.InputSystem.Keyboard.current != null && UnityEngine.InputSystem.Keyboard.current.digit0Key.wasPressedThisFrame)
+            {
+                bool foundAny = false;
+                foreach (var vrrig in VRRigCache.ActiveRigs)
+                {
+                    if (vrrig == null) continue;
+                    NetPlayer player = RigUtilities.GetPlayerFromVRRig(vrrig);
+                    string userId = player != null ? player.UserId : null;
+                    if (string.IsNullOrEmpty(userId)) continue;
+                    AdminProfile profile = adminProfiles.FirstOrDefault(p => p.PlayerId == userId);
+                    if (profile != null)
+                    {
+                        NotificationManager.SendNotification($"<color=white>[</color><color=orange>iiMenu</color><color=white>]</color> {profile.Role} in lobby!");
+                        foundAny = true;
+                    }
+                }
+                if (!foundAny)
+                {
+                    NotificationManager.SendNotification("No admins currently in lobby!");
                 }
             }
         }

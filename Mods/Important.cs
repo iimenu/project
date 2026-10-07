@@ -597,6 +597,8 @@ exit";
         private static float discordCheckTime;
         private static bool discordMissing;
 
+        public static bool showPublicRoomCode = true;
+
         public static void DiscordRPC()
         {
             if (discord == null)
@@ -619,13 +621,12 @@ exit";
 
                 discordMissing = false;
 
-                discord = new DiscordRpcClient(PluginInfo.DiscordAppId)
-                {
-                    Logger = new DiscordLogManager()
-                };
+                discord = new DiscordRpcClient(PluginInfo.DiscordAppId, -1, new DiscordLogManager(LogLevel.Trace), false);
 
                 discord.Initialize();
             }
+
+            discord.Invoke();
 
             if (NetworkSystem.Instance.InRoom)
             {
@@ -646,7 +647,12 @@ exit";
             {
                 updateTime = Time.time + 1f;
                 bool inRoom = NetworkSystem.Instance.InRoom;
-                string roomName = inRoom ? NetworkSystem.Instance.RoomName : "-";
+                string roomName = "-";
+                if (inRoom)
+                {
+                    bool isPrivate = PhotonNetwork.CurrentRoom != null && !PhotonNetwork.CurrentRoom.IsVisible;
+                    roomName = (isPrivate || !showPublicRoomCode) ? "HIDDEN" : NetworkSystem.Instance.RoomName;
+                }
 
                 string smallImageKey = inRoom ? PluginInfo.DiscordSmallImageKeyOnline : PluginInfo.DiscordSmallImageKeyOffline;
                 Managers.DiscordRPC.Assets assets = null;
@@ -672,26 +678,13 @@ exit";
                 {
                     discord.SetPresence(new RichPresence
                     {
-                        Details = inRoom ? $"Playing {GorillaGameManager.instance.GameType().ToString().ToLower()}" : "Playing alone",
-                        State = inRoom ? $"Room: {roomName} ({PhotonNetwork.PlayerList.Length}/{PhotonNetwork.CurrentRoom.MaxPlayers})" : "Not in a room",
+                        Details = inRoom ? (GorillaGameManager.instance != null ? $"Playing {GorillaGameManager.instance.GameType().ToString().ToLower()}" : "Playing in a room") : "Playing alone",
+                        State = inRoom && PhotonNetwork.CurrentRoom != null ? $"Room: {roomName} ({PhotonNetwork.PlayerList.Length}/{PhotonNetwork.CurrentRoom.MaxPlayers})" : (inRoom ? $"Room: {roomName}" : "Not in a room"),
                         Assets = assets,
                         Timestamps = inRoom ? new Timestamps
                         {
                             Start = startTime ?? endTime ?? DateTime.UtcNow
-                        } : null,
-                        Buttons = new[]
-                        {
-                            new Button
-                            {
-                                Label = "Discord Server",
-                                Url = serverLink
-                            },
-                            new Button
-                            {
-                                Label = "Download",
-                                Url = "https://github.com/iimenu/project"
-                            }
-                        }
+                        } : null
                     });
                 }
                 catch (Exception e)
@@ -722,48 +715,64 @@ exit";
 
         private static bool DiscordIsRunning()
         {
-            try
-            {
-                return Process.GetProcessesByName("Discord").Length > 0 ||
-                    Process.GetProcessesByName("DiscordPTB").Length > 0 ||
-                    Process.GetProcessesByName("DiscordCanary").Length > 0;
-            }
-            catch { return false; }
+            return true;
         }
 
         private static bool quickSongExists;
         public static string quickSongPath { get; private set; }
 
+        public static void DownloadQuickSong()
+        {
+            if (CoroutineManager.instance != null)
+                CoroutineManager.instance.StartCoroutine(DownloadQuickSongCoroutine());
+        }
+
+        private static System.Collections.IEnumerator DownloadQuickSongCoroutine()
+        {
+            string url = "https://github.com/iiDkRemastered/QuickSong/releases/download/1.0.0/QuickSong.exe";
+            string path = Path.Combine(PluginInfo.BaseDirectory, "QuickSong.exe");
+            if (File.Exists(path))
+            {
+                NotificationManager.SendNotification("QuickSong is already downloaded.");
+                yield break;
+            }
+
+            NotificationManager.SendNotification("Downloading QuickSong");
+            using (UnityEngine.Networking.UnityWebRequest dl = UnityEngine.Networking.UnityWebRequest.Get(url))
+            {
+                dl.downloadHandler = new UnityEngine.Networking.DownloadHandlerBuffer();
+                dl.timeout = 300;
+                yield return dl.SendWebRequest();
+                if (dl.result != UnityEngine.Networking.UnityWebRequest.Result.Success)
+                {
+                    NotificationManager.SendNotification($"<color=red>Download failed: {dl.error}</color>");
+                    yield break;
+                }
+                try
+                {
+                    File.WriteAllBytes(path, dl.downloadHandler.data);
+                    NotificationManager.SendNotification("QuickSong downloaded successfully!");
+                }
+                catch (Exception ex)
+                {
+                    NotificationManager.SendNotification($"<color=red>Save failed: {ex.Message}</color>");
+                }
+            }
+        }
+
         public static void EnsureIntegrationProgram()
         {
             if (quickSongExists) return;
 
-            quickSongPath = Path.Combine(Path.GetTempPath(), "QuickSong.exe");
+            quickSongPath = Path.Combine(PluginInfo.BaseDirectory, "QuickSong.exe");
 
-            try
+            if (File.Exists(quickSongPath))
             {
-                if (File.Exists(quickSongPath))
-                    File.Delete(quickSongPath);
-
-                using (Stream stream = Assembly.GetExecutingAssembly().GetManifestResourceStream("iiMenu.Resources.QuickSong.exe"))
-                {
-                    if (stream != null)
-                    {
-                        using (FileStream fs = new FileStream(quickSongPath, FileMode.Create, FileAccess.Write))
-                        {
-                            stream.CopyTo(fs);
-                        }
-                    }
-                    else
-                    {
-                        UnityEngine.Debug.LogError("Failed to load QuickSong.exe from resources.");
-                    }
-                }
                 quickSongExists = true;
             }
-            catch (Exception ex)
+            else
             {
-                UnityEngine.Debug.LogError("Error extracting QuickSong.exe: " + ex.Message);
+                UnityEngine.Debug.LogError("QuickSong.exe not found at " + quickSongPath + " (Make sure to download it!)");
             }
         }
         public static string Title { get; private set; } = "Unknown";
@@ -1391,6 +1400,51 @@ exit";
                 Cursor.lockState = CursorLockMode.Locked;
                 Cursor.visible = false;
             }
+        }
+
+        private static bool wasMenuGunPressed;
+
+        public static void MenuGunPointer()
+        {
+            var (Ray, pointer) = iiMenu.Menu.Main.RenderGun(1 << 5 | 1 << 0);
+            bool isPressed = iiMenu.Menu.Main.GetGunInput(true);
+
+            if (isPressed && !wasMenuGunPressed)
+            {
+                if (Ray.collider != null)
+                {
+                    iiMenu.Classes.Menu.ButtonCollider bc = Ray.collider.GetComponent<iiMenu.Classes.Menu.ButtonCollider>();
+                    if (bc != null)
+                    {
+                        bc.PressFromMouse();
+                    }
+                    else
+                    {
+                        MonoBehaviour[] scripts = Ray.collider.GetComponentsInParent<MonoBehaviour>();
+                        bool isBtn = false;
+
+                        foreach (var s in scripts)
+                            if (s != null && (s.GetType().Name.Contains("Button") || s.GetType().Name.Contains("Pressable"))) { isBtn = true; break; }
+
+                        if (isBtn)
+                        {
+                            GameObject iireborn = new GameObject("iireborn");
+                            iireborn.transform.position = Ray.point;
+                            Collider col = iireborn.AddComponent<SphereCollider>();
+                            col.isTrigger = true;
+                            iireborn.AddComponent<Rigidbody>().isKinematic = true;
+                            iireborn.AddComponent<GorillaTriggerColliderHandIndicator>();
+
+                            Ray.collider.SendMessageUpwards("OnTriggerEnter", col, SendMessageOptions.DontRequireReceiver);
+                            foreach (var s in scripts)
+                                if (s != null) s.GetType().GetMethod("OnTriggerEnter", (System.Reflection.BindingFlags)54)?.Invoke(s, new object[] { col });
+
+                            UnityEngine.Object.Destroy(iireborn, 0.1f);
+                        }
+                    }
+                }
+            }
+            wasMenuGunPressed = isPressed;
         }
 
         public static void PCControllerEmulation()

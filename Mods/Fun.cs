@@ -2228,49 +2228,7 @@ namespace iiMenu.Mods
             RecorderPatch.enabled = !Buttons.GetIndex("Legacy Microphone").enabled;
         }
 
-        private static float talkThroughGunDelay;
-        public static void TalkThroughGun()
-        {
-            if (GetGunInput(false))
-            {
-                var GunData = RenderGun();
-                RaycastHit Ray = GunData.Ray;
 
-                if (GetGunInput(true))
-                {
-                    VRRig gunTarget = GetRigFromHit(Ray);
-                    if (gunTarget && !gunTarget.IsLocal())
-                    {
-                        if (Time.time > talkThroughGunDelay)
-                        {
-                            talkThroughGunDelay = Time.time + 0.5f;
-
-                            gunLocked = true;
-                            lockTarget = gunTarget;
-
-                            int targetViewId = lockTarget.GetComponent<PhotonView>().ViewID;
-                            GorillaTagger.Instance.myRecorder.UserData = targetViewId;
-                            
-                            ReloadMicrophone();
-                        }
-                    }
-                }
-            }
-            else
-            {
-                if (gunLocked)
-                {
-                    gunLocked = false;
-                    DisableTalkThrough();
-                }
-            }
-        }
-
-        public static void DisableTalkThrough()
-        {
-            GorillaTagger.Instance.myRecorder.UserData = GorillaTagger.Instance.myVRRig.GetComponent<PhotonView>().ViewID;
-            ReloadMicrophone();
-        }
 
         public static void DebugMicrophone()
         {
@@ -2345,7 +2303,7 @@ namespace iiMenu.Mods
             factory.Feed(data);
 
         public static void ReloadMicrophone() =>
-            GorillaTagger.Instance.myRecorder.RestartRecording(true);
+            GorillaTagger.Instance.myRecorder?.RestartRecording(true);
 
         public static IEnumerator DelayReloadMicrophone()
         {
