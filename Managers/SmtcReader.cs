@@ -45,7 +45,8 @@ namespace iiMenu.Managers
 
         private const string BufferClassName = "Windows.Storage.Streams.Buffer";
         private static readonly Guid BufferFactoryIid = new Guid("71AF914D-C10F-484B-BC50-14BC623B3A27");
-        private static readonly Guid BufferByteAccessIid = new Guid("905A0FEF-BC53-11DF-8C49-001E4FC68AD1");
+        private static readonly Guid BufferByteAccessIid = new Guid("905A0FEF-BC53-11DF-8C49-001E4FC686DA");
+        private static readonly Guid RandomAccessStreamIid = new Guid("905A0FE1-BC53-11DF-8C49-001E4FC686DA");
         private const int ArtMaxBytes = 8388608;
 
         private const int StatusStarted = 0;
@@ -458,52 +459,63 @@ namespace iiMenu.Managers
                 {
                     if (WaitOp(openOp, FetchTimeoutMs) != 0)
                         return null;
-                    if (Slot<GetOp>(openOp, SlotOpWithProgressResults)(openOp, out IntPtr stream) != 0 || stream == IntPtr.Zero)
+                    if (Slot<GetOp>(openOp, SlotAsyncResults)(openOp, out IntPtr stream) != 0 || stream == IntPtr.Zero)
                         return null;
 
                     try
                     {
-                        if (Slot<GetSize>(stream, SlotStreamSize)(stream, out long size) != 0 || size <= 0 || size > ArtMaxBytes)
-                            return null;
-
-                        if (Slot<GetStreamAt>(stream, SlotStreamGetInput)(stream, 0, out IntPtr input) != 0 || input == IntPtr.Zero)
+                        Guid rasIid = RandomAccessStreamIid;
+                        if (Marshal.QueryInterface(stream, ref rasIid, out IntPtr ras) != 0 || ras == IntPtr.Zero)
                             return null;
 
                         try
                         {
-                            IntPtr buffer = CreateBuffer((uint)size);
-                            if (buffer == IntPtr.Zero)
+                            if (Slot<GetSize>(ras, SlotStreamSize)(ras, out long size) != 0 || size <= 0 || size > ArtMaxBytes)
+                                return null;
+
+                            if (Slot<GetStreamAt>(ras, SlotStreamGetInput)(ras, 0, out IntPtr input) != 0 || input == IntPtr.Zero)
                                 return null;
 
                             try
                             {
-                                if (Slot<ReadInto>(input, SlotInputRead)(input, buffer, (uint)size, 0, out IntPtr readOp) != 0 || readOp == IntPtr.Zero)
+                                IntPtr buffer = CreateBuffer((uint)size);
+                                if (buffer == IntPtr.Zero)
                                     return null;
-
-                                IntPtr resultBuffer = IntPtr.Zero;
+    
                                 try
                                 {
-                                    if (WaitOp(readOp, FetchTimeoutMs) != 0)
+                                    if (Slot<ReadInto>(input, SlotInputRead)(input, buffer, (uint)size, 0, out IntPtr readOp) != 0 || readOp == IntPtr.Zero)
                                         return null;
-                                    if (Slot<GetOp>(readOp, SlotOpWithProgressResults)(readOp, out resultBuffer) != 0 || resultBuffer == IntPtr.Zero)
-                                        return null;
-                                    return CopyBuffer(resultBuffer);
+    
+                                    IntPtr resultBuffer = IntPtr.Zero;
+                                    try
+                                    {
+                                        if (WaitOp(readOp, FetchTimeoutMs) != 0)
+                                            return null;
+                                        if (Slot<GetOp>(readOp, SlotOpWithProgressResults)(readOp, out resultBuffer) != 0 || resultBuffer == IntPtr.Zero)
+                                            return null;
+                                        return CopyBuffer(resultBuffer);
+                                    }
+                                    finally
+                                    {
+                                        if (resultBuffer != IntPtr.Zero && resultBuffer != buffer)
+                                            Marshal.Release(resultBuffer);
+                                        Marshal.Release(readOp);
+                                    }
                                 }
                                 finally
                                 {
-                                    if (resultBuffer != IntPtr.Zero && resultBuffer != buffer)
-                                        Marshal.Release(resultBuffer);
-                                    Marshal.Release(readOp);
+                                    Marshal.Release(buffer);
                                 }
                             }
                             finally
                             {
-                                Marshal.Release(buffer);
+                                Marshal.Release(input);
                             }
                         }
                         finally
                         {
-                            Marshal.Release(input);
+                            Marshal.Release(ras);
                         }
                     }
                     finally
