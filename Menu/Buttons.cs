@@ -30,6 +30,7 @@ using static iiMenu.Menu.Main;
 using static iiMenu.Utilities.RandomUtilities;
 using static iiMenu.Utilities.RigUtilities;
 using Application = UnityEngine.Application;
+
 using Random = UnityEngine.Random;
 
 namespace iiMenu.Menu
@@ -54,6 +55,7 @@ namespace iiMenu.Menu
                 new ButtonInfo { buttonText = "Advantage Mods", method =() => CurrentCategoryName = "Advantage Mods", isTogglable = false, toolTip = "Opens the advantage mods."},
                 new ButtonInfo { buttonText = "Visual Mods", method =() => CurrentCategoryName = "Visual Mods", isTogglable = false, toolTip = "Opens the visual mods."},
                 new ButtonInfo { buttonText = "Fun Mods", method =() => CurrentCategoryName = "Fun Mods", isTogglable = false, toolTip = "Opens the fun mods."},
+                new ButtonInfo { buttonText = "Fortnite Emotes", method =() => CurrentCategoryName = "Fortnite Emotes", isTogglable = false, toolTip = "Opens the fortnite emotes."},
                 new ButtonInfo { buttonText = "Sound Mods", method =() => CurrentCategoryName = "Sound Mods", isTogglable = false, toolTip = "Opens the sound mods."},
                 new ButtonInfo { buttonText = "Projectile Mods", method =() => CurrentCategoryName = "Projectile Mods", isTogglable = false, toolTip = "Opens the projectile mods."},
                 new ButtonInfo { buttonText = "Master Mods", method =() => CurrentCategoryName = "Master Mods", isTogglable = false, toolTip = "Opens the master mods."},
@@ -62,6 +64,7 @@ namespace iiMenu.Menu
                 new ButtonInfo { buttonText = "External Mods", method = ExternalModsManager.EnterExternalMods, isTogglable = false, toolTip = "One-click installer for external mods (Utilla, WalkSim Fixed, TooMuchInfo, LibrePad). Always pulls the latest GitHub release and drops the .dll into BepInEx/plugins — then restart."},
                 new ButtonInfo { buttonText = "Detected Mods", method = Detected.EnterDetectedTab, isTogglable = false, toolTip = "Opens the detected mods."},
 
+                new ButtonInfo { buttonText = "Music Player", method =() => CurrentCategoryName = "Music Player", isTogglable = false, toolTip = "Opens the music player page."},
                 new ButtonInfo { buttonText = "Achievements", method = AchievementManager.EnterAchievementTab, isTogglable = false, toolTip = "Opens the achievements page."},
                 new ButtonInfo { buttonText = "Credits", method =() => CurrentCategoryName = "Credits", isTogglable = false, toolTip = "Opens the credits page."}
             },
@@ -81,6 +84,7 @@ namespace iiMenu.Menu
                 new ButtonInfo { buttonText = "Safety Settings", method =() => CurrentCategoryName = "Safety Settings", isTogglable = false, toolTip = "Opens the settings for the safety mods."},
                 new ButtonInfo { buttonText = "Movement Settings", method =() => CurrentCategoryName = "Movement Settings", isTogglable = false, toolTip = "Opens the settings for the movement mods."},
                 new ButtonInfo { buttonText = "Advantage Settings", method =() => CurrentCategoryName = "Advantage Settings", isTogglable = false, toolTip = "Opens the settings for the advantage mods."},
+                new ButtonInfo { buttonText = "Discord RPC Settings", method =() => CurrentCategoryName = "Discord RPC Settings", isTogglable = false, toolTip = "Opens the settings for the Discord RPC."},
                 new ButtonInfo { buttonText = "Visual Settings", method =() => CurrentCategoryName = "Visual Settings", isTogglable = false, toolTip = "Opens the settings for the visual mods."},
                 new ButtonInfo { buttonText = "Fun Settings", method =() => CurrentCategoryName = "Fun Settings", isTogglable = false, toolTip = "Opens the settings for the fun mods."},
                 new ButtonInfo { buttonText = "Overpowered Settings", method =() => CurrentCategoryName = "Overpowered Settings", isTogglable = false, toolTip = "Opens the settings for the overpowered mods."},
@@ -144,6 +148,7 @@ namespace iiMenu.Menu
                 new ButtonInfo { buttonText = "Particle Spawn Effect", enableMethod =() => particleSpawnEffect = true, disableMethod =() => particleSpawnEffect = false, toolTip = "Spawns particles when opening the menu."},
                 new ButtonInfo { buttonText = "Gradient Title", enableMethod =() => gradientTitle = true, disableMethod =() => gradientTitle = false, toolTip = "Gives a gradient to the title of the menu depending on your theme."},
                 new ButtonInfo { buttonText = "Animated Title", enableMethod =() => animatedTitle = true, disableMethod =() => animatedTitle = false, toolTip = "Animates the title of the menu."},
+                // new ButtonInfo { buttonText = "3D Canvas Menu", enableMethod =() => { canvasLayout = true; iiMenu.Menu.Main.CloseMenu(); iiMenu.Menu.Main.OpenMenu(); }, disableMethod =() => { canvasLayout = false; CanvasBridge.Destroy(); iiMenu.Menu.Main.CloseMenu(); iiMenu.Menu.Main.OpenMenu(); }, toolTip = "Uses the new 3D Canvas Menu framework for drawing the menu."},
                 new ButtonInfo { buttonText = "Voice Commands", enableMethod = Settings.VoiceRecognitionOn, method = Settings.CheckFocus, disableMethod = Settings.VoiceRecognitionOff, toolTip = "Enable and disable mods using your voice. Activate it like how you would any other voice assistant, such as \"Jarvis, Platforms\"."},
                 new ButtonInfo { buttonText = "Chain Voice Commands", toolTip = "Makes voice commands chain together, so you don't have to repeatedly ask it to listen to you."},
                 new ButtonInfo { buttonText = "AI Assistant", enableMethod =() => CoroutineManager.instance.StartCoroutine(Settings.DictationOn()), method = Settings.CheckFocus, disableMethod = Settings.DictationOff, toolTip = "A voice assistant with artificial intelligence capabilities. Say your wake word (default \"System\") to wake it up."},
@@ -176,6 +181,7 @@ namespace iiMenu.Menu
                 new ButtonInfo { buttonText = "Change Menu Button", overlapText = "Change Menu Button <color=grey>[</color><color=green>Secondary</color><color=grey>]</color>", method =() => Settings.ChangeMenuButton(), enableMethod =() => Settings.ChangeMenuButton(), disableMethod =() => Settings.ChangeMenuButton(false), incremental = true, isTogglable = false, toolTip = "Changes the button used to open menu."},
                 new ButtonInfo { buttonText = "Menu Toggle Button", enableMethod =() => toggleButton = true, disableMethod =() => toggleButton = false, toolTip = "Allows the menu to be toggled on and off with the menu button."},
                 new ButtonInfo { buttonText = "Change Menu Theme", method =() => Settings.ChangeMenuTheme(), enableMethod =() => Settings.ChangeMenuTheme(), disableMethod =() => Settings.ChangeMenuTheme(false), incremental = true, isTogglable = false, toolTip = "Changes the theme of the menu."},
+                new ButtonInfo { buttonText = "Dev Themes", method =() => CurrentCategoryName = "Dev Themes", isTogglable = false, toolTip = "Opens the Dev Themes page."},
                 new ButtonInfo { buttonText = "Slow Gradient Fade", enableMethod =() => slowFadeColors = true, disableMethod =() => slowFadeColors = false, toolTip = "Makes gradient themes fade slower on the background."},
                 new ButtonInfo { buttonText = "Change Menu Scale", overlapText = "Change Menu Scale <color=grey>[</color><color=green>1</color><color=grey>]</color>", method =() => Settings.ChangeMenuScale(), enableMethod =() => Settings.ChangeMenuScale(), disableMethod =() => Settings.ChangeMenuScale(false), incremental = true, isTogglable = false, toolTip = "Changes the scale of the menu."},
                 new ButtonInfo { buttonText = "Change Notification Scale", overlapText = "Change Notification Scale <color=grey>[</color><color=green>6</color><color=grey>]</color>", method =() => Settings.ChangeNotificationScale(), enableMethod =() => Settings.ChangeNotificationScale(), disableMethod =() => Settings.ChangeNotificationScale(false), incremental = true, isTogglable = false, toolTip = "Changes the scale of the notifications."},
@@ -292,6 +298,12 @@ namespace iiMenu.Menu
                 new ButtonInfo { buttonText = "Load Preferences", method = Settings.LoadPreferences, isTogglable = false, toolTip = "Loads your preferences from a file."},
                 new ButtonInfo { buttonText = "Disable Autosave", method =() => autoSaveDelay = Time.time + 1f, toolTip = "Disables the auto save mechanism."},
                 new ButtonInfo { buttonText = "Panic", method = Settings.Panic, isTogglable = false, toolTip = "Disables every single active mod."},
+            },
+
+            new[] { // Dev Themes [NEW]
+                new ButtonInfo { buttonText = "Exit Dev Themes", method =() => CurrentCategoryName = "Menu Settings", isTogglable = false, toolTip = "Returns you back to the menu settings page."},
+
+                new ButtonInfo { buttonText = "poopooVR Theme", method =() => Settings.SetTheme(69), isTogglable = false, toolTip = "Hi I am poopooVR and this is my theme :)"},
             },
 
             new[] { // Room Settings [3]
@@ -412,7 +424,7 @@ namespace iiMenu.Menu
                 new ButtonInfo { buttonText = "Create Private", method =() => { if (GetIndex("20 Player Rooms").enabled) Important.CreateRoom($"@{Important.RandomRoomName()}", false); else Important.CreateRoom(Important.RandomRoomName(), false); }, isTogglable = false, toolTip = "Creates a private room."},
 
                 new ButtonInfo { buttonText = "Fast Disconnect", method =() => SinglePlayerPatch.enabled = true, disableMethod =() =>  SinglePlayerPatch.enabled = false, toolTip = "Uses the fastest method of disconnecting possible."},
-                new ButtonInfo { buttonText = "iiServers", method = IiServersManager.EnterIiServers, isTogglable = false, toolTip = "Private Photon Cloud for banned players."},
+                new ButtonInfo { buttonText = "iiServers", method = IiServersManager.EnterIiServers, isTogglable = false, toolTip = "Private Photon Cloud for banned players. Everyone connects to the same code, and to the next one when it is full. OFF restores official - no restart needed."},
                 new ButtonInfo { buttonText = "Join Menu Room", method =() => PhotonNetworkController.Instance.AttemptToJoinSpecificRoom($"<$II_{PluginInfo.Version}>", JoinType.Solo), isTogglable = false, toolTip = "Connects you to a room that is exclusive to ii <b>Reborn</b> users." },
 
                 new ButtonInfo { buttonText = "Bypass Join Room Type", enableMethod =() => JoinedRoomPatch.enabled = true, disableMethod =() => JoinedRoomPatch.enabled = false, toolTip = "Bypasses the immediate disconnection when trying to join a room that is in another map."},
@@ -466,7 +478,10 @@ namespace iiMenu.Menu
                 
                 new ButtonInfo { buttonText = "Restart Gorilla Tag", aliases = new[] { "Restart Game", "Restart App" }, method = () => Prompt("Are you sure you want to restart Gorilla Tag?", Important.RestartGame), isTogglable = false, toolTip = "Restarts Gorilla Tag." },
                 new ButtonInfo { buttonText = "Open Gorilla Tag Folder", method = Important.OpenGorillaTagFolder, isTogglable = false, toolTip = "Opens the folder in which your game is located." },
+                new ButtonInfo { buttonText = "Unlock Gamemodes", enableMethod = Important.EnableUnlockGamemodes, disableMethod = Important.DisableUnlockGamemodes, toolTip = "Unlocks Hunt, Paintbrawl, Ambush, FreezeTag, Ghost, and Guardian on the computer."},
                 new ButtonInfo { buttonText = "Discord RPC", aliases = new[] { "Self Tracker", "Rich Presence" }, method = Important.DiscordRPC, disableMethod = Important.DisableDiscordRPC, toolTip = "Gives you a indicator on Discord that you are using ii Reborn." },
+                new ButtonInfo { buttonText = "Mic Mode", overlapText = "Mic Mode <color=grey>[</color><color=green>Default</color><color=grey>]</color>", method =() => Important.CycleMicMode(true), enableMethod =() => Important.CycleMicMode(true), disableMethod =() => Important.CycleMicMode(false), incremental = true, isTogglable = false, toolTip = "Changes your microphone mode. Left/Right or Click to cycle modes." },
+                new ButtonInfo { buttonText = "Fix Audio Stutter", method = Important.FixAudioBug, isTogglable = false, toolTip = "Fixes audio glitches/stuttering, only use this if your audio is broken." },
 
                 new ButtonInfo { buttonText = "Media Integration", aliases = new[] { "Spotify" }, enableMethod = Important.EnsureIntegrationProgram, method = Important.MediaIntegration, disableMethod = Important.DisableMediaIntegration, toolTip = "Shows you what media you are watching/listening to in the top left. To switch media, open the menu and use your left joystick."},
 
@@ -504,7 +519,7 @@ namespace iiMenu.Menu
                 new ButtonInfo { buttonText = "15 FPS", method =() => Important.CapFPS(15), toolTip = "Caps your FPS at 15 frames per second."},
                 new ButtonInfo { buttonText = "Unlock FPS", method = Important.UncapFPS, disableMethod =() => Application.targetFrameRate = 144, toolTip = "Unlocks your FPS."},
 
-                new ButtonInfo { buttonText = "PC Button Click", aliases = new[] { "PC Click" }, method = Important.PCButtonClick, disableMethod = Important.DisablePCButtonClick, toolTip = "Lets you click in-game buttons with your mouse."},
+                new ButtonInfo { buttonText = "PC Button Click", aliases = new[] { "PC Click" }, method = Important.PCButtonClick, disableMethod = Important.DisablePCButtonClick, toolTip = "Lets you click in-game buttons with your mouse, hold down shit to unlock mouse."},
                 new ButtonInfo { buttonText = "PC Controller Emulation", method = Important.PCControllerEmulation, toolTip = "Allows you to press buttons on your in-game controllers using your keyboard."},
                 new ButtonInfo { buttonText = "Unlock Competitive Queue", method =() => GorillaComputer.instance.CompQueueUnlockButtonPress(), isTogglable = false, toolTip = "Permanently unlocks the competitive queue."},
                 new ButtonInfo { buttonText = "Change Queue to Default", overlapText = "Change Queue <color=grey>[</color><color=green>Default</color><color=grey>]</color>", method =() => GorillaComputer.instance.currentQueue = "DEFAULT", isTogglable = false, toolTip = "Changes your queue to default."},
@@ -871,10 +886,21 @@ namespace iiMenu.Menu
                 new ButtonInfo { buttonText = "Day Time", method =() => BetterDayNightManager.instance.SetTimeOfDay(3), toolTip = "Sets your time of day to daytime."},
                 new ButtonInfo { buttonText = "Evening Time", method =() => BetterDayNightManager.instance.SetTimeOfDay(7), toolTip = "Sets your time of day to evening."},
                 new ButtonInfo { buttonText = "Night Time", method =() => BetterDayNightManager.instance.SetTimeOfDay(0), toolTip = "Sets your time of day to night."},
-                new ButtonInfo { buttonText = "Fullbright", method =() => Visuals.SetFullbrightStatus(true), disableMethod =() => Visuals.SetFullbrightStatus(false), toolTip = "Disables the dynamic lighting in maps that use it."},
+                new ButtonInfo { buttonText = "Fullbright", method =() => Visuals.SetFullbrightStatus(true), disableMethod =() => Visuals.SetFullbrightStatus(false), toolTip = "Disables the dynamic lighting in maps that use it."},          
 
                 new ButtonInfo { buttonText = "Remove Blindfold", method = Visuals.RemoveBlindfold, toolTip = "Disables the blindfold in the prop hunt map."},
-                
+                new ButtonInfo { buttonText = "Ghost ESP", method = Patches.Menu.GhostESPPatch.Enable, disableMethod = Patches.Menu.GhostESPPatch.Disable, toolTip = "Makes ghost players visible in the Ghost gamemode."},
+                new ButtonInfo { buttonText = "Lucy ESP", method = Overpowered.LucyESP, disableMethod = Overpowered.DisableLucyESP, toolTip = "Applies Chams to Lucy." },
+                new ButtonInfo { buttonText = "Lucy Tracers", method = Visuals.LucyTracers, toolTip = "Draws a line pointing to Lucy." },
+                new ButtonInfo { buttonText = "Lucy Skeleton ESP", method = Visuals.LucySkeletonESP, toolTip = "Draws lines connecting Lucy's joints." },
+                new ButtonInfo { buttonText = "Lucy Look Tracer", method = Visuals.LucyLookTracer, toolTip = "Draws a line indicating where Lucy is looking." },
+                new ButtonInfo { buttonText = "Lucy State ESP", method = Visuals.LucyStateESP, disableMethod = Visuals.DisableLucyStateESP, toolTip = "Shows distance to Lucy and her current state." },
+                new ButtonInfo { buttonText = "Lucy Target Line", method = Visuals.LucyToTargetESP, toolTip = "Draws a line from Lucy to her target." },
+                new ButtonInfo { buttonText = "Rainbow Lucy", method = Visuals.RainbowLucy, disableMethod = Overpowered.DisableLucyESP, toolTip = "Makes Lucy cycle through RGB rainbow colors." },
+                new ButtonInfo { buttonText = "Lucy Head Spin", method = Visuals.LucyHeadSpin, toolTip = "Continuously spins Lucy's head 360 degrees." },
+                new ButtonInfo { buttonText = "Disable Alien Clutter", method = Visuals.DisableAlienClutter, disableMethod = Visuals.EnableAlienClutter, toolTip = "Removes the alien/halloween decorations in forest." },
+
+
                 new ButtonInfo { buttonText = "Core ESP", method = Visuals.CoreESP, toolTip = "Puts dots on your screen at where all of the cores in the ghost reactor map are."},
                 new ButtonInfo { buttonText = "Critter ESP", method = Visuals.CritterESP, toolTip = "Puts dots on your screen at where all of the critters in the critter map are."},
                 new ButtonInfo { buttonText = "Creature ESP", method = Visuals.CreatureESP, toolTip = "Puts dots on your screen at where all of the creatures are in forest and caves."},
@@ -888,7 +914,7 @@ namespace iiMenu.Menu
                 new ButtonInfo { buttonText = "Enable Fog", method = Visuals.EnableFog, disableMethod = Visuals.ResetFog, toolTip = "Enables the fog."},
 
                 new ButtonInfo { buttonText = "Disable Ambience", enableMethod = Visuals.DisableAmbience, disableMethod = Visuals.EnableAmbience, toolTip = "Disables all ambient effects."},
-
+                new ButtonInfo { buttonText = "Nice Mirror", enableMethod = Patches.Menu.NiceMirrorPatch.Enable, disableMethod = Patches.Menu.NiceMirrorPatch.Disable, toolTip = "Makes mirror background visible"},
                 new ButtonInfo { buttonText = "Custom Skybox Color", aliases = new[] { "Custom Sky Color" }, enableMethod = Visuals.DoCustomSkyboxColor, method = Visuals.CustomSkyboxColor, disableMethod = Visuals.UnCustomSkyboxColor, toolTip = "Changes the skybox color to match the menu."},
                 new ButtonInfo { buttonText = "Draw Gun", method = Visuals.DrawGun, disableMethod = Visuals.DisableDrawGun, toolTip = "Lets you draw on whatever your hand desires." },
                 new ButtonInfo { buttonText = "Gamesense Ring", aliases = new[] { "Fortnite Ring" }, enableMethod =() => HandTapPatch.OnHandTap += Visuals.OnHandTapGamesenseRing, method = Visuals.GamesenseRing, disableMethod = Visuals.DisableGamesenseRing, toolTip = "Shows the direction of where people walk around you." },
@@ -1024,6 +1050,8 @@ namespace iiMenu.Menu
 
                 new ButtonInfo { buttonText = "Show Pointers", method = Visuals.ShowButtonColliders, disableMethod = Visuals.HideButtonColliders, toolTip = "Shows dots near your hands, such as when you open the menu."},
 
+                new ButtonInfo { buttonText = "Green Screen", enableMethod = Visuals.GreenScreen, disableMethod = Visuals.FixGreenScreen, toolTip = "Teleports you to a green screen box high above the forest for video editing."},
+
                 new ButtonInfo { buttonText = "Info Watch Menu Name", enableMethod =() => Visuals.infoWatchMenuName = true, disableMethod =() => Visuals.infoWatchMenuName = false, toolTip = "Shows the menu name on the Info Watch mod."},
                 new ButtonInfo { buttonText = "Info Watch FPS", enableMethod =() => Visuals.infoWatchFPS = true, disableMethod =() => Visuals.infoWatchFPS = false, toolTip = "Shows your framerate on the Info Watch mod."},
                 new ButtonInfo { buttonText = "Info Watch Time", enableMethod =() => Visuals.infoWatchTime = true, disableMethod =() => Visuals.infoWatchTime = false, toolTip = "Shows the current time on the Info Watch mod."},
@@ -1043,6 +1071,7 @@ namespace iiMenu.Menu
                 new ButtonInfo { buttonText = "Broken Neck", method = Fun.BrokenNeck, disableMethod = Fun.FixHead, toolTip = "Rotates your head 90 degrees on the Z axis."},
 
                 new ButtonInfo { buttonText = "Head Bang", method = Fun.HeadBang, disableMethod = Fun.FixHead, toolTip = "Bangs your head at the BPM of Paint it Black (159)."},
+
 
                 new ButtonInfo { buttonText = "Flip Hands", aliases = new[] { "Fish Arms" }, method = Fun.FlipHands, toolTip = "Swaps your hands, left is right and right is left."},
                 new ButtonInfo { buttonText = "Loud Hand Taps", method = Fun.LoudHandTaps, disableMethod = Fun.FixHandTaps, toolTip = "Makes your hand taps really loud."},
@@ -1130,6 +1159,8 @@ namespace iiMenu.Menu
 
                 new ButtonInfo { buttonText = "Microphone Feedback", method =() => Fun.SetDebugEchoMode(true), disableMethod =() => Fun.SetDebugEchoMode(false), toolTip = "Plays sound coming through your microphone back to your speakers."},
                 new ButtonInfo { buttonText = "Copy Voice Gun", method = Fun.CopyVoiceGun, disableMethod = Fun.DisableCopyVoice, toolTip = "Copies the voice of whoever your hand desires."},
+                new ButtonInfo { buttonText = "Debug Microphone", method = Fun.DebugMicrophone, disableMethod = Fun.DisableDebugMicrophone, toolTip = "Lets you hear your own spoofed voice locally."},
+
 
                 new ButtonInfo { buttonText = "Narrate Text", method =() => PromptText("What would you like to be narrated?", () => SpeakText(keyboardInput), null, "Done", "Cancel"), isTogglable = false, toolTip = "Narrates the text of your desire."},
                 new ButtonInfo { buttonText = "Save Narration", method =() => PromptText("What would you like the narration to say?", () => Fun.SaveNarration(keyboardInput)), isTogglable = false, toolTip = "Saves whatever you want to narrate to your soundboard."},
@@ -1678,6 +1709,68 @@ namespace iiMenu.Menu
                 new ButtonInfo { buttonText = "Grab Player Info", method = Fun.GrabPlayerInfo, isTogglable = false, toolTip = "Saves every player's name, color, and player ID as a text file and opens it." },
             },
 
+            new[] { // Fortnite Emotes
+                new ButtonInfo { buttonText = "Exit Fortnite Emotes", method =() => CurrentCategoryName = "Main", isTogglable = false, toolTip = "Returns you back to the main page."},
+                new ButtonInfo { buttonText = "Download Emotes", method = Managers.EmoteManager.DownloadEmotes, isTogglable = false, toolTip = "Downloads the Fortnite Emotes asset bundle to your iiReborn folder." },
+                new ButtonInfo { buttonText = "Stop Emotes", method =() => Managers.EmoteManager.StopEmote(), isTogglable = false, toolTip = "Stops the currently playing emote." },
+new ButtonInfo { buttonText = "Dance Moves", method =() => Managers.EmoteManager.Emote("Dance Moves", "default"), isTogglable = false, toolTip = "Plays the Dance Moves emote." },
+new ButtonInfo { buttonText = "Take The L", method =() => Managers.EmoteManager.Emote("TakeTheL", "takethel"), isTogglable = false, toolTip = "Plays the Take The L emote." },
+new ButtonInfo { buttonText = "Reanimated", method =() => Managers.EmoteManager.Emote("Reanimated", "reanimated"), isTogglable = false, toolTip = "Plays the Reanimated emote." },
+new ButtonInfo { buttonText = "Electro Shuffle", method =() => Managers.EmoteManager.Emote("ElectroShuffle", "electroshuffle"), isTogglable = false, toolTip = "Plays the Electro Shuffle emote." },
+new ButtonInfo { buttonText = "Orange Justice", method =() => Managers.EmoteManager.Emote("OrangeJustice", "oj"), isTogglable = false, toolTip = "Plays the Orange Justice emote." },
+new ButtonInfo { buttonText = "Ride The Pony", method =() => Managers.EmoteManager.Emote("RideThePony", "ridethepony"), isTogglable = false, toolTip = "Plays the Ride The Pony emote." },
+new ButtonInfo { buttonText = "Fresh", method =() => Managers.EmoteManager.Emote("Emote_Fresh", "fresh"), isTogglable = false, toolTip = "Plays the Fresh emote." },
+new ButtonInfo { buttonText = "Electro Swing", method =() => Managers.EmoteManager.Emote("ElectroSwing", "swing"), isTogglable = false, toolTip = "Plays the Electro Swing emote." },
+new ButtonInfo { buttonText = "Floss", method =() => Managers.EmoteManager.Emote("Emote_FlossDance_CMM", "floss"), isTogglable = false, toolTip = "Plays the Floss emote." },
+new ButtonInfo { buttonText = "Disco Fever", method =() => Managers.EmoteManager.Emote("DiscoFever", "discofever"), isTogglable = false, toolTip = "Plays the Disco Fever emote." },
+new ButtonInfo { buttonText = "Boogie Down", method =() => Managers.EmoteManager.Emote("BoogieDownLoop", "boogiedown"), isTogglable = false, toolTip = "Plays the Boogie Down emote." },
+new ButtonInfo { buttonText = "Robot Dance", method =() => Managers.EmoteManager.Emote("Emote_RobotDance", "therobot"), isTogglable = false, toolTip = "Plays the Robot Dance emote." },
+new ButtonInfo { buttonText = "Best Mates", method =() => Managers.EmoteManager.Emote("BestMates", "bestmates"), isTogglable = false, toolTip = "Plays the Best Mates emote." },
+new ButtonInfo { buttonText = "Paws And Claws", method =() => Managers.EmoteManager.Emote("Paws And Claws", "pawsclaws"), isTogglable = false, toolTip = "Plays the Paws And Claws emote." },
+new ButtonInfo { buttonText = "Get Griddy", method =() => Managers.EmoteManager.Emote("Get Griddy", "Emote_Griddles_Music_Loop_01"), isTogglable = false, toolTip = "Plays the Get Griddy emote." },
+new ButtonInfo { buttonText = "Pull Up", method =() => Managers.EmoteManager.Emote("Pull Up", "Gas_Station_Loop"), isTogglable = false, toolTip = "Plays the Pull Up emote." },
+new ButtonInfo { buttonText = "Popular Vibe", method =() => Managers.EmoteManager.Emote("Popular Vibe", "Emote_SpeedDial_Loop"), isTogglable = false, toolTip = "Plays the Popular Vibe emote." },
+new ButtonInfo { buttonText = "Lucid Dreams", method =() => Managers.EmoteManager.Emote("Lucid DreamsLoop", "Emote_KelpLinen_Music_Loop"), isTogglable = false, toolTip = "Plays the Lucid Dreams emote." },
+new ButtonInfo { buttonText = "Empty Out Your Pockets", method =() => Managers.EmoteManager.Emote("Empty Out Your PocketsLoop", "eoyp"), isTogglable = false, toolTip = "Plays the Empty Out Your Pockets emote." },
+new ButtonInfo { buttonText = "What You Want", method =() => Managers.EmoteManager.Emote("WhatYouWant", "whatyouwant"), isTogglable = false, toolTip = "Plays the What You Want emote." },
+new ButtonInfo { buttonText = "The Renegade", method =() => Managers.EmoteManager.Emote("The Renegade", "Emote_Just_Home_Music_Loop"), isTogglable = false, toolTip = "Plays the The Renegade emote." },
+new ButtonInfo { buttonText = "Jabba Switchway", method =() => Managers.EmoteManager.Emote("Jabba Switchway Loop", "Emote_January_Bop_Loop"), isTogglable = false, toolTip = "Plays the Jabba Switchway emote." },
+new ButtonInfo { buttonText = "Infinidab", method =() => Managers.EmoteManager.Emote("InfinidabLoop", "infinitedab"), isTogglable = false, toolTip = "Plays the Infinidab emote." },
+new ButtonInfo { buttonText = "Celebrate Me", method =() => Managers.EmoteManager.Emote("Celebrate Me", "IP_Emote_Cottontail_Loop"), isTogglable = false, toolTip = "Plays the Celebrate Me emote." },
+new ButtonInfo { buttonText = "Billy Bounce", method =() => Managers.EmoteManager.Emote("BillyBounce", "billybounce"), isTogglable = false, toolTip = "Plays the Billy Bounce emote." },
+new ButtonInfo { buttonText = "Windmill Floss", method =() => Managers.EmoteManager.Emote("WindmillFloss", "whirlfloss"), isTogglable = false, toolTip = "Plays the Windmill Floss emote." },
+new ButtonInfo { buttonText = "Hype", method =() => Managers.EmoteManager.Emote("Hype", "hype"), isTogglable = false, toolTip = "Plays the Hype emote." },
+new ButtonInfo { buttonText = "Entranced", method =() => Managers.EmoteManager.Emote("Entranced", "entranced"), isTogglable = false, toolTip = "Plays the Entranced emote." },
+new ButtonInfo { buttonText = "Laugh It Up", method =() => Managers.EmoteManager.Emote("LaughItUp", "Emote_Laugh_01"), isTogglable = false, toolTip = "Plays the Laugh It Up emote." },
+new ButtonInfo { buttonText = "Snoop Walk", method =() => Managers.EmoteManager.Emote("SnoopWalk", "snoopwalk"), isTogglable = false, toolTip = "Plays the Snoop Walk emote." },
+new ButtonInfo { buttonText = "Scenario", method =() => Managers.EmoteManager.Emote("Scenario", "scenario"), isTogglable = false, toolTip = "Plays the Scenario emote." },
+new ButtonInfo { buttonText = "Night Out", method =() => Managers.EmoteManager.Emote("Night Out", "nightout"), isTogglable = false, toolTip = "Plays the Night Out emote." },
+new ButtonInfo { buttonText = "Point And Strut", method =() => Managers.EmoteManager.Emote("pointandstrut", "pointandstrut"), isTogglable = false, toolTip = "Plays the Point And Strut emote." },
+new ButtonInfo { buttonText = "Moongazer", method =() => Managers.EmoteManager.Emote("moongazer", "moongazer"), isTogglable = false, toolTip = "Plays the Moongazer emote." },
+new ButtonInfo { buttonText = "Rollie", method =() => Managers.EmoteManager.Emote("Rollie", "Emote_Twist_Daytona_Music_Loop_01"), isTogglable = false, toolTip = "Plays the Rollie emote." },
+new ButtonInfo { buttonText = "Heel", method =() => Managers.EmoteManager.Emote("HEEL", "heelclickbreakdown"), isTogglable = false, toolTip = "Plays the Heel emote." },
+new ButtonInfo { buttonText = "Switch Step", method =() => Managers.EmoteManager.Emote("SwitchStep", "switchstep"), isTogglable = false, toolTip = "Plays the Switch Step emote." },
+new ButtonInfo { buttonText = "Freestylin'", method =() => Managers.EmoteManager.Emote("Freestylin'", "freestylin"), isTogglable = false, toolTip = "Plays the Freestylin' emote." },
+new ButtonInfo { buttonText = "Go Mufasa", method =() => Managers.EmoteManager.Emote("Go Mufasa", "Emote_Sandwich_Bop_Loop"), isTogglable = false, toolTip = "Plays the Go Mufasa emote." },
+new ButtonInfo { buttonText = "Jubislide", method =() => Managers.EmoteManager.Emote("jubislide", "Emote_GoodbyeUpbeat_Loop"), isTogglable = false, toolTip = "Plays the Jubislide emote." },
+new ButtonInfo { buttonText = "Running Man", method =() => Managers.EmoteManager.Emote("RunningMan", "Athena_Emote_Music_RunningMan"), isTogglable = false, toolTip = "Plays the Running Man emote." },
+new ButtonInfo { buttonText = "Zany", method =() => Managers.EmoteManager.Emote("Zany", "zany"), isTogglable = false, toolTip = "Plays the Zany emote." },
+new ButtonInfo { buttonText = "Pumpernickel", method =() => Managers.EmoteManager.Emote("pumpernickel2", "Athena_Emotes_Music_PumpDance"), isTogglable = false, toolTip = "Plays the Pumpernickel emote." },
+new ButtonInfo { buttonText = "Hula", method =() => Managers.EmoteManager.Emote("HULA", "emote_hula_01"), isTogglable = false, toolTip = "Plays the Hula emote." },
+new ButtonInfo { buttonText = "Never Gonna", method =() => Managers.EmoteManager.Emote("Never Gonna Loop", "Emote_NeverGonna_Loop_01"), isTogglable = false, toolTip = "Plays the Never Gonna emote." },
+new ButtonInfo { buttonText = "Say So", method =() => Managers.EmoteManager.Emote("Say So", "Emote_HotPink_Loop_258"), isTogglable = false, toolTip = "Plays the Say So emote." },
+new ButtonInfo { buttonText = "Takeitslow", method =() => Managers.EmoteManager.Emote("Takeitslow", "takeitslow"), isTogglable = false, toolTip = "Plays the Takeitslow emote." },
+new ButtonInfo { buttonText = "Macarena", method =() => Managers.EmoteManager.Emote("Macarena", "Emote_Macaroon_Music_Loop_01"), isTogglable = false, toolTip = "Plays the Macarena emote." },
+new ButtonInfo { buttonText = "Cupid", method =() => Managers.EmoteManager.Emote("cupid", "cupid"), isTogglable = false, toolTip = "Plays the Cupid emote." },
+new ButtonInfo { buttonText = "Gangnam Style", method =() => Managers.EmoteManager.Emote("gangnam", "gangnam"), isTogglable = false, toolTip = "Plays the Gangnam Style emote." },
+new ButtonInfo { buttonText = "Real Slim Shady", method =() => Managers.EmoteManager.Emote("realslimshady", "slim"), isTogglable = false, toolTip = "Plays the Real Slim Shady emote." },
+new ButtonInfo { buttonText = "Party Hips", method =() => Managers.EmoteManager.Emote("partyhips", "partyhips"), isTogglable = false, toolTip = "Plays the Party Hips emote." },
+new ButtonInfo { buttonText = "Out West", method =() => Managers.EmoteManager.Emote("outwest", "outwest"), isTogglable = false, toolTip = "Plays the Out West emote." },
+new ButtonInfo { buttonText = "My World", method =() => Managers.EmoteManager.Emote("myworld", "Myworld"), isTogglable = false, toolTip = "Plays the My World emote." },
+new ButtonInfo { buttonText = "Jake", method =() => Managers.EmoteManager.Emote("Jake", "jake"), isTogglable = false, toolTip = "Plays the Jake emote." },
+new ButtonInfo { buttonText = "Miku", method =() => Managers.EmoteManager.Emote("miku", "miku"), isTogglable = false, toolTip = "Plays the Miku emote." },
+            },
+
             new[] { // Rebind Settings [13]
                 new ButtonInfo { buttonText = "Exit Rebind Settings", method =() => CurrentCategoryName = "Settings", isTogglable = false, toolTip = "Returns you back to the settings menu."},
 
@@ -1818,6 +1911,36 @@ namespace iiMenu.Menu
                 new ButtonInfo { buttonText = "Exit Master Mods", method =() => CurrentCategoryName = "Main", isTogglable = false, toolTip = "Returns you back to the main page."},
 
                 new ButtonInfo { buttonText = "MasterLabel", overlapText = "You are not master client.", label = true},
+
+                new ButtonInfo { buttonText = "Fast Broomsticks", enableMethod = Master.FastBroomsticks, disableMethod = Master.ResetBroomsticks, toolTip = "Makes the broomsticks fast! (Master)"},
+                new ButtonInfo { buttonText = "Slow Broomsticks", enableMethod = Master.SlowBroomsticks, disableMethod = Master.ResetBroomsticks, toolTip = "Makes the broomsticks slow! (Master)"},
+
+                new ButtonInfo { buttonText = "Spawn Lucy", method = Overpowered.SpawnLucy, isTogglable = false, toolTip = "Summons Lucy at closest grave" },
+                new ButtonInfo { buttonText = "Spawn Red Lucy", method = Overpowered.SpawnRedLucy, isTogglable = false, toolTip = "Summons the Red Lucy" },
+                new ButtonInfo { buttonText = "Despawn Lucy", method = Overpowered.DespawnLucy, isTogglable = false, toolTip = "Removes Lucy from the map." },
+                
+                new ButtonInfo { buttonText = "Become Lucy", method = Overpowered.BecomeLucy, disableMethod = Movement.EnableRig, toolTip = "Hides your rig and lets you control Lucy yourself." },
+                new ButtonInfo { buttonText = "Spaz Lucy", method = Overpowered.SpazLucy, toolTip = "Rapidly moves Lucy's position to make her twitch out." },
+                new ButtonInfo { buttonText = "Break Lucy", method = Overpowered.BreakLucy, toolTip = "Break's Lucy's position" },
+                new ButtonInfo { buttonText = "Annoying Lucy", method = Overpowered.AnnoyingLucy, toolTip = "Makes Lucy repeatedly gong and grab random players." },
+                new ButtonInfo { buttonText = "Lucy Attack All", method = Overpowered.LucyAttackAll, isTogglable = false, toolTip = "Makes Lucy instantly grab every player in the lobby." },
+                
+                new ButtonInfo { buttonText = "Lucy Attack Gun", method = Overpowered.LucyAttackGun, toolTip = "Shoot a player to make Lucy aggressively attack them." },
+                new ButtonInfo { buttonText = "Lucy Harass Gun", method = Overpowered.LucyHarassGun, toolTip = "Shoot a player to make Lucy relentlessly harass them." },
+                new ButtonInfo { buttonText = "Lucy Fling Gun", method = Overpowered.LucyFlingGun, toolTip = "Shoot a player to make Lucy fling them into the sky." },
+                new ButtonInfo { buttonText = "Lucy Orbit", method = Overpowered.LucyOrbit, toolTip = "Makes Lucy orbit around you." },
+                new ButtonInfo { buttonText = "Lucy Orbit Vertical", method = Overpowered.LucyOrbitVertical, toolTip = "Makes Lucy orbit vertically around you." },
+                new ButtonInfo { buttonText = "Lucy Crown", method = Overpowered.LucyCrown, toolTip = "Makes Lucy orbit right above your head like a halo." },
+                new ButtonInfo { buttonText = "Helicopter Lucy", method = Overpowered.HelicopterLucy, toolTip = "Rapidly spins Lucy horizontally like a helicopter" },
+                new ButtonInfo { buttonText = "Hand Grab Lucy", method = Overpowered.HandGrabLucy, toolTip = "Hold the right grip to hold Lucy in your hand." },
+                new ButtonInfo { buttonText = "Lucy Orbit Gun", method = Overpowered.LucyOrbitGun, toolTip = "Shoot a player to make Lucy orbit around them." },
+                new ButtonInfo { buttonText = "Lucy Bodyguard", method = Overpowered.LucyBodyguard, toolTip = "Lucy protects you and attacks any player who comes within 5 meters." },
+                
+                new ButtonInfo { buttonText = "Anti-Lucy", method = Overpowered.AntiLucy, toolTip = "Teleports Lucy away into an endless charge loop if she gets too close to you." },
+                new ButtonInfo { buttonText = "Freeze Lucy", method = Overpowered.FreezeLucy, disableMethod = Overpowered.UnfreezeLucy, toolTip = "Sets Lucy's speed to 0, completely freezing her." },
+                new ButtonInfo { buttonText = "Slow Lucy", method = Overpowered.SlowLucy, disableMethod = Overpowered.UnfreezeLucy, toolTip = "Sets Lucy's speed to a crawl." },
+                new ButtonInfo { buttonText = "Fast Lucy", method = Overpowered.FastLucy, disableMethod = Overpowered.UnfreezeLucy, toolTip = "Sets Lucy's speed incredibly high." },
+                new ButtonInfo { buttonText = "Lucy Gun", method = Overpowered.MoveLucyGun, toolTip = "Teleports Lucy to where you shoot." },
 
                 new ButtonInfo { buttonText = "Guardian Self", method = Overpowered.GuardianSelf, isTogglable = false, toolTip = "Makes you red."},
                 new ButtonInfo { buttonText = "Guardian Gun", method = Overpowered.GuardianGun, toolTip = "Makes whoever your hand desires the guardian."},
@@ -2013,6 +2136,8 @@ namespace iiMenu.Menu
 
             new[] { // Overpowered Mods [17]
                 new ButtonInfo { buttonText = "Exit Overpowered Mods", method =() => CurrentCategoryName = "Main", isTogglable = false, toolTip = "Returns you back to the main page."},
+
+                new ButtonInfo { buttonText = "Ride Lucy", method = Overpowered.RideLucy, toolTip = "Ride on Lucy's head" },
 
                 new ButtonInfo { buttonText = "Always Guardian", method = Overpowered.AlwaysGuardian, disableMethod = Movement.EnableRig, toolTip = "Makes you always the guardian."},
                 new ButtonInfo { buttonText = "Guardian Protector", method = Overpowered.GuardianProtector, toolTip = "Pushes people away from the guardian moon if they try to approach it."},
@@ -2353,6 +2478,16 @@ namespace iiMenu.Menu
                 new ButtonInfo { buttonText = "Keybind Right Joystick", enableMethod =() => Settings.StartBind("RJ"), disableMethod =() => IsBinding = false, toolTip = "Enables binding mode, letting you bind a mod to a button."},
             },
 
+            new[] { // Plugin Settings [33]
+                new ButtonInfo { buttonText = "Exit Plugin Settings", method =() => CurrentCategoryName = "Settings", isTogglable = false, toolTip = "Returns you back to the settings menu."},
+                new ButtonInfo { buttonText = "Reload Plugins", method = () => { }, isTogglable = false, toolTip = "Reloads all of your plugins." }
+            },
+
+            new[] { // Discord RPC Settings
+                new ButtonInfo { buttonText = "Exit RPC Settings", method =() => CurrentCategoryName = "Settings", isTogglable = false, toolTip = "Returns you back to the settings menu."},
+
+                new ButtonInfo { buttonText = "Show Public Room Code", enableMethod =() => Important.showPublicRoomCode = true, disableMethod =() => Important.showPublicRoomCode = false, toolTip = "Shows the room code on your Discord RPC. Private rooms are ALWAYS hidden regardless of this setting."}
+            },
             new[] { // Fun Settings [36]
                 new ButtonInfo { buttonText = "Exit Fun Settings", method =() => CurrentCategoryName = "Settings", isTogglable = false, toolTip = "Returns you back to the settings menu."},
 
@@ -2391,11 +2526,14 @@ namespace iiMenu.Menu
             },            new[] { // Credits [38]
                 new ButtonInfo { buttonText = "Exit Credits", method =() => CurrentCategoryName = "Main", isTogglable = false, toolTip = "Returns you back to the main page." },
 
-                new ButtonInfo { buttonText = "Old Devs", method =() => NotificationManager.SendNotification("The original developers of ii's <b>Stupid</b> Menu.", 5000), isTogglable = false, toolTip = "The original developers of ii's <b>Stupid</b> Menu." },
-                new ButtonInfo { buttonText = "Zlothy", method =() => Process.Start("https://github.com/gorillan0t/Sentinel/blob/master/Sentinel/Disc.cs"), isTogglable = false, toolTip = "Disc design and deployment inspiration: github.com/gorillan0t/Sentinel/blob/master/Sentinel/Disc.cs" },
-                new ButtonInfo { buttonText = "Useless", method =() => Process.Start(serverLink), isTogglable = false, toolTip = "Useless — discord.gg/iidk" },
+                new ButtonInfo { buttonText = "KingSells (Founder)", method =() => System.Diagnostics.Process.Start("https://github.com/TheKing13245"), isTogglable = false, toolTip = "Founder - github.com/TheKing13245" },
+                new ButtonInfo { buttonText = "Ian (Admin)", method =() => System.Diagnostics.Process.Start("https://github.com/corgisolutions"), isTogglable = false, toolTip = "Admin - github.com/corgisolutions" },
+                new ButtonInfo { buttonText = "Lucy (Menu Dev)", method =() => System.Diagnostics.Process.Start("https://github.com/noob123ii"), isTogglable = false, toolTip = "Menu Dev - github.com/noob123ii" },
+                new ButtonInfo { buttonText = "poopooVR (Menu Dev)", method =() => System.Diagnostics.Process.Start("https://github.com/poopoovr"), isTogglable = false, toolTip = "Menu Dev - github.com/poopoovr" },
+                
 
-                new ButtonInfo { buttonText = "GPL v3", method =() => Process.Start("https://www.gnu.org/licenses/gpl-3.0.html"), isTogglable = false, toolTip = "The GNU General Public License Version 3 is the license that my menu uses. It proveides a \"free, copyleft license for software and other kinds of works.\""},
+                new ButtonInfo { buttonText = "GPL v3", method =() => System.Diagnostics.Process.Start("https://www.gnu.org/licenses/gpl-3.0.html"), isTogglable = false, toolTip = "The GNU General Public License Version 3 is the license that my menu uses. It proveides a \"free, copyleft license for software and other kinds of works.\""},
+                new ButtonInfo { buttonText = "iiDk", method =() => System.Diagnostics.Process.Start("https://tianjo.cc/iidk"), isTogglable = false, toolTip = "Original Menu Developer - https://tianjo.cc/iidk" },
             },
 
             new[] // Custom Maps [39]
@@ -2553,6 +2691,13 @@ namespace iiMenu.Menu
                 new ButtonInfo { buttonText = "Join Code 2", method =() => IiServersManager.JoinSpecific(IiServersManager.RoomCode(1)), isTogglable = false, toolTip = "Joins the second iiServers code (10 players), used when the first one is full."},
                 new ButtonInfo { buttonText = "iiServers Status", isTogglable = false, toolTip = "Shows iiServers vs official and MOTD."},
                 new ButtonInfo { buttonText = "Refresh iiServers Config", method =() => { if (CoroutineManager.instance != null) IiServersManager.RefreshIiServersButtons(); }, isTogglable = false, toolTip = "Re-fetches AppId/Version from API."},
+            },
+
+            new[] { // Music Player [42]
+                new ButtonInfo { buttonText = "Exit Music Player", method =() => CurrentCategoryName = "Main", isTogglable = false, toolTip = "Returns you back to the main page."},
+                new ButtonInfo { buttonText = "Previous Track", method = Important.PreviousTrack, isTogglable = false, toolTip = "Plays the previous track.", hideFromArraylist = true},
+                new ButtonInfo { buttonText = "Play / Pause", method = Important.PauseTrack, isTogglable = false, toolTip = "Pauses or resumes the track.", hideFromArraylist = true},
+                new ButtonInfo { buttonText = "Skip Track", method = Important.SkipTrack, isTogglable = false, toolTip = "Skips the current track.", hideFromArraylist = true}
             }
         };
 
@@ -2560,6 +2705,7 @@ namespace iiMenu.Menu
             "Main",
             "Settings",
             "Menu Settings",
+            "Dev Themes",
             "Room Settings",
             "Movement Settings",
             "Projectile Settings",
@@ -2570,6 +2716,7 @@ namespace iiMenu.Menu
             "Advantage Mods",
             "Visual Mods",
             "Fun Mods",
+            "Fortnite Emotes",
             "Rebind Settings",
             "Sound Mods",
             "Projectile Mods",
@@ -2589,6 +2736,8 @@ namespace iiMenu.Menu
             "Soundboard Settings",
             "Overpowered Settings",
             "Keybind Settings",
+            "Plugin Settings",
+            "Discord RPC Settings",
             "Fun Settings",
             "Players",
             "Credits",
@@ -2600,7 +2749,8 @@ namespace iiMenu.Menu
             "Achievements",
             "Mod List",
             "External Mods",
-            "iiServers"
+            "iiServers",
+            "Music Player"
         };
 
         public static int _currentCategoryIndex;
@@ -2784,8 +2934,6 @@ new ButtonInfo { buttonText = "Spawn Lightning", method = Visuals.SpawnLightning
 new ButtonInfo { buttonText = "Pumpkin Watcher", enableMethod =() => WatcherEyesPatch.enabled = true, disableMethod =() => WatcherEyesPatch.enabled = false, toolTip = "Make the pumpkin in stump always look at you."},
 new ButtonInfo { buttonText = "Pumpkin Gazer", enableMethod =() => GetObject("Environment Objects/LocalObjects_Prefab/TreeRoom/2025_Halloween2_TreeRoom/SetDressing (1)/HalloweenWatchingEyes").GetComponent<HalloweenWatcherEyes>().durationToBeNormalWhenPlayerLooks = 0.01f, disableMethod =() => GetObject("Environment Objects/LocalObjects_Prefab/TreeRoom/2025_Halloween2_TreeRoom/SetDressing (1)/HalloweenWatchingEyes").GetComponent<HalloweenWatcherEyes>().durationToBeNormalWhenPlayerLooks = 0.01f, toolTip = "Make the pumpkin in stump instantly look at you when you look away."},
 
-new ButtonInfo { buttonText = "Spawn Red Lucy", method = Overpowered.SpawnRedLucy, isTogglable = false, toolTip = "Summons the red lucy in forest." },
-new ButtonInfo { buttonText = "Spawn Blue Lucy", method = Overpowered.SpawnBlueLucy, isTogglable = false, toolTip = "Summons the blue lucy in forest." },
 new ButtonInfo { buttonText = "Despawn Lucy", method = Overpowered.DespawnLucy, isTogglable = false, toolTip = "Despawns lucy in forest." },
 
 new ButtonInfo { buttonText = "Lucy Chase Self", method =() => Overpowered.LucyChase(NetworkSystem.Instance.LocalPlayer), isTogglable = false, toolTip = "Makes lucy chase you." },
@@ -3035,8 +3183,6 @@ new ButtonInfo { buttonText = "Start Moon Event", method =() => Overpowered.Star
 new ButtonInfo { buttonText = "End Moon Event", method =() => Overpowered.EndMoonEvent(), isTogglable = false, toolTip = "Ends the moon event."},
 new ButtonInfo { buttonText = "Spaz Moon Event", method =() => Overpowered.FlashScreen(), toolTip = "Spazzes out the moon event."},
 
-new ButtonInfo { buttonText = "Spawn Red Lucy", method =() => Overpowered.SpawnRedLucy(), isTogglable = false, toolTip = "Summons the red Lucy in forest." },
-new ButtonInfo { buttonText = "Spawn Blue Lucy", method =() => Overpowered.SpawnBlueLucy(), isTogglable = false, toolTip = "Summons the blue Lucy in forest." },
 new ButtonInfo { buttonText = "Despawn Lucy", method =() => Overpowered.DespawnLucy(), isTogglable = false, toolTip = "Despawns lucy in forest." },
 new ButtonInfo { buttonText = "Spaz Lucy", method =() => Overpowered.SpazLucy(), toolTip = "Gives lucy a seizure." },
 
@@ -3053,3 +3199,4 @@ new ButtonInfo { buttonText = "Anti Lucy", enableMethod =() => RisePatch.enabled
 new ButtonInfo { buttonText = "Disable Lucy",  enableMethod =() => LucyPatch.enabled = true, disableMethod =() => LucyPatch.enabled = false, toolTip = "Prevents lucy from spawning."},
 new ButtonInfo { buttonText = "Anti Lurker", enableMethod =() => LurkerPatch.enabled = true, method = Safety.AntiLurker, disableMethod =() => LurkerPatch.enabled = false, toolTip = "Prevents the lurker ghost from possessing you."},
  */
+
