@@ -81,5 +81,31 @@ namespace iiMenu.Patches.Menu
                 return false;
             }
         }
+
+        [HarmonyPatch(typeof(WarningScreens), nameof(WarningScreens.StartWarningScreen))]
+        public class StartWarningScreenPatch
+        {
+            private static bool Prefix(ref Task<WarningButtonResult> __result)
+            {
+                if (!enabled)
+                    return true;
+
+                __result = Task.FromResult(WarningButtonResult.None);
+                return false;
+            }
+        }
+
+        [HarmonyPatch(typeof(WarningScreens), nameof(WarningScreens.StartOptInFollowUpScreen))]
+        public class StartOptInFollowUpScreenPatch
+        {
+            private static bool Prefix(ref Task<WarningButtonResult> __result)
+            {
+                if (!enabled)
+                    return true;
+
+                __result = Task.FromResult(WarningButtonResult.None);
+                return false;
+            }
+        }
     }
 }
