@@ -11,6 +11,9 @@ namespace iiMenu.Managers
 
         private const int SlotRequestAsync = 6;
         private const int SlotManagerGetCurrentSession = 6;
+        private const int SlotManagerGetSessions = 7;
+        private const int SlotViewGetAt = 6;
+        private const int SlotViewSize = 7;
         private const int SlotSessionMediaProperties = 7;
         private const int SlotSessionTimeline = 8;
         private const int SlotSessionPlaybackInfo = 9;
@@ -29,8 +32,10 @@ namespace iiMenu.Managers
         private const int SlotTimelinePosition = 10;
         private const int SlotAsyncStatus = 7;
         private const int SlotAsyncCancel = 9;
-        private const int SlotAsyncResults = 13;
-        private const int SlotOpWithProgressResults = 15;
+        private const int SlotAsyncResults = 8;
+        private const int SlotOpWithProgressResults = 10;
+
+        private static readonly Guid AsyncInfoIid = new Guid("00000036-0000-0000-C000-000000000046");
 
         private const string BufferClassName = "Windows.Storage.Streams.Buffer";
         private static readonly Guid BufferFactoryIid = new Guid("71AF914D-C10F-484B-BC50-14BC623B3A27");
@@ -84,7 +89,16 @@ namespace iiMenu.Managers
         private delegate int ReadInto(IntPtr self, IntPtr buffer, uint count, int options, out IntPtr operation);
 
         [UnmanagedFunctionPointer(CallingConvention.StdCall)]
-        private delegate int CreateBuffer(IntPtr self, uint capacity, out IntPtr buffer);
+        private delegate int BufferCreate(IntPtr self, uint capacity, out IntPtr buffer);
+
+        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        private delegate int GetSessions(IntPtr self, out IntPtr view);
+
+        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        private delegate int ViewGetAt(IntPtr self, uint index, out IntPtr item);
+
+        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        private delegate int NoArgs(IntPtr self);
 
         private static T Slot<T>(IntPtr obj, int index) where T : class
         {
@@ -105,19 +119,30 @@ namespace iiMenu.Managers
 
         private static int WaitOp(IntPtr op, int timeoutMs)
         {
-            GetInt32 status = Slot<GetInt32>(op, SlotAsyncStatus);
-            long deadline = Environment.TickCount + timeoutMs;
-            while (Environment.TickCount < deadline)
+            Guid iid = AsyncInfoIid;
+            if (Marshal.QueryInterface(op, ref iid, out IntPtr info) != 0 || info == IntPtr.Zero)
+                return -1;
+
+            try
             {
-                int hr = status(op, out int current);
-                if (hr != 0)
-                    return hr;
-                if (current != StatusStarted)
-                    return 0;
-                Thread.Sleep(10);
+                GetInt32 status = Slot<GetInt32>(info, SlotAsyncStatus);
+                long deadline = Environment.TickCount + timeoutMs;
+                while (Environment.TickCount < deadline)
+                {
+                    int hr = status(info, out int current);
+                    if (hr != 0)
+                        return hr;
+                    if (current != StatusStarted)
+                        return 0;
+                    Thread.Sleep(10);
+                }
+                Slot<NoArgs>(info, SlotAsyncCancel)(info);
+                return -1;
             }
-            Slot<GetInt32>(op, SlotAsyncCancel)(op, out _);
-            return -1;
+            finally
+            {
+                Marshal.Release(info);
+            }
         }
 
         public sealed class Snapshot
@@ -137,6 +162,10 @@ namespace iiMenu.Managers
         private static Thread worker;
         private static bool running;
 
+        public static string LastStatus;
+
+        private static void Note(string value) => LastStatus = value;
+
         public static bool Running
         {
             get
@@ -153,7 +182,7 @@ namespace iiMenu.Managers
                 if (worker != null && worker.IsAlive)
                     return;
                 running = true;
-                worker = new Thread(Loop) { IsBackground = true, Name = "iiMenu.Smtc" };
+                worker = new Thread(Loop) { IsBackground = true, Name = "Corgi.Smtc" };
                 worker.Start();
             }
         }
@@ -181,7 +210,9 @@ namespace iiMenu.Managers
             int hr = RoInitialize(1);
             if (hr != 0 && hr != 1)
             {
+#if DEBUG
                 LogManager.Log($"smtc roinitialize failed 0x{hr:X8}");
+#endif
                 return;
             }
 
@@ -258,22 +289,37 @@ namespace iiMenu.Managers
                     if (hr == unchecked((int)0x80040154))
                     {
                         permanent = true;
+                        Note("unsupported os");
+#if DEBUG
                         LogManager.Log("smtc unavailable on this os");
+#endif
                     }
+                    else
+                        Note($"activate 0x{hr:X8}");
                     return IntPtr.Zero;
                 }
 
                 hr = Slot<GetOp>(factory, SlotRequestAsync)(factory, out IntPtr op);
                 if (hr != 0 || op == IntPtr.Zero)
+                {
+                    Note($"requestasync 0x{hr:X8}");
                     return IntPtr.Zero;
+                }
 
                 try
                 {
                     if (WaitOp(op, AcquireTimeoutMs) != 0)
+                    {
+                        Note("requestasync timeout");
                         return IntPtr.Zero;
+                    }
                     hr = Slot<GetOp>(op, SlotAsyncResults)(op, out IntPtr result);
                     if (hr != 0 || result == IntPtr.Zero)
+                    {
+                        Note($"manager results 0x{hr:X8}");
                         return IntPtr.Zero;
+                    }
+                    Note("manager acquired");
                     return result;
                 }
                 finally
@@ -293,10 +339,31 @@ namespace iiMenu.Managers
         {
             int hr = Slot<GetOp>(manager, SlotManagerGetCurrentSession)(manager, out IntPtr session);
             if (hr != 0)
+            {
+                Note($"getcurrentsession 0x{hr:X8}");
                 return null;
+            }
+
+            if (session == IntPtr.Zero && Slot<GetSessions>(manager, SlotManagerGetSessions)(manager, out IntPtr view) == 0 && view != IntPtr.Zero)
+            {
+                try
+                {
+                    if (Slot<GetInt32>(view, SlotViewSize)(view, out int count) == 0)
+                        Note($"no current, sessions {count}");
+                    if (Slot<ViewGetAt>(view, SlotViewGetAt)(view, 0, out IntPtr first) == 0 && first != IntPtr.Zero)
+                        session = first;
+                }
+                finally
+                {
+                    Marshal.Release(view);
+                }
+            }
 
             if (session == IntPtr.Zero)
+            {
+                Note("no session");
                 return new Snapshot { HasData = false, Title = "Unknown", Artist = "Unknown", Paused = true };
+            }
 
             try
             {
@@ -322,6 +389,8 @@ namespace iiMenu.Managers
                                 Marshal.Release(props);
                             }
                         }
+                        else
+                            Note("props fetch failed");
                     }
                     finally
                     {
@@ -361,6 +430,7 @@ namespace iiMenu.Managers
                 }
 
                 snapshot.HasData = true;
+                Note("ok");
                 return snapshot;
             }
             finally
@@ -485,7 +555,7 @@ namespace iiMenu.Managers
 
                 try
                 {
-                    return Slot<CreateBuffer>(factory, SlotBufferCreate)(factory, capacity, out IntPtr buffer) == 0 && buffer != IntPtr.Zero ? buffer : IntPtr.Zero;
+                    return Slot<BufferCreate>(factory, SlotBufferCreate)(factory, capacity, out IntPtr buffer) == 0 && buffer != IntPtr.Zero ? buffer : IntPtr.Zero;
                 }
                 finally
                 {
