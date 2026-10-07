@@ -33,6 +33,7 @@ using UnityEngine.XR;
 using static iiMenu.Menu.Main;
 using static iiMenu.Utilities.AssetUtilities;
 using static iiMenu.Utilities.RigUtilities;
+
 using Object = UnityEngine.Object;
 
 namespace iiMenu.Mods
@@ -273,7 +274,7 @@ namespace iiMenu.Mods
             if (!XRSettings.isDeviceActive)
             {
                 Mouse desktopMouse = Mouse.current;
-                Camera camera = TPC ?? Camera.main;
+                Camera camera = TPC ?? iiMenu.Menu.Main.MainCam;
                 if (desktopMouse == null || camera == null)
                     return;
 
@@ -1082,6 +1083,12 @@ exit 0";
 
             Buttons.GetIndex("Change Menu Button").overlapText = "Change Menu Button <color=grey>[</color><color=green>" + buttonNames[menuButtonIndex] + "</color><color=grey>]</color>";
         }
+        public static void SetTheme(int id)
+        {
+            themeType = id - 1;
+            ChangeMenuTheme(true);
+        }
+
         public static void ChangeMenuTheme(bool increment = true)
         {
             if (increment)
@@ -1089,7 +1096,7 @@ exit 0";
             else
                 themeType--;
 
-            const int themeCount = 68;
+            const int themeCount = 69;
 
             if (themeType > themeCount)
                 themeType = 1;
@@ -1099,6 +1106,30 @@ exit 0";
 
             if (Buttons.GetIndex("Custom Menu Theme").enabled)
                 return;
+
+            if (themeType == 69)
+            {
+                customWatermark = LoadTextureFromResource($"{PluginInfo.ClientResourcePath}.poopooVR.png");
+                if (watermarkImage != null)
+                {
+                    watermarkImage.material.SetTexture("_MainTex", customWatermark);
+                    watermarkImage.material.color = Color.white;
+                }
+            }
+            else
+            {
+                if (Buttons.GetIndex("Custom Watermark").enabled)
+                    CustomWatermark();
+                else
+                {
+                    customWatermark = null;
+                    if (watermarkImage != null)
+                    {
+                        watermarkImage.material.SetTexture("_MainTex", LoadTextureFromResource($"{PluginInfo.ClientResourcePath}.icon.png"));
+                        watermarkImage.material.color = Color.white;
+                    }
+                }
+            }
 
             switch (themeType)
             {
@@ -3312,6 +3343,38 @@ exit 0";
                         new ExtGradient
                         {
                             colors = ExtGradient.GetSolidGradient(new Color32(240, 196, 190, 255))
+                        },
+                        new ExtGradient
+                        {
+                            colors = ExtGradient.GetSolidGradient(Color.white)
+                        }
+                    };
+                    break;
+                case 69: // poopooVR
+                    backgroundColor = new ExtGradient
+                    {
+                        colors = ExtGradient.GetSimpleGradient(new Color32(60, 40, 20, 255), new Color32(30, 20, 10, 255))
+                    };
+                    buttonColors = new[]
+                    {
+                        new ExtGradient
+                        {
+                            colors = ExtGradient.GetSolidGradient(new Color32(15, 15, 15, 255))
+                        },
+                        new ExtGradient
+                        {
+                            colors = ExtGradient.GetSolidGradient(new Color32(35, 35, 35, 255))
+                        }
+                    };
+                    textColors = new[]
+                    {
+                        new ExtGradient
+                        {
+                            colors = ExtGradient.GetSolidGradient(new Color32(255, 230, 200, 255))
+                        },
+                        new ExtGradient
+                        {
+                            colors = ExtGradient.GetSolidGradient(Color.white)
                         },
                         new ExtGradient
                         {
@@ -7139,6 +7202,7 @@ exit 0";
                 66,
                 66,
                 66,
+                66,
                 66
             };
             string[] buttonSoundNames = {
@@ -7173,7 +7237,8 @@ exit 0";
                 "GMod Undo",
                 "Half Life",
                 "Mine",
-                "Sensation"
+                "Sensation",
+                "Poop"
             };
 
             if (positive)
