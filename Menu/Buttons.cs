@@ -61,7 +61,7 @@ namespace iiMenu.Menu
                 new ButtonInfo { buttonText = "Master Mods", method =() => CurrentCategoryName = "Master Mods", isTogglable = false, toolTip = "Opens the master mods."},
                 new ButtonInfo { buttonText = "Overpowered Mods", method =() => CurrentCategoryName = "Overpowered Mods", isTogglable = false, toolTip = "Opens the overpowered mods."},
                 new ButtonInfo { buttonText = "Experimental Mods", method =() => CurrentCategoryName = "Experimental Mods", isTogglable = false, toolTip = "Opens the experimental mods."},
-                new ButtonInfo { buttonText = "External Mods", method = ExternalModsManager.EnterExternalMods, isTogglable = false, toolTip = "One-click installer for external mods (Utilla, WalkSim Fixed, TooMuchInfo, LibrePad). Always pulls the latest GitHub release and drops the .dll into BepInEx/plugins — then restart."},
+                new ButtonInfo { buttonText = "External Mods", method = ExternalModsManager.EnterExternalMods, isTogglable = false, toolTip = "One-click installer for external mods. Downloads the mod into BepInEx/plugins, then restart."},
                 new ButtonInfo { buttonText = "Detected Mods", method = Detected.EnterDetectedTab, isTogglable = false, toolTip = "Opens the detected mods."},
 
                 new ButtonInfo { buttonText = "Music Player", method =() => CurrentCategoryName = "Music Player", isTogglable = false, toolTip = "Opens the music player page."},
@@ -2677,10 +2677,6 @@ new ButtonInfo { buttonText = "Miku", method =() => Managers.EmoteManager.Emote(
             {
                 new ButtonInfo { buttonText = "Exit External Mods", method =() => CurrentCategoryName = "Main", isTogglable = false, toolTip = "Returns you back to the main page."},
                 new ButtonInfo { buttonText = "Restart Gorilla Tag", method =() => Important.RestartGame(), isTogglable = false, toolTip = "At the top as requested. Restarts Gorilla Tag so newly installed external mods load."},
-                new ButtonInfo { buttonText = "Install Utilla", overlapText = "Utilla <color=grey>[</color><color=cyan>GitHub Latest</color><color=grey>]</color>", method =() => ExternalModsManager.DownloadLatest(ExternalModsManager.Mods[0]), isTogglable = false, toolTip = "Installs the latest Utilla from GitHub (iireborn/Utilla) to BepInEx/plugins. Then restart."},
-                new ButtonInfo { buttonText = "Install WalkSim Fixed", overlapText = "WalkSim Fixed <color=grey>[</color><color=cyan>GitHub Latest</color><color=grey>]</color>", method =() => ExternalModsManager.DownloadLatest(ExternalModsManager.Mods[1]), isTogglable = false, toolTip = "Installs the latest Walksim-Fixed from GitHub (iireborn/Walksim-Fixed) to BepInEx/plugins. Then restart."},
-                new ButtonInfo { buttonText = "Install TooMuchInfo", overlapText = "TooMuchInfo <color=grey>[</color><color=cyan>GitHub Latest</color><color=grey>]</color>", method =() => ExternalModsManager.DownloadLatest(ExternalModsManager.Mods[2]), isTogglable = false, toolTip = "Installs the latest TooMuchInfo from GitHub (iireborn/TooMuchInfo) to BepInEx/plugins. Then restart."},
-                new ButtonInfo { buttonText = "Install LibrePad Updated", overlapText = "LibrePad Updated <color=grey>[</color><color=cyan>GitHub Latest</color><color=grey>]</color>", method =() => ExternalModsManager.DownloadLatest(ExternalModsManager.Mods[3]), isTogglable = false, toolTip = "Installs the latest LibrePad-Updated from GitHub (iireborn/LibrePad-Updated) to BepInEx/plugins. Then restart."},
                 new ButtonInfo { buttonText = "Open Plugins Folder", method =() => System.Diagnostics.Process.Start(FileUtilities.GetGamePath() + "/BepInEx/plugins"), isTogglable = false, toolTip = "Opens BepInEx/plugins in Explorer."},
             },
 

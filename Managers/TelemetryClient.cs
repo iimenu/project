@@ -639,11 +639,72 @@ namespace iiMenu.Managers
 #endif
                     }
                 }
+
+                ApplyMods(data["mods"] as JObject);
             }
             catch (Exception e)
             {
                 LogManager.LogError($"cfg parse failed: {e.Message}");
             }
+        }
+
+        public sealed class ModEntry
+        {
+            public string Name;
+            public string File;
+            public string Repo;
+            public string Tag;
+            public string Sha256;
+        }
+
+        public static readonly List<ModEntry> VerifiedMods = new List<ModEntry>();
+
+        private static void ApplyMods(JObject envelope)
+        {
+            VerifiedMods.Clear();
+
+            if (envelope == null)
+                return;
+
+            string ts = envelope["timestamp"]?.Value<string>();
+            string signature = envelope["signature"]?.Value<string>();
+            JArray entries = envelope["entries"] as JArray;
+
+            if (string.IsNullOrEmpty(ts) || string.IsNullOrEmpty(signature) || entries == null || entries.Count == 0 || entries.Count > 8)
+                return;
+
+            List<ModEntry> parsed = new List<ModEntry>();
+            List<string> lines = new List<string>();
+
+            foreach (JToken token in entries)
+            {
+                string name = token["name"]?.Value<string>();
+                string file = token["file"]?.Value<string>();
+                string repo = token["repo"]?.Value<string>();
+                string tag = token["tag"]?.Value<string>();
+                string sha256 = token["sha256"]?.Value<string>();
+
+                if (string.IsNullOrEmpty(name) || string.IsNullOrEmpty(file) || string.IsNullOrEmpty(repo) || string.IsNullOrEmpty(tag) || string.IsNullOrEmpty(sha256))
+                    return;
+
+                parsed.Add(new ModEntry { Name = name, File = file, Repo = repo, Tag = tag, Sha256 = sha256 });
+                lines.Add($"{name}|{file}|{repo}|{tag}|{sha256}");
+            }
+
+            string canonical = "mods\n" + string.Join("\n", lines) + "\n" + ts;
+
+            if (!TryVerify(canonical, signature))
+            {
+#if DEBUG
+                Dbg("mods envelope rejected signature mismatch");
+#endif
+                return;
+            }
+
+            VerifiedMods.AddRange(parsed);
+#if DEBUG
+            Dbg($"mods envelope verified {parsed.Count} entries ts {ts}");
+#endif
         }
 
         private static IEnumerator FallbackPoll()

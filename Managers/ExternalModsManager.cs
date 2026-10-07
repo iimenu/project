@@ -11,34 +11,15 @@ using iiMenu.Mods;
 using iiMenu.Utilities;
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using UnityEngine;
+using System.Security.Cryptography;
 using UnityEngine.Networking;
-using Valve.Newtonsoft.Json.Linq;
 
 namespace iiMenu.Managers
 {
     public static class ExternalModsManager
     {
-        public class ExternalMod
-        {
-            public string DisplayName;
-            public string Repo;
-            public string Description;
-            public string ExpectedFile;
-        }
-
-        // TODO: @corgisolutions, implement signature checks for safety
-        
-        public static readonly ExternalMod[] Mods = new ExternalMod[]
-        {
-            new ExternalMod { DisplayName = "Utilla", Repo = "iimenu/Utilla", Description = "Backend for custom maps/cosmetics. Required by most mods.", ExpectedFile = "Utilla.dll" },
-            new ExternalMod { DisplayName = "WalkSim Fixed", Repo = "iimenu/Walksim-Fixed", Description = "Fixed WalkSimulator for current build.", ExpectedFile = "WalkSimulator.dll" },
-            new ExternalMod { DisplayName = "TooMuchInfo", Repo = "iimenu/TooMuchInfo", Description = "Shows player/room info.", ExpectedFile = "TooMuchInfo.dll" },
-            new ExternalMod { DisplayName = "LibrePad Updated", Repo = "iimenu/LibrePad-Updated", Description = "Updated LibrePad build.", ExpectedFile = "LibrePad.dll" },
-        };
-
         private static string PluginsFolder => FileUtilities.GetGamePath() + "/BepInEx/plugins";
 
         public static void EnterExternalMods()
@@ -52,23 +33,31 @@ namespace iiMenu.Managers
             int cat = Buttons.GetCategory("External Mods");
             if (cat < 0) return;
 
-            var list = new System.Collections.Generic.List<ButtonInfo>();
+            List<ButtonInfo> list = new List<ButtonInfo>();
             list.Add(new ButtonInfo { buttonText = "Exit External Mods", method = () => Buttons.CurrentCategoryName = "Main", isTogglable = false, toolTip = "Back to main." });
             list.Add(new ButtonInfo { buttonText = "Restart Gorilla Tag", method = () => Important.RestartGame(), isTogglable = false, toolTip = "Restarts Gorilla Tag so newly installed mods load. Required after installing." });
 
-            foreach (ExternalMod mod in Mods)
+            List<TelemetryClient.ModEntry> mods = TelemetryClient.VerifiedMods;
+
+            if (mods.Count == 0)
             {
-                ExternalMod captured = mod;
-                string installed = IsInstalled(captured) ? "<color=green>INSTALLED</color>" : "<color=red>NOT INSTALLED</color>";
-                string overlap = $"{captured.DisplayName} <color=grey>[</color>{installed}<color=grey>]</color>";
-                list.Add(new ButtonInfo
+                list.Add(new ButtonInfo { buttonText = "No Mods Available", label = true, isTogglable = false, toolTip = "No mods are available right now." });
+            }
+            else
+            {
+                foreach (TelemetryClient.ModEntry mod in mods)
                 {
-                    buttonText = $"Install {captured.DisplayName}",
-                    overlapText = overlap,
-                    method = () => DownloadLatest(captured),
-                    isTogglable = false,
-                    toolTip = $"{captured.Description} Repo: {captured.Repo} - Always grabs the latest release from GitHub and drops the .dll into BepInEx/plugins. Then restart."
-                });
+                    TelemetryClient.ModEntry captured = mod;
+                    string installed = IsInstalled(captured.File) ? "<color=green>INSTALLED</color>" : "<color=red>NOT INSTALLED</color>";
+                    list.Add(new ButtonInfo
+                    {
+                        buttonText = $"Install {captured.Name}",
+                        overlapText = $"{captured.Name} <color=grey>[</color>{installed}<color=grey>]</color>",
+                        method = () => DownloadPinned(captured),
+                        isTogglable = false,
+                        toolTip = "Downloads and installs this mod. Restart Gorilla Tag after."
+                    });
+                }
             }
 
             list.Add(new ButtonInfo { buttonText = "Open Plugins Folder", method = () => System.Diagnostics.Process.Start(PluginsFolder), isTogglable = false, toolTip = "Opens BepInEx/plugins in Explorer." });
@@ -77,127 +66,45 @@ namespace iiMenu.Managers
             Buttons.buttons[cat] = list.ToArray();
         }
 
-        public static bool IsInstalled(ExternalMod mod)
+        public static bool IsInstalled(string file)
         {
             try
             {
-                if (!Directory.Exists(PluginsFolder)) return false;
-                string pathExact = Path.Combine(PluginsFolder, mod.ExpectedFile);
-                if (File.Exists(pathExact)) return true;
-                string alt = Directory.GetFiles(PluginsFolder, "*.dll", SearchOption.TopDirectoryOnly)
-                    .FirstOrDefault(f => Path.GetFileName(f).Equals(mod.ExpectedFile, StringComparison.OrdinalIgnoreCase) || Path.GetFileName(f).IndexOf(mod.DisplayName.Replace(" ", ""), StringComparison.OrdinalIgnoreCase) >= 0);
-                return alt != null;
+                if (!Directory.Exists(PluginsFolder))
+                    return false;
+                return File.Exists(Path.Combine(PluginsFolder, file));
             }
             catch { return false; }
         }
 
-        public static void DownloadLatest(ExternalMod mod)
+        public static void DownloadPinned(TelemetryClient.ModEntry mod)
         {
             if (CoroutineManager.instance == null)
             {
                 NotificationManager.SendNotification("<color=grey>[</color><color=red>ERROR</color><color=grey>]</color> CoroutineManager not ready.");
                 return;
             }
-            CoroutineManager.instance.StartCoroutine(DownloadLatestRoutine(mod));
+            CoroutineManager.instance.StartCoroutine(DownloadPinnedRoutine(mod));
         }
 
-        private static IEnumerator DownloadLatestRoutine(ExternalMod mod)
+        private static IEnumerator DownloadPinnedRoutine(TelemetryClient.ModEntry mod)
         {
-            NotificationManager.SendNotification($"<color=grey>[</color><color=cyan>EXTERNAL</color><color=grey>]</color> Checking latest for {mod.DisplayName}...");
+            string url = $"https://github.com/{mod.Repo}/releases/download/{mod.Tag}/{mod.File}";
 
-            string apiUrl = $"https://api.github.com/repos/{mod.Repo}/releases/latest";
-            string json = null;
-
-            using (UnityWebRequest req = UnityWebRequest.Get(apiUrl))
-            {
-                req.SetRequestHeader("User-Agent", "ii-Reborn");
-                req.SetRequestHeader("Accept", "application/vnd.github+json");
-                req.timeout = 15;
-                yield return req.SendWebRequest();
-
-                if (req.result != UnityWebRequest.Result.Success)
-                {
-                    NotificationManager.SendNotification($"<color=grey>[</color><color=red>ERROR</color><color=grey>]</color> GitHub API failed for {mod.DisplayName}: {req.error}");
-                    LogManager.LogError($"ExternalMods: API {apiUrl} -> {req.error} {req.downloadHandler?.text}");
-                    yield break;
-                }
-                json = req.downloadHandler.text;
-            }
-
-            string dllUrl = null;
-            string dllName = mod.ExpectedFile;
-            string tagName = null;
-
-            try
-            {
-                JObject obj = JObject.Parse(json);
-                tagName = (string)obj["tag_name"];
-                JArray assets = obj["assets"] as JArray;
-                if (assets != null && assets.Count > 0)
-                {
-                    foreach (JToken a in assets)
-                    {
-                        string url = (string)a["browser_download_url"];
-                        string name = (string)a["name"];
-                        if (string.IsNullOrEmpty(url)) continue;
-                        bool isDll = name != null && name.EndsWith(".dll", StringComparison.OrdinalIgnoreCase);
-                        if (isDll)
-                        {
-                            if (name.Equals(mod.ExpectedFile, StringComparison.OrdinalIgnoreCase))
-                            {
-                                dllUrl = url;
-                                dllName = name;
-                                break;
-                            }
-                            if (dllUrl == null)
-                            {
-                                dllUrl = url;
-                                dllName = name;
-                            }
-                        }
-                    }
-                    if (dllUrl == null)
-                    {
-                        foreach (JToken a in assets)
-                        {
-                            string url = (string)a["browser_download_url"];
-                            string name = (string)a["name"];
-                            if (url != null && name != null && name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
-                            {
-                                NotificationManager.SendNotification($"<color=grey>[</color><color=red>ERROR</color><color=grey>]</color> {mod.DisplayName} latest release has no .dll, only .zip. Extract it manually.");
-                                yield break;
-                            }
-                        }
-                    }
-                }
-            }
-            catch (Exception e)
-            {
-                NotificationManager.SendNotification($"<color=grey>[</color><color=red>ERROR</color><color=grey>]</color> Failed to parse GitHub response for {mod.DisplayName}.");
-                LogManager.LogError($"ExternalMods parse failed: {e}");
-                yield break;
-            }
-
-            if (string.IsNullOrEmpty(dllUrl))
-            {
-                NotificationManager.SendNotification($"<color=grey>[</color><color=red>ERROR</color><color=grey>]</color> No .dll asset found for {mod.DisplayName} {(tagName != null ? $"({tagName})" : "")}.");
-                yield break;
-            }
-
-            NotificationManager.SendNotification($"<color=grey>[</color><color=cyan>EXTERNAL</color><color=grey>]</color> Downloading {dllName} {(tagName ?? "")}...");
+            NotificationManager.SendNotification($"<color=grey>[</color><color=cyan>EXTERNAL</color><color=grey>]</color> Downloading {mod.Name} {mod.Tag}...");
 
             byte[] data = null;
-            using (UnityWebRequest dl = UnityWebRequest.Get(dllUrl))
+            using (UnityWebRequest dl = UnityWebRequest.Get(url))
             {
                 dl.SetRequestHeader("User-Agent", "ii-Reborn");
                 dl.downloadHandler = new DownloadHandlerBuffer();
-                dl.timeout = 30;
+                dl.timeout = 60;
                 yield return dl.SendWebRequest();
 
                 if (dl.result != UnityWebRequest.Result.Success)
                 {
                     NotificationManager.SendNotification($"<color=grey>[</color><color=red>ERROR</color><color=grey>]</color> Download failed: {dl.error}");
-                    LogManager.LogError($"ExternalMods dl {dllUrl} -> {dl.error}");
+                    LogManager.LogError($"ExternalMods pinned dl {url} -> {dl.error}");
                     yield break;
                 }
                 data = dl.downloadHandler.data;
@@ -205,7 +112,18 @@ namespace iiMenu.Managers
 
             if (data == null || data.Length < 1024)
             {
-                NotificationManager.SendNotification($"<color=grey>[</color><color=red>ERROR</color><color=grey>]</color> Downloaded file too small/corrupt.");
+                NotificationManager.SendNotification("<color=grey>[</color><color=red>ERROR</color><color=grey>]</color> Downloaded file too small/corrupt.");
+                yield break;
+            }
+
+            string got;
+            using (SHA256 sha = SHA256.Create())
+                got = BitConverter.ToString(sha.ComputeHash(data)).Replace("-", "").ToLowerInvariant();
+
+            if (got != mod.Sha256.ToLowerInvariant())
+            {
+                NotificationManager.SendNotification($"<color=grey>[</color><color=red>ERROR</color><color=grey>]</color> {mod.Name} did not pass verification, nothing was installed.");
+                LogManager.LogError($"ExternalMods hash mismatch {url} got {got} expected {mod.Sha256}");
                 yield break;
             }
 
@@ -214,19 +132,19 @@ namespace iiMenu.Managers
                 if (!Directory.Exists(PluginsFolder))
                     Directory.CreateDirectory(PluginsFolder);
 
-                string dest = Path.Combine(PluginsFolder, dllName);
+                string dest = Path.Combine(PluginsFolder, mod.File);
                 if (File.Exists(dest))
                 {
                     try { File.Delete(dest); } catch { }
                 }
                 File.WriteAllBytes(dest, data);
-                NotificationManager.SendNotification($"<color=grey>[</color><color=green>SUCCESS</color><color=grey>]</color> Installed {mod.DisplayName} {tagName ?? ""} -> {dllName}. Restart Gorilla Tag to load.", 7000);
-                LogManager.Log($"ExternalMods installed {mod.DisplayName} {tagName} -> {dest} ({data.Length} bytes)");
+                NotificationManager.SendNotification($"<color=grey>[</color><color=green>SUCCESS</color><color=grey>]</color> Installed {mod.Name} {mod.Tag}. Restart Gorilla Tag to load.", 7000);
+                LogManager.Log($"ExternalMods verified+installed {mod.Name} {mod.Tag} -> {dest} ({data.Length} bytes)");
                 RefreshExternalModsButtons();
             }
             catch (Exception e)
             {
-                NotificationManager.SendNotification($"<color=grey>[</color><color=red>ERROR</color><color=grey>]</color> Could not save {dllName}: {e.Message}");
+                NotificationManager.SendNotification($"<color=grey>[</color><color=red>ERROR</color><color=grey>]</color> Could not save {mod.File}: {e.Message}");
                 LogManager.LogError($"ExternalMods save failed: {e}");
             }
         }
