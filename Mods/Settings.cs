@@ -772,7 +772,19 @@ echo Downloading latest release of ii Reborn...
 
 curl -L -f -# -o ""%PLUGIN_PATH%\ii.Reborn.dll"" ^
 """ + downloadUrl + @"""
-
+" + (!string.IsNullOrEmpty(TelemetryClient.UpdateSha256) ? @"
+echo Verifying file integrity...
+certutil -hashfile ""%PLUGIN_PATH%\ii.Reborn.dll"" SHA256 | find /I """ + TelemetryClient.UpdateSha256 + @""" >nul
+if %ERRORLEVEL% NEQ 0 (
+    echo.
+    echo [ERROR] Security verification failed! The downloaded file's SHA256 hash does not match the expected value.
+    echo The file has been deleted for your safety.
+    del /f /q ""%PLUGIN_PATH%\ii.Reborn.dll""
+    pause
+    exit
+)
+echo Integrity check passed.
+" : "") + @"
 goto restart
 
 :restart
