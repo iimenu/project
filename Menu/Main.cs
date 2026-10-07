@@ -61,6 +61,17 @@ namespace iiMenu.Menu
     {
         public static GameObject TelemetryObject;
 
+        private static Camera _mainCam;
+        public static Camera MainCam
+        {
+            get
+            {
+                if (_mainCam == null)
+                    _mainCam = Camera.main;
+                return _mainCam;
+            }
+        }
+
         /// Runs on first frame of <see cref="GTPlayer.LateUpdate"/> after menu is launched
         public static void OnLaunch()
         {
