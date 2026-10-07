@@ -74,7 +74,6 @@ namespace iiMenu.Menu
 
                 new ButtonInfo { buttonText = "Keybind Settings", method =() => CurrentCategoryName = "Keybind Settings", isTogglable = false, toolTip = "Opens the settings for the keybinds."},
                 new ButtonInfo { buttonText = "Rebind Settings", method =() => CurrentCategoryName = "Rebind Settings", isTogglable = false, toolTip = "Opens the settings for rebinds."},
-                new ButtonInfo { buttonText = "Plugin Settings", method =() => CurrentCategoryName = "Plugin Settings", isTogglable = false, toolTip = "Opens the settings for the plugins."},
 
                 new ButtonInfo { buttonText = "Soundboard Settings", method =() => CurrentCategoryName = "Soundboard Settings", isTogglable = false, toolTip = "Opens the settings for the soundboard."},
 
@@ -2354,11 +2353,6 @@ namespace iiMenu.Menu
                 new ButtonInfo { buttonText = "Keybind Right Joystick", enableMethod =() => Settings.StartBind("RJ"), disableMethod =() => IsBinding = false, toolTip = "Enables binding mode, letting you bind a mod to a button."},
             },
 
-            new[] { // Plugin Settings [33]
-                new ButtonInfo { buttonText = "Exit Plugin Settings", method =() => CurrentCategoryName = "Settings", isTogglable = false, toolTip = "Returns you back to the settings menu."},
-                new ButtonInfo { buttonText = "Reload Plugins", method = PluginManager.ReloadPlugins, isTogglable = false, toolTip = "Reloads all of your plugins." }
-            },
-
             new[] { // Fun Settings [36]
                 new ButtonInfo { buttonText = "Exit Fun Settings", method =() => CurrentCategoryName = "Settings", isTogglable = false, toolTip = "Returns you back to the settings menu."},
 
@@ -2595,7 +2589,6 @@ namespace iiMenu.Menu
             "Soundboard Settings",
             "Overpowered Settings",
             "Keybind Settings",
-            "Plugin Settings",
             "Fun Settings",
             "Players",
             "Credits",

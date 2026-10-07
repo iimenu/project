@@ -990,10 +990,5 @@ namespace iiMenu.Menu
             }
         }
 
-        private void OnGUI() // Legacy plugin OnGUI compatibility
-        {
-            if (isOpen)
-                PluginManager.ExecuteOnGUI();
-        }
     }
 }
