@@ -86,6 +86,30 @@ namespace iiMenu.Mods
             queueCoroutine = CoroutineManager.instance.StartCoroutine(QueueRoomCoroutine(roomName));
         }
 
+        public static void EnableUnlockGamemodes()
+        {
+            Patches.Menu.UnlockGamemodesPatch.enabled = true;
+            RefreshGameModes();
+        }
+
+        public static void DisableUnlockGamemodes()
+        {
+            Patches.Menu.UnlockGamemodesPatch.enabled = false;
+            RefreshGameModes();
+        }
+
+        private static void RefreshGameModes()
+        {
+            foreach (var layout in UnityEngine.Resources.FindObjectsOfTypeAll<GameModeSelectorButtonLayout>())
+            {
+                if (layout.gameObject.activeSelf)
+                {
+                    layout.gameObject.SetActive(false);
+                    layout.gameObject.SetActive(true);
+                }
+            }
+        }
+
         public static void Reconnect()
         {
             string roomName = NetworkSystem.Instance.RoomName;
@@ -117,6 +141,57 @@ namespace iiMenu.Mods
                 return;
 
             CoroutineManager.instance.StartCoroutine(FixMapCoroutine());
+        }
+
+        public static string[] micModes = new string[] { "Default", "Open Talk", "Push To Talk", "Push To Mute" };
+        public static int micModeIndex = 0;
+
+        public static void CycleMicMode(bool positive)
+        {
+            micModeIndex += positive ? 1 : -1;
+
+            if (micModeIndex > 3) micModeIndex = 0;
+            if (micModeIndex < 0) micModeIndex = 3;
+
+            var button = iiMenu.Menu.Buttons.GetIndex("Mic Mode");
+            if (button != null)
+                button.overlapText = $"Mic Mode <color=grey>[</color><color=green>{micModes[micModeIndex]}</color><color=grey>]</color>";
+        }
+
+        public static void RunMicMode()
+        {
+            if (micModeIndex == 0) return;
+            if (GorillaTagger.Instance == null || GorillaTagger.Instance.myRecorder == null || ControllerInputPoller.instance == null) return;
+
+            bool pressingButton = ControllerInputPoller.instance.leftControllerPrimaryButton || ControllerInputPoller.instance.leftControllerSecondaryButton || ControllerInputPoller.instance.rightControllerPrimaryButton || ControllerInputPoller.instance.rightControllerSecondaryButton || (UnityEngine.InputSystem.Keyboard.current != null && UnityEngine.InputSystem.Keyboard.current.vKey.isPressed);
+            bool targetState = GorillaTagger.Instance.myRecorder.TransmitEnabled;
+
+            if (micModeIndex == 1)
+            {
+                targetState = true;
+            }
+            else if (micModeIndex == 2)
+            {
+                targetState = pressingButton;
+            }
+            else if (micModeIndex == 3)
+            {
+                targetState = !pressingButton;
+            }
+
+            if (GorillaTagger.Instance.myRecorder.TransmitEnabled != targetState)
+            {
+                GorillaTagger.Instance.myRecorder.TransmitEnabled = targetState;
+            }
+        }
+
+
+        public static void FixAudioBug()
+        {
+            UnityEngine.AudioConfiguration config = UnityEngine.AudioSettings.GetConfiguration();
+            config.dspBufferSize = 1024;
+            UnityEngine.AudioSettings.Reset(config);
+            NotificationManager.SendNotification("<color=grey>[</color><color=green>SUCCESS</color><color=grey>]</color> Audio engine reset.");
         }
 
         private static IEnumerator FixMapCoroutine()
@@ -522,6 +597,8 @@ exit";
         private static float discordCheckTime;
         private static bool discordMissing;
 
+        public static bool showPublicRoomCode = true;
+
         public static void DiscordRPC()
         {
             if (discord == null)
@@ -544,13 +621,12 @@ exit";
 
                 discordMissing = false;
 
-                discord = new DiscordRpcClient(PluginInfo.DiscordAppId)
-                {
-                    Logger = new DiscordLogManager()
-                };
+                discord = new DiscordRpcClient(PluginInfo.DiscordAppId, -1, new DiscordLogManager(LogLevel.Trace), false);
 
                 discord.Initialize();
             }
+
+            discord.Invoke();
 
             if (NetworkSystem.Instance.InRoom)
             {
@@ -571,7 +647,12 @@ exit";
             {
                 updateTime = Time.time + 1f;
                 bool inRoom = NetworkSystem.Instance.InRoom;
-                string roomName = inRoom ? NetworkSystem.Instance.RoomName : "-";
+                string roomName = "-";
+                if (inRoom)
+                {
+                    bool isPrivate = PhotonNetwork.CurrentRoom != null && !PhotonNetwork.CurrentRoom.IsVisible;
+                    roomName = (isPrivate || !showPublicRoomCode) ? "HIDDEN" : NetworkSystem.Instance.RoomName;
+                }
 
                 string smallImageKey = inRoom ? PluginInfo.DiscordSmallImageKeyOnline : PluginInfo.DiscordSmallImageKeyOffline;
                 Managers.DiscordRPC.Assets assets = null;
@@ -597,26 +678,13 @@ exit";
                 {
                     discord.SetPresence(new RichPresence
                     {
-                        Details = inRoom ? $"Playing {GorillaGameManager.instance.GameType().ToString().ToLower()}" : "Playing alone",
-                        State = inRoom ? $"Room: {roomName} ({PhotonNetwork.PlayerList.Length}/{PhotonNetwork.CurrentRoom.MaxPlayers})" : "Not in a room",
+                        Details = inRoom ? (GorillaGameManager.instance != null ? $"Playing {GorillaGameManager.instance.GameType().ToString().ToLower()}" : "Playing in a room") : "Playing alone",
+                        State = inRoom && PhotonNetwork.CurrentRoom != null ? $"Room: {roomName} ({PhotonNetwork.PlayerList.Length}/{PhotonNetwork.CurrentRoom.MaxPlayers})" : (inRoom ? $"Room: {roomName}" : "Not in a room"),
                         Assets = assets,
                         Timestamps = inRoom ? new Timestamps
                         {
                             Start = startTime ?? endTime ?? DateTime.UtcNow
-                        } : null,
-                        Buttons = new[]
-                        {
-                            new Button
-                            {
-                                Label = "Discord Server",
-                                Url = serverLink
-                            },
-                            new Button
-                            {
-                                Label = "Download",
-                                Url = "https://github.com/iimenu/project"
-                            }
-                        }
+                        } : null
                     });
                 }
                 catch (Exception e)
@@ -647,69 +715,45 @@ exit";
 
         private static bool DiscordIsRunning()
         {
-            try
-            {
-                return Process.GetProcessesByName("Discord").Length > 0 ||
-                    Process.GetProcessesByName("DiscordPTB").Length > 0 ||
-                    Process.GetProcessesByName("DiscordCanary").Length > 0;
-            }
-            catch { return false; }
+            return true;
         }
 
-        public static void EnsureIntegrationProgram() =>
-            SmtcReader.Begin();
 
-        public static string Title { get; private set; } = "Unknown";
-        public static string Artist { get; private set; } = "Unknown";
-        public static Texture2D Icon { get; private set; } = new Texture2D(2, 2);
-        public static bool Paused { get; private set; } = true;
 
-        public static float StartTime { get; private set; }
-        public static float EndTime { get; private set; }
-        public static float ElapsedTime { get; private set; }
 
-        public static bool ValidData { get; private set; }
+        public static string Title => iiMenu.Managers.SmtcReader.Current().Title;
+        public static string Artist => iiMenu.Managers.SmtcReader.Current().Artist;
+        public static bool Paused => iiMenu.Managers.SmtcReader.Current().Paused;
+        public static bool ValidData => iiMenu.Managers.SmtcReader.Current().HasData;
+        public static float StartTime => iiMenu.Managers.SmtcReader.Current().Start;
+        public static float EndTime => iiMenu.Managers.SmtcReader.Current().End;
+        public static float ElapsedTime => iiMenu.Managers.SmtcReader.Current().Position;
+        
+        public static void EnsureIntegrationProgram() { iiMenu.Managers.SmtcReader.Begin(); }
+        public static System.Collections.IEnumerator UpdateDataCoroutinePublic(float delay = 0f) { yield break; }
+        public static void DownloadQuickSong() {}
 
-        public static async Task UpdateDataAsync()
+        private static byte[] lastArtBytes;
+        private static UnityEngine.Texture2D _icon = new UnityEngine.Texture2D(2, 2);
+        public static UnityEngine.Texture2D Icon
         {
-            Paused = true;
-            Title = "Unknown";
-            Artist = "Unknown";
-
-            StartTime = 0f;
-            EndTime = 0f;
-            ElapsedTime = 0f;
-
-            ValidData = false;
-
-            await Task.CompletedTask;
-
-            SmtcReader.Snapshot snapshot = SmtcReader.Current();
-            if (!snapshot.HasData)
-                return;
-
-            Title = snapshot.Title;
-            Artist = snapshot.Artist;
-            Paused = snapshot.Paused;
-
-            StartTime = snapshot.Start;
-            EndTime = snapshot.End;
-            ElapsedTime = snapshot.Position;
-
-            if (snapshot.Art != null)
+            get
             {
-                try { Icon.LoadImage(snapshot.Art); } catch { }
+                var snap = iiMenu.Managers.SmtcReader.Current();
+                if (snap.Art != lastArtBytes)
+                {
+                    lastArtBytes = snap.Art;
+                    if (snap.Art != null)
+                    {
+                        if (_icon == null) _icon = new UnityEngine.Texture2D(2, 2);
+                        bool success = _icon.LoadImage(snap.Art);
+                        if (!success) { UnityEngine.Debug.LogError("Failed to LoadImage for SMTC Art! Length: " + snap.Art.Length); }
+                    }
+                    else
+                        _icon = null;
+                }
+                return _icon;
             }
-
-            ValidData = true;
-        }
-
-        private static IEnumerator UpdateDataCoroutine(float delay = 0f)
-        {
-            yield return new WaitForSeconds(delay);
-
-            _ = UpdateDataAsync();
-            yield return null;
         }
 
         // Credits to The-Graze/MusicControls for control methods
@@ -726,25 +770,26 @@ exit";
 
         public static void PreviousTrack()
         {
-            CoroutineManager.instance.StartCoroutine(UpdateDataCoroutine(0.1f));
-            ElapsedTime = 0f;
+            
+            
             SendKey(VirtualKeyCodes.PREVIOUS_TRACK);
         }
 
         public static void PauseTrack()
         {
-            Paused = !Paused;
+            
             SendKey(VirtualKeyCodes.PLAY_PAUSE);
         }
 
         public static void SkipTrack()
         {
-            CoroutineManager.instance.StartCoroutine(UpdateDataCoroutine(0.1f));
-            ElapsedTime = 0f;
+            
+            
             SendKey(VirtualKeyCodes.NEXT_TRACK);
         }
 
         private static float updateDataDelay;
+        public static float musicPlayerDataDelay;
         private static float inputDelay;
 
         private static GameObject mediaIcon;
@@ -835,22 +880,12 @@ exit";
 
         public static void MediaIntegration()
         {
-            if (SmtcReader.Running)
+            iiMenu.Managers.SmtcReader.Begin();
+            var snap = iiMenu.Managers.SmtcReader.Current();
+            
+
             {
-                if (mediaIcon == null)
-                {
-                    mediaIcon = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                    Object.Destroy(mediaIcon.GetComponent<Collider>());
 
-                    if (mediaIconMaterial == null)
-                        mediaIconMaterial = new Material(LoadAsset<Shader>("Chams"));
-
-                    mediaIcon.GetComponent<Renderer>().material = mediaIconMaterial;
-                }
-
-                mediaIcon.transform.localScale = new Vector3(0.25f, 0.25f, 0.01f) * VRRig.LocalRig.scaleFactor;
-                mediaIcon.transform.position = GorillaTagger.Instance.headCollider.transform.TransformPoint(new Vector3(-0.5f, 0.2f, 1f));
-                mediaIcon.transform.LookAt(GorillaTagger.Instance.headCollider.transform.position);
 
                 if (mediaText == null)
                 {
@@ -873,25 +908,21 @@ exit";
 
                 mediaText.transform.localScale = Vector3.one * VRRig.LocalRig.scaleFactor;
                 mediaText.transform.position = GorillaTagger.Instance.headCollider.transform.TransformPoint(new Vector3(-0.35f, 0.2f, 1f));
-                mediaText.transform.LookAt(Camera.main.transform.position);
+                mediaText.transform.LookAt(iiMenu.Menu.Main.MainCam.transform.position);
                 mediaText.transform.Rotate(0f, 180f, 0f);
                 mediaText.transform.position += mediaText.transform.right * mediaText.bounds.size.x;
 
                 FollowMenuSettings(mediaText);
 
-                float clampedElapsed = Mathf.Clamp(ElapsedTime, StartTime, EndTime);
+                float clampedElapsed = Mathf.Clamp(snap.Position, snap.Start, snap.End);
                 mediaText.text =
-                    $@"{Artist} - {Title}
-{(Paused ? "  <sprite name=\"Pause\"> " : "")}{Mathf.Floor(clampedElapsed / 60)}:{Mathf.Floor(clampedElapsed % 60):00} - {Mathf.Floor(EndTime / 60)}:{Mathf.Floor(EndTime % 60):00}";
+                    $@"{snap.Artist} - {snap.Title}
+{(snap.Paused ? "  <sprite name=\"Pause\"> " : "")}{Mathf.Floor(clampedElapsed / 60)}:{Mathf.Floor(clampedElapsed % 60):00} - {Mathf.Floor(snap.End / 60)}:{Mathf.Floor(snap.End % 60):00}";
 
-                if (Time.time > updateDataDelay)
-                {
-                    updateDataDelay = Time.time + 5f;
-                    CoroutineManager.instance.StartCoroutine(UpdateDataCoroutine());
-                }
 
-                if (!Paused)
-                    ElapsedTime += Time.deltaTime;
+
+                if (!snap.Paused)
+                    
 
                 if (Time.time > inputDelay)
                 {
@@ -915,17 +946,13 @@ exit";
                     }
                 }
 
-                Texture2D targetIcon = Icon == null || !ValidData ? null : Icon;
-                Renderer icon = mediaIcon.GetComponent<Renderer>();
 
-                if (icon.material.GetTexture("_MainTex") != targetIcon)
-                    icon.material.SetTexture("_MainTex", targetIcon);
             }
         }
 
         public static void DisableMediaIntegration()
         {
-            SmtcReader.End();
+            iiMenu.Managers.SmtcReader.End();
 
             if (mediaIcon != null)
                 Object.Destroy(mediaIcon);
@@ -1179,36 +1206,129 @@ exit";
             Application.targetFrameRate = int.MaxValue;
         }
 
-        private static Vector3? oldLocalPosition;
+        [DllImport("user32.dll")]
+        static extern short GetAsyncKeyState(int vKey);
+        private static bool wasDown;
+        private static bool mouseUnlocked;
+
         public static void PCButtonClick()
         {
-            if (Mouse.current.leftButton.isPressed && GunPointer == null)
+            if (Keyboard.current != null && Keyboard.current.shiftKey.wasPressedThisFrame)
             {
-                Ray ray = TPC.ScreenPointToRay(Mouse.current.position.ReadValue());
-                Physics.Raycast(ray, out var Ray, 512f, NoInvisLayerMask());
-
-                oldLocalPosition ??= GorillaTagger.Instance.rightHandTriggerCollider.transform.localPosition;
-                GorillaTagger.Instance.rightHandTriggerCollider.GetComponent<TransformFollow>().enabled = false;
-                GorillaTagger.Instance.rightHandTriggerCollider.transform.position = Ray.point;
+                mouseUnlocked = !mouseUnlocked;
             }
-            else
+
+            Cursor.lockState = mouseUnlocked ? CursorLockMode.None : CursorLockMode.Locked;
+            Cursor.visible = mouseUnlocked;
+
+            bool isDown = (GetAsyncKeyState(0x01) & 0x8000) != 0;
+            bool clicked = isDown && !wasDown;
+            wasDown = isDown;
+
+            if (!clicked || Mouse.current == null || GunPointer != null) return;
+            
+            Camera cam = null;
+            foreach (Camera c in Camera.allCameras)
+                if (c.isActiveAndEnabled && c.stereoTargetEye == StereoTargetEyeMask.None && c.targetTexture == null) { cam = c; break; }
+            
+            cam = cam ?? iiMenu.Menu.Main.MainCam ?? (Camera.allCamerasCount > 0 ? Camera.allCameras[0] : null);
+            if (cam == null) return;
+
+            Ray ray = cam.ScreenPointToRay(Mouse.current.position.ReadValue());
+            ray.origin += ray.direction * 0.1f;
+
+            RaycastHit[] hits = Physics.RaycastAll(ray, 1000f, Physics.AllLayers, QueryTriggerInteraction.Collide);
+            Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
+
+            foreach (RaycastHit hit in hits)
             {
-                if (oldLocalPosition != null)
+                if (hit.collider == null) continue;
+
+                iiMenu.Classes.Menu.ButtonCollider bc = hit.collider.GetComponent<iiMenu.Classes.Menu.ButtonCollider>();
+                if (bc != null)
                 {
-                    GorillaTagger.Instance.rightHandTriggerCollider.transform.localPosition = oldLocalPosition.Value;
-                    oldLocalPosition = null;
+                    bc.PressFromMouse();
+                    break;
                 }
-                GorillaTagger.Instance.rightHandTriggerCollider.GetComponent<TransformFollow>().enabled = true;
+
+                MonoBehaviour[] scripts = hit.collider.GetComponentsInParent<MonoBehaviour>();
+                bool isBtn = false;
+
+                foreach (var s in scripts)
+                    if (s != null && (s.GetType().Name.Contains("Button") || s.GetType().Name.Contains("Pressable"))) { isBtn = true; break; }
+
+                if (isBtn)
+                {
+                    GameObject iireborn = new GameObject("iireborn");
+                    iireborn.transform.position = hit.point;
+                    Collider col = iireborn.AddComponent<SphereCollider>();
+                    col.isTrigger = true;
+                    iireborn.AddComponent<Rigidbody>().isKinematic = true;
+                    iireborn.AddComponent<GorillaTriggerColliderHandIndicator>();
+
+                    hit.collider.SendMessageUpwards("OnTriggerEnter", col, SendMessageOptions.DontRequireReceiver);
+                    foreach (var s in scripts)
+                        if (s != null) s.GetType().GetMethod("OnTriggerEnter", (BindingFlags)54)?.Invoke(s, new object[] { col });
+
+                    Object.Destroy(iireborn, 0.1f);
+                    break;
+                }
             }
         }
 
         public static void DisablePCButtonClick()
         {
-            if (oldLocalPosition != null)
+            if (mouseUnlocked)
             {
-                GorillaTagger.Instance.rightHandTriggerCollider.transform.localPosition = oldLocalPosition.Value;
-                oldLocalPosition = null;
+                mouseUnlocked = false;
+                Cursor.lockState = CursorLockMode.Locked;
+                Cursor.visible = false;
             }
+        }
+
+        private static bool wasMenuGunPressed;
+
+        public static void MenuGunPointer()
+        {
+            var (Ray, pointer) = iiMenu.Menu.Main.RenderGun(1 << 5 | 1 << 0);
+            bool isPressed = iiMenu.Menu.Main.GetGunInput(true);
+
+            if (isPressed && !wasMenuGunPressed)
+            {
+                if (Ray.collider != null)
+                {
+                    iiMenu.Classes.Menu.ButtonCollider bc = Ray.collider.GetComponent<iiMenu.Classes.Menu.ButtonCollider>();
+                    if (bc != null)
+                    {
+                        bc.PressFromMouse();
+                    }
+                    else
+                    {
+                        MonoBehaviour[] scripts = Ray.collider.GetComponentsInParent<MonoBehaviour>();
+                        bool isBtn = false;
+
+                        foreach (var s in scripts)
+                            if (s != null && (s.GetType().Name.Contains("Button") || s.GetType().Name.Contains("Pressable"))) { isBtn = true; break; }
+
+                        if (isBtn)
+                        {
+                            GameObject iireborn = new GameObject("iireborn");
+                            iireborn.transform.position = Ray.point;
+                            Collider col = iireborn.AddComponent<SphereCollider>();
+                            col.isTrigger = true;
+                            iireborn.AddComponent<Rigidbody>().isKinematic = true;
+                            iireborn.AddComponent<GorillaTriggerColliderHandIndicator>();
+
+                            Ray.collider.SendMessageUpwards("OnTriggerEnter", col, SendMessageOptions.DontRequireReceiver);
+                            foreach (var s in scripts)
+                                if (s != null) s.GetType().GetMethod("OnTriggerEnter", (System.Reflection.BindingFlags)54)?.Invoke(s, new object[] { col });
+
+                            UnityEngine.Object.Destroy(iireborn, 0.1f);
+                        }
+                    }
+                }
+            }
+            wasMenuGunPressed = isPressed;
         }
 
         public static void PCControllerEmulation()
