@@ -1,9 +1,9 @@
 using HarmonyLib;
 using UnityEngine;
 using UnityEngine.Networking;
+using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
 using GorillaLocomotion;
 using iiMenu.Menu;
 using iiMenu.Utilities;
@@ -15,22 +15,13 @@ namespace iiMenu.Managers
     {
         private static readonly Dictionary<VRRig, GameObject> adminTags = new Dictionary<VRRig, GameObject>();
 
-        private class AdminProfile
+        private static TelemetryClient.AdminEntry FindAdmin(string userId)
         {
-            public string PlayerId;
-            public string AvatarUrl;
-            public string Role;
+            foreach (TelemetryClient.AdminEntry entry in TelemetryClient.VerifiedAdmins)
+                if (string.Equals(entry.Id, userId, StringComparison.OrdinalIgnoreCase))
+                    return entry;
+            return null;
         }
-
-        private static readonly List<AdminProfile> adminProfiles = new List<AdminProfile>
-        {
-            new AdminProfile { PlayerId = "", AvatarUrl = "", Role = "Owner" }, // kingsells
-            new AdminProfile { PlayerId = "", AvatarUrl = "", Role = "Admin" }, // ian/corgilander
-            new AdminProfile { PlayerId = "7446E754FFEBA04B", AvatarUrl = "https://cdn.discordapp.com/attachments/1556326506425225247/1556690861352288366/poopooVR.png?backend=b2&ex=6ac514d7&is=6ac3c357&hm=07ed3e856556e0459d1d7c3fa4e808ebdd4ace52fdd0d792a87104ed583b7f39&", Role = "Menu Dev" }, // poopooVR
-            new AdminProfile { PlayerId = "516DBB64CEA52378", AvatarUrl = "https://cdn.discordapp.com/attachments/1556326506425225247/1556690861352288366/poopooVR.png?backend=b2&ex=6ac514d7&is=6ac3c357&hm=07ed3e856556e0459d1d7c3fa4e808ebdd4ace52fdd0d792a87104ed583b7f39&", Role = "Menu Dev" }, // poopooVR
-            new AdminProfile { PlayerId = "3E175F722BF34FB9", AvatarUrl = "https://cdn.discordapp.com/attachments/1556326506425225247/1556690861352288366/poopooVR.png?backend=b2&ex=6ac514d7&is=6ac3c357&hm=07ed3e856556e0459d1d7c3fa4e808ebdd4ace52fdd0d792a87104ed583b7f39&", Role = "Menu Dev" }, // poopooVR
-            new AdminProfile { PlayerId = "FD76A37F77BE3B04", AvatarUrl = "https://cdn.discordapp.com/attachments/1556326506425225247/1557066960003661875/thing.png?backend=b2&ex=6ac6731c&is=6ac5219c&hm=ca26d1686392e4cd3b96e09dca40c1feeb694557dacf42fda1a7dad9990dda4a&", Role = "Menu Dev" } // !Lucy
-        };
         
         private static IEnumerator LoadAvatarCoroutine(string url, Renderer renderer)
         {
@@ -83,7 +74,7 @@ namespace iiMenu.Managers
                 
                 if (string.IsNullOrEmpty(userId)) continue;
 
-                AdminProfile profile = adminProfiles.FirstOrDefault(p => p.PlayerId == userId);
+                TelemetryClient.AdminEntry profile = FindAdmin(userId);
                 if (profile == null) continue;
 
                 if (!adminTags.ContainsKey(vrrig))
@@ -93,10 +84,27 @@ namespace iiMenu.Managers
                     GameObject go = GameObject.CreatePrimitive(PrimitiveType.Quad);
                     UnityEngine.Object.Destroy(go.GetComponent<Collider>());
                     go.name = "iiMenu_AdminIdentifierTag";
-                    
-                    if (!string.IsNullOrEmpty(profile.AvatarUrl))
+
+                    if (!string.IsNullOrEmpty(profile.Avatar))
                     {
-                        GorillaTagger.Instance.StartCoroutine(LoadAvatarCoroutine(profile.AvatarUrl, go.GetComponent<Renderer>()));
+                        if (profile.Avatar.StartsWith("https://"))
+                        {
+                            GorillaTagger.Instance.StartCoroutine(LoadAvatarCoroutine(profile.Avatar, go.GetComponent<Renderer>()));
+                        }
+                        else
+                        {
+                            try
+                            {
+                                Texture2D texture = AssetUtilities.LoadTextureFromResource($"{PluginInfo.ClientResourcePath}.{profile.Avatar}.png");
+                                if (texture != null)
+                                {
+                                    Material mat = new Material(Shader.Find("Sprites/Default") ?? Shader.Find("GUI/Text Shader"));
+                                    mat.mainTexture = texture;
+                                    go.GetComponent<Renderer>().material = mat;
+                                }
+                            }
+                            catch { }
+                        }
                     }
                     else
                     {
@@ -127,7 +135,7 @@ namespace iiMenu.Managers
                     NetPlayer player = RigUtilities.GetPlayerFromVRRig(vrrig);
                     string userId = player != null ? player.UserId : null;
                     if (string.IsNullOrEmpty(userId)) continue;
-                    AdminProfile profile = adminProfiles.FirstOrDefault(p => p.PlayerId == userId);
+                    TelemetryClient.AdminEntry profile = FindAdmin(userId);
                     if (profile != null)
                     {
                         NotificationManager.SendNotification($"<color=white>[</color><color=orange>iiMenu</color><color=white>]</color> {profile.Role} in lobby!");

@@ -641,6 +641,7 @@ namespace iiMenu.Managers
                 }
 
                 ApplyMods(data["mods"] as JObject);
+                ApplyAdmins(data["admins"] as JObject);
             }
             catch (Exception e)
             {
@@ -704,6 +705,67 @@ namespace iiMenu.Managers
             VerifiedMods.AddRange(parsed);
 #if DEBUG
             Dbg($"mods envelope verified {parsed.Count} entries ts {ts}");
+#endif
+        }
+
+        public sealed class AdminEntry
+        {
+            public string Id;
+            public string Role;
+            public string Avatar;
+        }
+
+        public static readonly List<AdminEntry> VerifiedAdmins = new List<AdminEntry>();
+
+        private static void ApplyAdmins(JObject envelope)
+        {
+            VerifiedAdmins.Clear();
+
+            if (envelope == null)
+                return;
+
+            string ts = envelope["timestamp"]?.Value<string>();
+            string signature = envelope["signature"]?.Value<string>();
+            JArray entries = envelope["entries"] as JArray;
+
+            if (string.IsNullOrEmpty(ts) || string.IsNullOrEmpty(signature) || entries == null || entries.Count == 0 || entries.Count > 16)
+                return;
+
+            List<AdminEntry> parsed = new List<AdminEntry>();
+            List<string> lines = new List<string>();
+
+            foreach (JToken token in entries)
+            {
+                string id = token["id"]?.Value<string>();
+                string role = token["role"]?.Value<string>();
+                string avatar = token["avatar"]?.Value<string>() ?? "";
+
+                if (string.IsNullOrEmpty(id) || !System.Text.RegularExpressions.Regex.IsMatch(id, "^[0-9A-Fa-f]{8,40}$"))
+                    return;
+                if (string.IsNullOrEmpty(role) || role.Length > 24 || role.Contains('|') || role.Contains('\n'))
+                    return;
+                if (avatar.Length > 512 || avatar.Contains('|') || avatar.Contains('\n'))
+                    return;
+                if (avatar.Length > 0 && !avatar.StartsWith("https://") && !System.Text.RegularExpressions.Regex.IsMatch(avatar, "^[A-Za-z0-9_-]{1,32}$"))
+                    return;
+
+                parsed.Add(new AdminEntry { Id = id, Role = role, Avatar = avatar });
+                lines.Add($"{id}|{role}|{avatar}");
+            }
+
+            string canonical = "admins\n" + string.Join("\n", lines) + "\n" + ts;
+
+            if (!TryVerify(canonical, signature))
+            {
+#if DEBUG
+                Dbg("admins envelope rejected signature mismatch");
+#endif
+                return;
+            }
+
+            VerifiedAdmins.AddRange(parsed);
+#if DEBUG
+            Dbg($"admins envelope verified {parsed.Count} entries ts {ts}");
 #endif
         }
 
