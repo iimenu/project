@@ -44,6 +44,64 @@ namespace iiMenu.Mods
 {
     public class Visuals
     {
+        private static GameObject[] alienClutters;
+        private static readonly string[] alienPaths = new[]
+        {
+            "Environment Objects/LocalObjects_Prefab/Forest/2026_Halloween_Forest/",
+            "Environment Objects/LocalObjects_Prefab/Mountain/2026_Halloween_Mountain",
+            "City_Pretty/Event_Overview_AlienArrival/10_02_ArrivalExperience/Arrival_Scene/2WorldRelativeObjects/EventHierarchy/1Gameplay",
+            "Environment Objects/LocalObjects_Prefab/Canyon/2026_Halloween_Canyon",
+            "Environment Objects/LocalObjects_Prefab/Beach/2026_Halloween_Beach"
+        };
+
+        public static void DisableAlienClutter()
+        {
+            if (alienClutters == null)
+            {
+                alienClutters = new GameObject[alienPaths.Length];
+                for (int i = 0; i < alienPaths.Length; i++)
+                {
+                    alienClutters[i] = GameObject.Find(alienPaths[i]);
+                }
+            }
+
+            foreach (var clutter in alienClutters)
+            {
+                if (clutter != null)
+                {
+                    for (int i = 0; i < clutter.transform.childCount; i++)
+                    {
+                        Transform child = clutter.transform.GetChild(i);
+                        if (child.name.ToLower().Contains("broom"))
+                        {
+                            child.gameObject.SetActive(true);
+                        }
+                        else
+                        {
+                            child.gameObject.SetActive(false);
+                        }
+                    }
+                }
+            }
+        }
+
+        public static void EnableAlienClutter()
+        {
+            if (alienClutters != null)
+            {
+                foreach (var clutter in alienClutters)
+                {
+                    if (clutter != null)
+                    {
+                        for (int i = 0; i < clutter.transform.childCount; i++)
+                        {
+                            clutter.transform.GetChild(i).gameObject.SetActive(true);
+                        }
+                    }
+                }
+            }
+        }
+
         private static Shader GetVisualShader()
         {
             return Shader.Find("GUI/Text Shader") ?? Shader.Find("Universal Render Pipeline/Unlit") ?? Shader.Find("Sprites/Default");
@@ -668,6 +726,78 @@ namespace iiMenu.Mods
                 renderer.material = oldSkyMat;
         }
 
+        private static GameObject greenBox;
+        private static Vector3 preGreenScreenPos;
+        private static bool greenScreenActive;
+
+        public static void GreenScreen()
+        {
+            if (!greenScreenActive)
+            {
+                preGreenScreenPos = GorillaTagger.Instance.rigidbody.transform.position;
+                greenScreenActive = true;
+            }
+
+            Vector3 tpPos = new Vector3(0f, 200f, 0f);
+            TeleportPlayer(tpPos);
+            GorillaTagger.Instance.rigidbody.linearVelocity = Vector3.zero;
+
+            if (greenBox == null)
+            {
+                greenBox = new GameObject("GreenScreenBox");
+                greenBox.transform.position = tpPos;
+
+                Material greenMat = new Material(Shader.Find("GUI/Text Shader"));
+                greenMat.color = Color.green;
+
+                Vector3[] positions = {
+                    new Vector3(0, -5, 0),
+                    new Vector3(0, 5, 0),
+                    new Vector3(-5, 0, 0),
+                    new Vector3(5, 0, 0),
+                    new Vector3(0, 0, -5),
+                    new Vector3(0, 0, 5)
+                };
+
+                Vector3[] scales = {
+                    new Vector3(10, 1, 10),
+                    new Vector3(10, 1, 10),
+                    new Vector3(1, 10, 10),
+                    new Vector3(1, 10, 10),
+                    new Vector3(10, 10, 1),
+                    new Vector3(10, 10, 1)
+                };
+
+                for (int i = 0; i < 6; i++)
+                {
+                    GameObject wall = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                    wall.transform.SetParent(greenBox.transform);
+                    wall.transform.localPosition = positions[i];
+                    wall.transform.localScale = scales[i];
+                    wall.GetComponent<Renderer>().material = greenMat;
+                    
+                    if (i != 0) 
+                        Object.Destroy(wall.GetComponent<Collider>());
+                }
+            }
+        }
+
+        public static void FixGreenScreen()
+        {
+            if (greenScreenActive)
+            {
+                TeleportPlayer(preGreenScreenPos);
+                GorillaTagger.Instance.rigidbody.linearVelocity = Vector3.zero;
+                greenScreenActive = false;
+            }
+
+            if (greenBox != null)
+            {
+                Object.Destroy(greenBox);
+                greenBox = null;
+            }
+        }
+
         public static TrailRenderer trailRenderer;
         public static void DrawGun()
         {
@@ -801,12 +931,12 @@ namespace iiMenu.Mods
 
                 Renderer renderer = gameObject.GetComponent<Renderer>();
 
-                Vector3 toTarget = position - Camera.main.transform.position;
+                Vector3 toTarget = position - iiMenu.Menu.Main.MainCam.transform.position;
                 toTarget.Normalize();
 
-                Vector3 camForward = Camera.main.transform.forward.normalized;
-                Vector3 camRight = Camera.main.transform.right.normalized;
-                Vector3 camUp = Camera.main.transform.up.normalized;
+                Vector3 camForward = iiMenu.Menu.Main.MainCam.transform.forward.normalized;
+                Vector3 camRight = iiMenu.Menu.Main.MainCam.transform.right.normalized;
+                Vector3 camUp = iiMenu.Menu.Main.MainCam.transform.up.normalized;
 
                 float x = Vector3.Dot(toTarget, camRight);
                 float y = Vector3.Dot(toTarget, camUp);
@@ -815,13 +945,13 @@ namespace iiMenu.Mods
 
                 float ringRadius = 0.2f;
                 Vector3 ringOffset = (camRight * dirInPlane.x + camUp * dirInPlane.y) * ringRadius;
-                Vector3 ringCenter = Camera.main.transform.position + camForward * 0.5f;
+                Vector3 ringCenter = iiMenu.Menu.Main.MainCam.transform.position + camForward * 0.5f;
 
                 Vector3 finalPos = ringCenter + ringOffset;
                 gameObject.transform.position = finalPos;
 
-                gameObject.transform.rotation = Quaternion.LookRotation(finalPos - Camera.main.transform.position, -Camera.main.transform.up);
-                Camera.main.transform.forward.X_Z();
+                gameObject.transform.rotation = Quaternion.LookRotation(finalPos - iiMenu.Menu.Main.MainCam.transform.position, -iiMenu.Menu.Main.MainCam.transform.up);
+                iiMenu.Menu.Main.MainCam.transform.forward.X_Z();
 
                 float t = Mathf.Lerp(1f, 0f, Time.time - timestamp);
 
@@ -922,7 +1052,7 @@ namespace iiMenu.Mods
             TextMeshPro.SafeSetText(text);
 
             go.transform.position = (leftHand ? GorillaTagger.Instance.leftHandTransform : GorillaTagger.Instance.rightHandTransform).position + Vector3.up * (GetLabelDistance(leftHand) * (scaleWithPlayer ? GTPlayer.Instance.scale : 1f));
-            go.transform.LookAt(Camera.main.transform.position);
+            go.transform.LookAt(iiMenu.Menu.Main.MainCam.transform.position);
             go.transform.Rotate(0f, 180f, 0f);
         }
 
@@ -1105,10 +1235,10 @@ namespace iiMenu.Mods
 
         public static void EnableDebugHUD()
         {
-            if (Camera.main == null)
+            if (iiMenu.Menu.Main.MainCam == null)
                 return;
 
-            Transform debugCanvas = Camera.main.transform.Find("DebugCanvas");
+            Transform debugCanvas = iiMenu.Menu.Main.MainCam.transform.Find("DebugCanvas");
             DebugHudStats debugStats = debugCanvas != null ? debugCanvas.GetComponent<DebugHudStats>() : null;
             if (debugStats == null)
                 return;
@@ -1131,10 +1261,10 @@ namespace iiMenu.Mods
 
         public static void DisableDebugHUD()
         {
-            if (Camera.main == null)
+            if (iiMenu.Menu.Main.MainCam == null)
                 return;
 
-            Transform debugCanvas = Camera.main.transform.Find("DebugCanvas");
+            Transform debugCanvas = iiMenu.Menu.Main.MainCam.transform.Find("DebugCanvas");
             DebugHudStats debugStats = debugCanvas != null ? debugCanvas.GetComponent<DebugHudStats>() : null;
             if (debugStats != null)
                 debugStats.gameObject.SetActive(false);
@@ -1837,7 +1967,7 @@ namespace iiMenu.Mods
                 nameTag.transform.localScale = new Vector3(0.25f, 0.25f, 0.25f) * vrrig.scaleFactor;
 
                 nameTag.transform.position = GetNameTagPosition(vrrig);
-                nameTag.transform.LookAt(Camera.main.transform.position);
+                nameTag.transform.LookAt(iiMenu.Menu.Main.MainCam.transform.position);
                 nameTag.transform.Rotate(0f, 180f, 0f);
             }
         }
@@ -1892,7 +2022,7 @@ namespace iiMenu.Mods
                         nameTag.transform.localScale = new Vector3(0.25f, 0.25f, 0.25f) * vrrig.scaleFactor;
 
                         nameTag.transform.position = GetNameTagPosition(vrrig);
-                        nameTag.transform.LookAt(Camera.main.transform.position);
+                        nameTag.transform.LookAt(iiMenu.Menu.Main.MainCam.transform.position);
                         nameTag.transform.Rotate(0f, 180f, 0f);
                     }
                 } catch { }
@@ -1949,7 +2079,7 @@ namespace iiMenu.Mods
                         nameTag.transform.localScale = new Vector3(0.25f, 0.25f, 0.25f) * vrrig.scaleFactor;
 
                         nameTag.transform.position = GetNameTagPosition(vrrig);
-                        nameTag.transform.LookAt(Camera.main.transform.position);
+                        nameTag.transform.LookAt(iiMenu.Menu.Main.MainCam.transform.position);
                         nameTag.transform.Rotate(0f, 180f, 0f);
                     }
                 } catch { }
@@ -2006,7 +2136,7 @@ namespace iiMenu.Mods
                         nameTag.transform.localScale = new Vector3(0.25f, 0.25f, 0.25f) * vrrig.scaleFactor;
 
                         nameTag.transform.position = GetNameTagPosition(vrrig);
-                        nameTag.transform.LookAt(Camera.main.transform.position);
+                        nameTag.transform.LookAt(iiMenu.Menu.Main.MainCam.transform.position);
                         nameTag.transform.Rotate(0f, 180f, 0f);
                     }
                 } catch { }
@@ -2063,7 +2193,7 @@ namespace iiMenu.Mods
                         nameTag.transform.localScale = new Vector3(0.25f, 0.25f, 0.25f) * vrrig.scaleFactor;
 
                         nameTag.transform.position = GetNameTagPosition(vrrig);
-                        nameTag.transform.LookAt(Camera.main.transform.position);
+                        nameTag.transform.LookAt(iiMenu.Menu.Main.MainCam.transform.position);
                         nameTag.transform.Rotate(0f, 180f, 0f);
                     }
                 }
@@ -2133,7 +2263,7 @@ namespace iiMenu.Mods
                             nameTag.transform.localScale = new Vector3(0.25f, 0.25f, 0.25f) * vrrig.scaleFactor;
 
                             nameTag.transform.position = GetNameTagPosition(vrrig);
-                            nameTag.transform.LookAt(Camera.main.transform.position);
+                            nameTag.transform.LookAt(iiMenu.Menu.Main.MainCam.transform.position);
                             nameTag.transform.Rotate(0f, 180f, 0f);
                         }
                     }
@@ -2205,7 +2335,7 @@ namespace iiMenu.Mods
                             nameTag.transform.localScale = new Vector3(0.25f, 0.25f, 0.25f) * vrrig.scaleFactor;
 
                             nameTag.transform.position = GetNameTagPosition(vrrig);
-                            nameTag.transform.LookAt(Camera.main.transform.position);
+                            nameTag.transform.LookAt(iiMenu.Menu.Main.MainCam.transform.position);
                             nameTag.transform.Rotate(0f, 180f, 0f);
                         }
                     }
@@ -2264,7 +2394,7 @@ namespace iiMenu.Mods
                         nameTag.transform.localScale = new Vector3(0.25f, 0.25f, 0.25f) * vrrig.scaleFactor;
 
                         nameTag.transform.position = GetNameTagPosition(vrrig);
-                        nameTag.transform.LookAt(Camera.main.transform.position);
+                        nameTag.transform.LookAt(iiMenu.Menu.Main.MainCam.transform.position);
                         nameTag.transform.Rotate(0f, 180f, 0f);
                     }
                 }
@@ -2322,7 +2452,7 @@ namespace iiMenu.Mods
                         nameTag.transform.localScale = new Vector3(0.25f, 0.25f, 0.25f) * vrrig.scaleFactor;
 
                         nameTag.transform.position = GetNameTagPosition(vrrig);
-                        nameTag.transform.LookAt(Camera.main.transform.position);
+                        nameTag.transform.LookAt(iiMenu.Menu.Main.MainCam.transform.position);
                         nameTag.transform.Rotate(0f, 180f, 0f);
                     }
                 }
@@ -2383,7 +2513,7 @@ namespace iiMenu.Mods
                         nameTag.transform.localScale = new Vector3(0.25f, 0.25f, 0.25f) * vrrig.scaleFactor;
 
                         nameTag.transform.position = GetNameTagPosition(vrrig);
-                        nameTag.transform.LookAt(Camera.main.transform.position);
+                        nameTag.transform.LookAt(iiMenu.Menu.Main.MainCam.transform.position);
                         nameTag.transform.Rotate(0f, 180f, 0f);
                     }
                 } catch { }
@@ -2451,7 +2581,7 @@ namespace iiMenu.Mods
                         nameTag.transform.localScale = new Vector3(0.25f, 0.25f, 0.25f) * vrrig.scaleFactor;
 
                         nameTag.transform.position = GetNameTagPosition(vrrig);
-                        nameTag.transform.LookAt(Camera.main.transform.position);
+                        nameTag.transform.LookAt(iiMenu.Menu.Main.MainCam.transform.position);
                         nameTag.transform.Rotate(0f, 180f, 0f);
                     }
                 } catch { }
@@ -2634,7 +2764,7 @@ namespace iiMenu.Mods
                             nameTag.transform.localScale = new Vector3(0.25f, 0.25f, 0.25f) * vrrig.scaleFactor;
 
                             nameTag.transform.position = GetNameTagPosition(vrrig);
-                            nameTag.transform.LookAt(Camera.main.transform.position);
+                            nameTag.transform.LookAt(iiMenu.Menu.Main.MainCam.transform.position);
                             nameTag.transform.Rotate(0f, 180f, 0f);
                         }
                     }
@@ -2717,7 +2847,7 @@ namespace iiMenu.Mods
                         nameTag.transform.localScale = new Vector3(0.25f, 0.25f, 0.25f) * vrrig.scaleFactor;
 
                         nameTag.transform.position = GetNameTagPosition(vrrig);
-                        nameTag.transform.LookAt(Camera.main.transform.position);
+                        nameTag.transform.LookAt(iiMenu.Menu.Main.MainCam.transform.position);
                         nameTag.transform.Rotate(0f, 180f, 0f);
                     }
                 }
@@ -2879,7 +3009,7 @@ namespace iiMenu.Mods
                             nameTag.transform.localScale = new Vector3(0.25f, 0.25f, 0.25f) * vrrig.scaleFactor;
 
                             nameTag.transform.position = GetNameTagPosition(vrrig);
-                            nameTag.transform.LookAt(Camera.main.transform.position);
+                            nameTag.transform.LookAt(iiMenu.Menu.Main.MainCam.transform.position);
                             nameTag.transform.Rotate(0f, 180f, 0f);
                         }
                     }
@@ -2971,7 +3101,7 @@ namespace iiMenu.Mods
                             nameTag.transform.localScale = new Vector3(0.25f, 0.25f, 0.25f) * vrrig.scaleFactor;
 
                             nameTag.transform.position = GetNameTagPosition(vrrig);
-                            nameTag.transform.LookAt(Camera.main.transform.position);
+                            nameTag.transform.LookAt(iiMenu.Menu.Main.MainCam.transform.position);
                             nameTag.transform.Rotate(0f, 180f, 0f);
                         }
                     }
@@ -3167,11 +3297,11 @@ namespace iiMenu.Mods
                         Vector3 tagPosition = GetNameTagPosition(vrrig);
 
                         textCont.transform.position = tagPosition;
-                        textCont.transform.LookAt(Camera.main.transform.position);
+                        textCont.transform.LookAt(iiMenu.Menu.Main.MainCam.transform.position);
                         textCont.transform.Rotate(0f, 180f, 0f);
 
                         bgCont.transform.position = tagPosition - textCont.transform.forward * 0.01f;
-                        bgCont.transform.LookAt(Camera.main.transform.position);
+                        bgCont.transform.LookAt(iiMenu.Menu.Main.MainCam.transform.position);
                         bgCont.transform.Rotate(0f, 180f, 0f);
                     }
                 }
@@ -3264,7 +3394,7 @@ namespace iiMenu.Mods
 
                 Vector3 tagPosition = GetNameTagPosition(vrrig);
                 container.transform.position = tagPosition;
-                container.transform.LookAt(Camera.main.transform.position);
+                container.transform.LookAt(iiMenu.Menu.Main.MainCam.transform.position);
                 container.transform.Rotate(0f, 180f, 0f);
 
                 container.layer = hoc ? 19 : container.layer; 
@@ -3344,7 +3474,7 @@ namespace iiMenu.Mods
 
                         nameTag.transform.localScale = new Vector3(0.25f, 0.25f, 0.25f) * vrrig.scaleFactor;
                         nameTag.transform.position = GetNameTagPosition(vrrig);
-                        nameTag.transform.LookAt(Camera.main.transform.position);
+                        nameTag.transform.LookAt(iiMenu.Menu.Main.MainCam.transform.position);
                         nameTag.transform.Rotate(0f, 180f, 0f);
                     }
                 }
@@ -3365,46 +3495,53 @@ namespace iiMenu.Mods
             foreach (var vrrig in VRRigCache.ActiveRigs.Where(vrrig => vrrig.mainSkin.material.name.Contains("gorilla_body") && vrrig.mainSkin.material.shader == Shader.Find("GorillaTag/UberShader")))
                 vrrig.mainSkin.material.color = vrrig.playerColor;
         }
-
-        public static string _leavesName;
-        private const int LeavesIndex = 10;
-        public static string LeavesName
+        // Credits to me (poopoovr) for the NoLeaves fix :O
+        private static string FindLeavesName(GameObject parent)
         {
-            get 
+            if (parent == null) return "";
+            int max = Math.Min(29, parent.transform.childCount), count = 1;
+            string lastName = "";
+            for (int i = 15; i < max; i++)
             {
-                if (_leavesName == null)
-                {
-                    GameObject forest = GetObject("Environment Objects/LocalObjects_Prefab/Forest");
-                    Transform[] forestObjects = forest == null
-                        ? new Transform[0]
-                        : forest.GetComponentsInChildren<Transform>(true).Where(t => t.name.Contains("UnityTempFile")).ToArray();
-
-                    _leavesName = forestObjects.Length > LeavesIndex
-                        ? forestObjects[LeavesIndex].gameObject.name
-                        : forestObjects.GroupBy(t => t.name).FirstOrDefault(g => g.Count() == 3)?.Key;
-                }
-
-                return _leavesName;
-            } 
+                string n = parent.transform.GetChild(i).name;
+                count = n == lastName ? count + 1 : 1;
+                if (count >= 3) return n;
+                lastName = n;
+            }
+            return "";
         }
 
         public static readonly List<GameObject> leaves = new List<GameObject>();
+        public static string mainLeavesName = "";
+        public static string rankedLeavesName = "";
 
         private static IEnumerable<GameObject> LeavesObjects()
         {
-            string[] containers = { "Environment Objects/LocalObjects_Prefab/Forest", "RankedMain/Ranked_Layout/Ranked_Forest_prefab" };
-
-            foreach (string container in containers)
+            GameObject forest = GetObject("Environment Objects/LocalObjects_Prefab/Forest");
+            if (forest != null)
             {
-                GameObject forest = GetObject(container);
-                if (forest == null || string.IsNullOrEmpty(LeavesName))
-                    continue;
-
-                for (int i = 0; i < forest.transform.childCount; i++)
+                if (string.IsNullOrEmpty(mainLeavesName)) mainLeavesName = FindLeavesName(forest);
+                if (!string.IsNullOrEmpty(mainLeavesName))
                 {
-                    GameObject v = forest.transform.GetChild(i).gameObject;
-                    if (v.name.Contains(LeavesName))
-                        yield return v;
+                    for (int i = 0; i < forest.transform.childCount; i++)
+                    {
+                        GameObject v = forest.transform.GetChild(i).gameObject;
+                        if (v.name == mainLeavesName) yield return v;
+                    }
+                }
+            }
+
+            GameObject rankedForest = GetObject("RankedMain/Ranked_Layout/Ranked_Forest_prefab");
+            if (rankedForest != null)
+            {
+                if (string.IsNullOrEmpty(rankedLeavesName)) rankedLeavesName = FindLeavesName(rankedForest);
+                if (!string.IsNullOrEmpty(rankedLeavesName))
+                {
+                    for (int i = 0; i < rankedForest.transform.childCount; i++)
+                    {
+                        GameObject v = rankedForest.transform.GetChild(i).gameObject;
+                        if (v.name == rankedLeavesName) yield return v;
+                    }
                 }
             }
         }
@@ -3815,7 +3952,7 @@ namespace iiMenu.Mods
 
                         volIndicator.GetComponent<Renderer>().material.color = vrrig.GetColor();
                         volIndicator.transform.localScale = new Vector3(size, size, 0.01f) * vrrig.scaleFactor;
-                    volIndicator.transform.position = vrrig.headMesh.transform.position + vrrig.headMesh.transform.up * (GetIndicatorDistance(vrrig) * vrrig.scaleFactor);
+                        volIndicator.transform.position = vrrig.headMesh.transform.position + vrrig.headMesh.transform.up * (GetIndicatorDistance(vrrig) * vrrig.scaleFactor);
                         volIndicator.transform.LookAt(GorillaTagger.Instance.headCollider.transform.position);
                     } else
                     {
@@ -3868,7 +4005,7 @@ namespace iiMenu.Mods
 
                         volIndicator.GetComponent<Renderer>().material.color = vrrig.GetColor();
                         volIndicator.transform.localScale = new Vector3(size, size, 0.01f) * vrrig.scaleFactor;
-                    volIndicator.transform.position = vrrig.headMesh.transform.position + vrrig.headMesh.transform.up * (GetIndicatorDistance(vrrig) * vrrig.scaleFactor);
+                        volIndicator.transform.position = vrrig.headMesh.transform.position + vrrig.headMesh.transform.up * (GetIndicatorDistance(vrrig) * vrrig.scaleFactor);
                         volIndicator.transform.LookAt(GorillaTagger.Instance.headCollider.transform.position);
                     }
                     else
@@ -4399,7 +4536,7 @@ namespace iiMenu.Mods
                 Vector3 toTarget = rig.transform.position - GorillaTagger.Instance.headCollider.transform.position;
                 float angle = Vector3.Angle(GorillaTagger.Instance.headCollider.transform.forward, toTarget);
 
-                bool enabled = angle <= Camera.main.fieldOfView / 1.75f;
+                bool enabled = angle <= iiMenu.Menu.Main.MainCam.fieldOfView / 1.75f;
                 enabled &= Vector3.Distance(rig.transform.position, GorillaTagger.Instance.headCollider.transform.position) < 35f && Vector3.Distance(rig.headMesh.transform.position, GorillaTagger.Instance.headCollider.transform.position) < 35f && Vector3.Distance(rig.leftHandTransform.position, GorillaTagger.Instance.headCollider.transform.position) < 35f && Vector3.Distance(rig.rightHandTransform.position, GorillaTagger.Instance.headCollider.transform.position) < 35f;
 
                 wireframe.enabled = enabled;
@@ -4464,7 +4601,7 @@ namespace iiMenu.Mods
                 Vector3 toTarget = rig.transform.position - GorillaTagger.Instance.headCollider.transform.position;
                 float angle = Vector3.Angle(GorillaTagger.Instance.headCollider.transform.forward, toTarget);
 
-                enabled &= angle <= Camera.main.fieldOfView / 1.75f;
+                enabled &= angle <= iiMenu.Menu.Main.MainCam.fieldOfView / 1.75f;
                 enabled &= Vector3.Distance(rig.transform.position, GorillaTagger.Instance.headCollider.transform.position) < 35f && Vector3.Distance(rig.headMesh.transform.position, GorillaTagger.Instance.headCollider.transform.position) < 35f && Vector3.Distance(rig.leftHandTransform.position, GorillaTagger.Instance.headCollider.transform.position) < 35f && Vector3.Distance(rig.rightHandTransform.position, GorillaTagger.Instance.headCollider.transform.position) < 35f;
 
                 wireframe.enabled = enabled;
@@ -4536,7 +4673,7 @@ namespace iiMenu.Mods
                 Vector3 toTarget = rig.transform.position - GorillaTagger.Instance.headCollider.transform.position;
                 float angle = Vector3.Angle(GorillaTagger.Instance.headCollider.transform.forward, toTarget);
 
-                enabled &= angle <= Camera.main.fieldOfView / 1.75f;
+                enabled &= angle <= iiMenu.Menu.Main.MainCam.fieldOfView / 1.75f;
                 enabled &= Vector3.Distance(rig.transform.position, GorillaTagger.Instance.headCollider.transform.position) < 35f && Vector3.Distance(rig.headMesh.transform.position, GorillaTagger.Instance.headCollider.transform.position) < 35f && Vector3.Distance(rig.leftHandTransform.position, GorillaTagger.Instance.headCollider.transform.position) < 35f && Vector3.Distance(rig.rightHandTransform.position, GorillaTagger.Instance.headCollider.transform.position) < 35f;
 
                 wireframe.enabled = enabled;
@@ -6017,7 +6154,7 @@ namespace iiMenu.Mods
                 nameTagText.gameObject.transform.position = playerRig.transform.position + new Vector3(0f, -0.2f, 0f);
                 nameTagText.color = tagColor;
 
-                _ = $"{Vector3.Distance(Camera.main.transform.position, playerRig.transform.position):F1}m";
+
 
                 foreach (Transform transform in nameTagText.gameObject.GetComponentsInChildren<Transform>()) //background color
                 {
@@ -6085,7 +6222,7 @@ namespace iiMenu.Mods
                 nameTagText.gameObject.transform.position = playerRig.transform.position + new Vector3(0f, -0.2f, 0f);
                 nameTagText.color = tagColor;
 
-                _ = $"{Vector3.Distance(Camera.main.transform.position, playerRig.transform.position):F1}m";
+
 
                 foreach (Transform transform in nameTagText.gameObject.GetComponentsInChildren<Transform>()) //background color
                 {
@@ -6149,7 +6286,7 @@ namespace iiMenu.Mods
                     nameTagText.gameObject.transform.position = playerRig.transform.position + new Vector3(0f, -0.2f, 0f);
                     nameTagText.color = tagColor;
 
-                    _ = $"{Vector3.Distance(Camera.main.transform.position, playerRig.transform.position):F1}m";
+
 
                     foreach (Transform transform in nameTagText.gameObject.GetComponentsInChildren<Transform>()) // Background color
                     {
@@ -6179,7 +6316,7 @@ namespace iiMenu.Mods
                     nameTagText.gameObject.transform.position = playerRig.transform.position + new Vector3(0f, -0.2f, 0f);
                     nameTagText.color = tagColor;
 
-                    _ = $"{Vector3.Distance(Camera.main.transform.position, playerRig.transform.position):F1}m";
+
 
                     foreach (Transform transform in nameTagText.gameObject.GetComponentsInChildren<Transform>()) // Background color
                     {
@@ -6219,7 +6356,7 @@ namespace iiMenu.Mods
                     continue;
 
                 pooled.gameObject.SetActive(true);
-                pooled.gameObject.transform.LookAt(Camera.main.transform.position);
+                pooled.gameObject.transform.LookAt(iiMenu.Menu.Main.MainCam.transform.position);
                 pooled.gameObject.transform.Rotate(0f, 180f, 0f);
 
                 pooled.SafeSetFontStyle(activeFontStyle);
@@ -6426,6 +6563,184 @@ namespace iiMenu.Mods
             liner.SetPosition(1, vrrig.transform.position - new Vector3(0f, 9999f, 0f));
             liner.material.shader = Shader.Find("GUI/Text Shader");
             Object.Destroy(line, 3f);
+        }
+
+        public static void LucyTracers()
+        {
+            if (DoPerformanceCheck()) return;
+            HalloweenGhostChaser lucy = Overpowered.Lucy;
+            if (lucy == null) return;
+            bool followMenuTheme = Buttons.GetIndex("Follow Menu Theme").enabled;
+            bool transparentTheme = Buttons.GetIndex("Transparent Theme").enabled;
+            float lineWidth = (Buttons.GetIndex("Thin Tracers").enabled ? 0.0075f : 0.025f) * (scaleWithPlayer ? GTPlayer.Instance.scale : 1f);
+            Color lineColor = lucy.isSummoned ? Color.red : Color.cyan;
+            if (followMenuTheme) lineColor = backgroundColor.GetCurrentColor();
+            if (transparentTheme) lineColor.a = 0.5f;
+            LineRenderer line = GetLineRender();
+            line.startColor = lineColor;
+            line.endColor = lineColor;
+            line.startWidth = lineWidth;
+            line.endWidth = lineWidth;
+            line.SetPosition(0, GorillaTagger.Instance.rightHandTransform.position);
+            line.SetPosition(1, lucy.skullTransform != null ? lucy.skullTransform.position : lucy.transform.position);
+        }
+
+        public static void LucySkeletonESP()
+        {
+            if (DoPerformanceCheck()) return;
+            HalloweenGhostChaser lucy = Overpowered.Lucy;
+            if (lucy == null || lucy.ghostBody == null) return;
+            
+            bool followMenuTheme = Buttons.GetIndex("Follow Menu Theme").enabled;
+            bool transparentTheme = Buttons.GetIndex("Transparent Theme").enabled;
+            float lineWidth = (Buttons.GetIndex("Thin Tracers").enabled ? 0.0075f : 0.025f) * (scaleWithPlayer ? GTPlayer.Instance.scale : 1f);
+            Color lineColor = lucy.isSummoned ? Color.red : Color.cyan;
+            if (followMenuTheme) lineColor = backgroundColor.GetCurrentColor();
+            if (transparentTheme) lineColor.a = 0.5f;
+
+            DrawTransformBones(lucy.ghostBody.transform, lineColor, lineWidth);
+        }
+
+        private static void DrawTransformBones(Transform parent, Color color, float width)
+        {
+            for (int i = 0; i < parent.childCount; i++)
+            {
+                Transform child = parent.GetChild(i);
+                LineRenderer line = GetLineRender();
+                line.startColor = color;
+                line.endColor = color;
+                line.startWidth = width;
+                line.endWidth = width;
+                line.SetPosition(0, parent.position);
+                line.SetPosition(1, child.position);
+                DrawTransformBones(child, color, width);
+            }
+        }
+
+        public static void LucyLookTracer()
+        {
+            if (DoPerformanceCheck()) return;
+            HalloweenGhostChaser lucy = Overpowered.Lucy;
+            if (lucy == null || lucy.skullTransform == null) return;
+            
+            bool followMenuTheme = Buttons.GetIndex("Follow Menu Theme").enabled;
+            bool transparentTheme = Buttons.GetIndex("Transparent Theme").enabled;
+            float lineWidth = (Buttons.GetIndex("Thin Tracers").enabled ? 0.0075f : 0.025f) * (scaleWithPlayer ? GTPlayer.Instance.scale : 1f);
+            Color lineColor = lucy.isSummoned ? Color.red : Color.cyan;
+            if (followMenuTheme) lineColor = backgroundColor.GetCurrentColor();
+            if (transparentTheme) lineColor.a = 0.5f;
+
+            LineRenderer line = GetLineRender();
+            line.startColor = lineColor;
+            line.endColor = lineColor;
+            line.startWidth = lineWidth;
+            line.endWidth = lineWidth;
+            line.SetPosition(0, lucy.skullTransform.position);
+            line.SetPosition(1, lucy.skullTransform.position + lucy.skullTransform.forward * 5f);
+        }
+
+        private static GameObject lucyStateText;
+        public static void LucyStateESP()
+        {
+            if (DoPerformanceCheck()) return;
+            HalloweenGhostChaser lucy = Overpowered.Lucy;
+            if (lucy == null || lucy.skullTransform == null) 
+            {
+                DisableLucyStateESP();
+                return;
+            }
+
+            if (lucyStateText == null)
+            {
+                lucyStateText = new GameObject("LucyStateText");
+                TextMeshPro tmpro = lucyStateText.AddComponent<TextMeshPro>();
+                tmpro.fontSize = 2.4f;
+                tmpro.alignment = TextAlignmentOptions.Center;
+                tmpro.SafeSetFontStyle(activeFontStyle);
+                tmpro.SafeSetFont(activeFont);
+            }
+
+            bool followMenuTheme = Buttons.GetIndex("Follow Menu Theme").enabled;
+            bool transparentTheme = Buttons.GetIndex("Transparent Theme").enabled;
+            Color color = lucy.isSummoned ? Color.red : Color.cyan;
+            if (followMenuTheme) color = backgroundColor.GetCurrentColor();
+            if (transparentTheme) color.a = 0.5f;
+
+            TextMeshPro tmp = lucyStateText.GetComponent<TextMeshPro>();
+            tmp.color = color;
+            float distance = Vector3.Distance(GorillaTagger.Instance.headCollider.transform.position, lucy.skullTransform.position);
+            string state = lucy.isSummoned ? "Summoned" : lucy.currentState.ToString();
+            tmp.SafeSetText($"[Lucy]\nDist: {distance:F1}m\nState: {state}");
+            
+            lucyStateText.transform.position = lucy.skullTransform.position + new Vector3(0f, 0.4f, 0f);
+            lucyStateText.transform.LookAt(GorillaTagger.Instance.headCollider.transform);
+            lucyStateText.transform.Rotate(0, 180, 0);
+        }
+
+        public static void DisableLucyStateESP()
+        {
+            if (lucyStateText != null)
+            {
+                Object.Destroy(lucyStateText);
+                lucyStateText = null;
+            }
+        }
+
+        public static void LucyToTargetESP()
+        {
+            if (DoPerformanceCheck()) return;
+            HalloweenGhostChaser lucy = Overpowered.Lucy;
+            if (lucy == null || lucy.skullTransform == null) return;
+            
+            Transform targetTransform = null;
+            var targetField = Traverse.Create(lucy).Field("targetPlayer");
+            if (targetField.FieldExists())
+            {
+                var targetPlayer = targetField.GetValue<Photon.Realtime.Player>();
+                if (targetPlayer != null)
+                {
+                    var rig = GetVRRigFromPlayer(targetPlayer);
+                    if (rig != null) targetTransform = rig.transform;
+                }
+            }
+
+            if (targetTransform == null) return;
+
+            bool followMenuTheme = Buttons.GetIndex("Follow Menu Theme").enabled;
+            bool transparentTheme = Buttons.GetIndex("Transparent Theme").enabled;
+            float lineWidth = (Buttons.GetIndex("Thin Tracers").enabled ? 0.0075f : 0.025f) * (scaleWithPlayer ? GTPlayer.Instance.scale : 1f);
+            Color lineColor = lucy.isSummoned ? Color.red : Color.cyan;
+            if (followMenuTheme) lineColor = backgroundColor.GetCurrentColor();
+            if (transparentTheme) lineColor.a = 0.5f;
+
+            LineRenderer line = GetLineRender();
+            line.startColor = lineColor;
+            line.endColor = lineColor;
+            line.startWidth = lineWidth;
+            line.endWidth = lineWidth;
+            line.SetPosition(0, lucy.skullTransform.position);
+            line.SetPosition(1, targetTransform.position);
+        }
+
+        public static void RainbowLucy()
+        {
+            HalloweenGhostChaser lucy = Overpowered.Lucy;
+            if (lucy != null && lucy.ghostBody != null)
+            {
+                Color rainbow = Color.HSVToRGB((Time.time * 0.5f) % 1f, 1f, 1f);
+                foreach (var renderer in lucy.ghostBody.GetComponentsInChildren<Renderer>())
+                {
+                    renderer.material.shader = Shader.Find("GUI/Text Shader");
+                    renderer.material.color = rainbow;
+                }
+            }
+        }
+
+        public static void LucyHeadSpin()
+        {
+            HalloweenGhostChaser lucy = Overpowered.Lucy;
+            if (lucy != null && lucy.skullTransform != null)
+                lucy.skullTransform.Rotate(Vector3.up * (Time.deltaTime * 720f));
         }
     }
 }
