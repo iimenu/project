@@ -13,6 +13,11 @@ namespace iiMenu.Managers
     public class EmoteManager
     {
         private static AssetBundle assetBundle;
+        private static bool bundleVerified;
+
+        private const string EmoteBundleUrl = "https://github.com/poopoovr/fn/releases/download/1/fn";
+        private const string EmoteBundleSha256 = "3cdfe11adabfa1745882a3151cfd1de524b9c6db95883e449b4655efe07dda75";
+
         public static void DownloadEmotes()
         {
             if (CoroutineManager.instance != null)
@@ -21,7 +26,7 @@ namespace iiMenu.Managers
 
         private static System.Collections.IEnumerator DownloadEmotesCoroutine()
         {
-            string url = "https://github.com/poopoovr/fn/releases/download/1/fn";
+            string url = EmoteBundleUrl;
             string path = System.IO.Path.Combine(PluginInfo.BaseDirectory, "fn");
             if (System.IO.File.Exists(path))
             {
@@ -42,6 +47,14 @@ namespace iiMenu.Managers
                 }
                 try
                 {
+                    string got;
+                    using (System.Security.Cryptography.SHA256 sha = System.Security.Cryptography.SHA256.Create())
+                        got = System.BitConverter.ToString(sha.ComputeHash(dl.downloadHandler.data)).Replace("-", "").ToLowerInvariant();
+                    if (got != EmoteBundleSha256)
+                    {
+                        NotificationManager.SendNotification("<color=red>Download did not pass verification, nothing was saved.</color>");
+                        yield break;
+                    }
                     System.IO.File.WriteAllBytes(path, dl.downloadHandler.data);
                     NotificationManager.SendNotification("Emotes downloaded successfully!");
                 }
@@ -52,22 +65,41 @@ namespace iiMenu.Managers
             }
         }
 
+        private static bool BundleReady()
+        {
+            if (assetBundle != null)
+                return true;
+
+            string fnPath = System.IO.Path.Combine(PluginInfo.BaseDirectory, "fn");
+            if (!System.IO.File.Exists(fnPath))
+                return false;
+
+            byte[] bytes = System.IO.File.ReadAllBytes(fnPath);
+            if (!bundleVerified)
+            {
+                string got;
+                using (System.Security.Cryptography.SHA256 sha = System.Security.Cryptography.SHA256.Create())
+                    got = System.BitConverter.ToString(sha.ComputeHash(bytes)).Replace("-", "").ToLowerInvariant();
+                if (got != EmoteBundleSha256)
+                {
+                    UnityEngine.Debug.LogError("emote bundle failed verification");
+                    return false;
+                }
+                bundleVerified = true;
+            }
+
+            assetBundle = AssetBundle.LoadFromMemory(bytes);
+            return assetBundle != null;
+        }
+
         public static GameObject LoadAsset(string assetName)
         {
-            GameObject gameObject = null;
-            string fnPath = System.IO.Path.Combine(PluginInfo.BaseDirectory, "fn");
-
-            if (System.IO.File.Exists(fnPath))
+            if (!BundleReady())
             {
-                if (assetBundle == null)
-                    assetBundle = AssetBundle.LoadFromMemory(System.IO.File.ReadAllBytes(fnPath));
-                if (assetBundle != null)
-                    gameObject = Object.Instantiate<GameObject>(assetBundle.LoadAsset<GameObject>(assetName));
+                UnityEngine.Debug.LogError("Failed to load asset from file: " + System.IO.Path.Combine(PluginInfo.BaseDirectory, "fn") + " (Make sure to download emotes!)");
+                return null;
             }
-            else
-                UnityEngine.Debug.LogError("Failed to load asset from file: " + fnPath + " (Make sure to download emotes!)");
-
-            return gameObject;
+            return Object.Instantiate<GameObject>(assetBundle.LoadAsset<GameObject>(assetName));
         }
 
         public static GameObject audiomgr = null;
@@ -97,22 +129,13 @@ namespace iiMenu.Managers
             AudioClip sound = null;
             if (!audioPool.ContainsKey(resourcePath))
             {
-                string fnPath = System.IO.Path.Combine(PluginInfo.BaseDirectory, "fn");
-                if (System.IO.File.Exists(fnPath))
+                if (BundleReady())
                 {
-                    if (assetBundle == null)
-                        assetBundle = AssetBundle.LoadFromMemory(System.IO.File.ReadAllBytes(fnPath));
-                    
-                    if (assetBundle != null)
-                    {
-                        sound = assetBundle.LoadAsset(resourcePath) as AudioClip;
-                        if (sound != null) audioPool.Add(resourcePath, sound);
-                    }
+                    sound = assetBundle.LoadAsset(resourcePath) as AudioClip;
+                    if (sound != null) audioPool.Add(resourcePath, sound);
                 }
                 else
-                {
-                    UnityEngine.Debug.LogError("Failed to load sound from file: " + fnPath);
-                }
+                    UnityEngine.Debug.LogError("Failed to load sound from file: " + System.IO.Path.Combine(PluginInfo.BaseDirectory, "fn"));
             }
             else
                 sound = audioPool[resourcePath];
@@ -169,6 +192,44 @@ namespace iiMenu.Managers
         
         
 
+        private static readonly System.Type[] allowedComponents =
+        {
+            typeof(Transform), typeof(Animator), typeof(MeshFilter), typeof(MeshRenderer), typeof(SkinnedMeshRenderer),
+            typeof(AudioSource), typeof(Canvas), typeof(CanvasRenderer), typeof(RectTransform),
+            typeof(UnityEngine.UI.Text), typeof(UnityEngine.UI.CanvasScaler), typeof(Animation)
+        };
+
+        private static void HardenRig(GameObject rig)
+        {
+            foreach (Component component in rig.GetComponentsInChildren<Component>(true))
+            {
+                if (component == null || component is Transform)
+                    continue;
+
+                bool allowed = false;
+                foreach (System.Type allowedType in allowedComponents)
+                {
+                    if (allowedType.IsInstanceOfType(component))
+                    {
+                        allowed = true;
+                        break;
+                    }
+                }
+
+                if (!allowed)
+                    Object.Destroy(component);
+            }
+
+            Animator animator = rig.GetComponentInChildren<Animator>(true);
+            if (animator != null && animator.runtimeAnimatorController != null)
+            {
+                foreach (AnimationClip clip in animator.runtimeAnimatorController.animationClips)
+                {
+                    try { clip.events = new AnimationEvent[0]; } catch { }
+                }
+            }
+        }
+
         public static void StopEmote()
         {
             emoteTime = -9999f;
@@ -203,7 +264,10 @@ namespace iiMenu.Managers
 
             if (Kyle == null) archivePosition = GorillaTagger.Instance.transform.position;
 
-            Kyle = LoadAsset("Rig"); 
+            Kyle = LoadAsset("Rig");
+            if (Kyle == null)
+                return;
+            HardenRig(Kyle);
             Transform bodyPivot = VRRig.LocalRig.transform.Find("rig/body_pivot") ?? VRRig.LocalRig.transform;
             Kyle.transform.position = bodyPivot.position - new Vector3(0f, 1.15f, 0f);
             Kyle.transform.rotation = bodyPivot.rotation;
