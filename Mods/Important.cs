@@ -656,31 +656,8 @@ exit";
             catch { return false; }
         }
 
-        private static bool quickSongExists;
-        public static void EnsureIntegrationProgram()
-        {
-            quickSongExists = File.Exists($"{PluginInfo.BaseDirectory}/QuickSong.exe");
-            if (!quickSongExists)
-            {
-                Prompt("This mod requires the \"QuickSong\" library. Would you like to automatically download it? (16.3mb)", () =>
-                {
-                    using UnityWebRequest request = UnityWebRequest.Get("https://github.com/iiDk-the-actual/QuickSong/releases/latest/download/QuickSong.exe");
-                    UnityWebRequestAsyncOperation operation = request.SendWebRequest();
-
-                    while (!operation.isDone) { }
-
-                    if (request.result == UnityWebRequest.Result.Success)
-                    {
-                        File.WriteAllBytes($"{PluginInfo.BaseDirectory}/QuickSong.exe", request.downloadHandler.data);
-                        NotificationManager.SendNotification($"<color=grey>[</color><color=green>SUCCESS</color><color=grey>]</color> Successfully downloaded QuickSong to {PluginInfo.BaseDirectory}/QuickSong.exe.");
-                    }
-                    else
-                        NotificationManager.SendNotification($"<color=grey>[</color><color=red>ERROR</color><color=grey>]</color> Could not download QuickSong: {(request.error.IsNullOrEmpty() ? "Unknown error" : request.error)}");
-
-                    quickSongExists = File.Exists($"{PluginInfo.BaseDirectory}/QuickSong.exe");
-                }, () => Toggle("Media Integration"));
-            }
-        }
+        public static void EnsureIntegrationProgram() =>
+            SmtcReader.Begin();
 
         public static string Title { get; private set; } = "Unknown";
         public static string Artist { get; private set; } = "Unknown";
@@ -695,21 +672,6 @@ exit";
 
         public static async Task UpdateDataAsync()
         {
-            ProcessStartInfo psi = new ProcessStartInfo
-            {
-                FileName = $"{FileUtilities.GetGamePath()}/{PluginInfo.BaseDirectory}/QuickSong.exe",
-                Arguments = "-all",
-                UseShellExecute = false,
-                RedirectStandardOutput = true,
-                CreateNoWindow = true
-            };
-
-            using Process proc = new Process { StartInfo = psi };
-            proc.Start();
-            string output = await proc.StandardOutput.ReadToEndAsync();
-
-            await Task.Run(() => proc.WaitForExit());
-
             Paused = true;
             Title = "Unknown";
             Artist = "Unknown";
@@ -718,22 +680,28 @@ exit";
             EndTime = 0f;
             ElapsedTime = 0f;
 
-            try
+            ValidData = false;
+
+            await Task.CompletedTask;
+
+            SmtcReader.Snapshot snapshot = SmtcReader.Current();
+            if (!snapshot.HasData)
+                return;
+
+            Title = snapshot.Title;
+            Artist = snapshot.Artist;
+            Paused = snapshot.Paused;
+
+            StartTime = snapshot.Start;
+            EndTime = snapshot.End;
+            ElapsedTime = snapshot.Position;
+
+            if (snapshot.Art != null)
             {
-                Dictionary<string, object> data = JsonConvert.DeserializeObject<Dictionary<string, object>>(output);
-                Title = (string)data["Title"];
-                Artist = (string)data["Artist"];
-
-                StartTime = Convert.ToSingle(data["StartTime"]);
-                EndTime = Convert.ToSingle(data["EndTime"]);
-                ElapsedTime = Convert.ToSingle(data["ElapsedTime"]);
-
-                Paused = (string)data["Status"] != "Playing";
-                Icon.LoadImage(Convert.FromBase64String((string)data["ThumbnailBase64"]));
-
-                ValidData = true;
+                try { Icon.LoadImage(snapshot.Art); } catch { }
             }
-            catch { }
+
+            ValidData = true;
         }
 
         private static IEnumerator UpdateDataCoroutine(float delay = 0f)
@@ -867,7 +835,7 @@ exit";
 
         public static void MediaIntegration()
         {
-            if (quickSongExists)
+            if (SmtcReader.Running)
             {
                 if (mediaIcon == null)
                 {
@@ -957,7 +925,7 @@ exit";
 
         public static void DisableMediaIntegration()
         {
-            quickSongExists = false;
+            SmtcReader.End();
 
             if (mediaIcon != null)
                 Object.Destroy(mediaIcon);
