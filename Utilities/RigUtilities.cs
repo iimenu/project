@@ -23,17 +23,27 @@ namespace iiMenu.Utilities
     {
         public static VRRig GetVRRigFromPlayer(NetPlayer p)
         {
-            if (p == null || GorillaGameManager.instance == null)
-                return null;
+            if (p == null) return null;
 
-            try
+            if (GorillaGameManager.instance != null)
             {
-                return GorillaGameManager.StaticFindRigForPlayer(p);
+                try
+                {
+                    return GorillaGameManager.StaticFindRigForPlayer(p);
+                }
+                catch { }
             }
-            catch
+
+            // Fallback for casual lobbies where GorillaGameManager.instance is null
+            foreach (VRRig rig in VRRigCache.ActiveRigs)
             {
-                return null;
+                if (TryGetPlayerFromVRRig(rig, out NetPlayer rigPlayer) && rigPlayer == p)
+                {
+                    return rig;
+                }
             }
+
+            return null;
         }
 
         public static VRRig GetRigFromHit(RaycastHit hit)
