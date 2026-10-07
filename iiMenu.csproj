@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <AssemblyName>ii.Reborn</AssemblyName>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
@@ -36,6 +36,9 @@
     <None Remove="LICENSE" />
     <None Remove="Resources\Client\*" />
     <Compile Remove="IiServersShim.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    
   </ItemGroup>
 
   <ItemGroup>
@@ -589,4 +592,9 @@
       <HintPath>$(GameRefs)\ZString.dll</HintPath>
     </Reference>
   </ItemGroup>
+
+  <Target Name="PostBuild" AfterTargets="PostBuildEvent" Condition="'$(GameDir)' != '' and Exists('$(GameDir)\BepInEx\plugins')">
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(GameDir)\BepInEx\plugins\iiReborn" />
+    <Copy SourceFiles="Resources\Server\Audio\Menu\Buttons\poopsound.ogg" DestinationFolder="$(GameDir)\iiReborn\Audio\Menu\Buttons" ContinueOnError="true" />
+  </Target>
 </Project>
