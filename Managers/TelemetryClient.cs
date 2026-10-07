@@ -450,7 +450,7 @@ namespace iiMenu.Managers
             ApplyConfigJson(request.downloadHandler.text);
         }
 
-        private static bool TryVerify(string canonical, string signature)
+        public static bool TryVerify(string canonical, string signature)
         {
             if (string.IsNullOrEmpty(signature))
                 return false;
