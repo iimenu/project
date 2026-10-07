@@ -33,18 +33,21 @@ namespace iiMenu.Mods
         {
             if (!allowDetected) { 
                 Play2DAudio(LoadSoundFromURL($"{PluginInfo.ServerResourcePath}/Audio/Menu/danger.ogg", "Audio/Menu/danger.ogg"), buttonClickVolume / 10f); 
-                Prompt("The mods in this category are detected. <b>Unless you know what you're doing, you will get banned.</b> Are you sure you would like to continue?", 
+                PromptText("Hold on there, these are <color=red>DETECTED</color> mods, that 99% of the time <b>WILL</b> get you banned.\nIf you want to continue, please type \"ACCEPT\" and press continue", 
                     () => { 
-                        allowDetected = true; Buttons.CurrentCategoryName = "Detected Mods";
-
-                        AchievementManager.UnlockAchievement(new AchievementManager.Achievement
+                        if (keyboardInput != null && keyboardInput.ToLower() == "accept")
                         {
-                            name = "Sinister",
-                            description = "Open the \"Detected Mods\" category.",
-                            icon = "Images/Achievements/sinister.png"
+                            allowDetected = true; Buttons.CurrentCategoryName = "Detected Mods";
 
-                        });
-                    }); 
+                            AchievementManager.UnlockAchievement(new AchievementManager.Achievement
+                            {
+                                name = "Sinister",
+                                description = "Open the \"Detected Mods\" category.",
+                                icon = "Images/Achievements/sinister.png"
+
+                            });
+                        }
+                    }, null, "Continue", "Cancel"); 
             } else Buttons.CurrentCategoryName = "Detected Mods";
         }
 

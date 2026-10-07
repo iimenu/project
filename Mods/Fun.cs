@@ -2228,6 +2228,18 @@ namespace iiMenu.Mods
             RecorderPatch.enabled = !Buttons.GetIndex("Legacy Microphone").enabled;
         }
 
+
+
+        public static void DebugMicrophone()
+        {
+            GorillaTagger.Instance.myRecorder.DebugEchoMode = true;
+        }
+
+        public static void DisableDebugMicrophone()
+        {
+            GorillaTagger.Instance.myRecorder.DebugEchoMode = false;
+        }
+
         public static void SaveNarration(string text)
         {
             string path = $"{PluginInfo.BaseDirectory}/Sounds/Narrations";
@@ -2291,7 +2303,7 @@ namespace iiMenu.Mods
             factory.Feed(data);
 
         public static void ReloadMicrophone() =>
-            GorillaTagger.Instance.myRecorder.RestartRecording(true);
+            GorillaTagger.Instance.myRecorder?.RestartRecording(true);
 
         public static IEnumerator DelayReloadMicrophone()
         {
@@ -7340,5 +7352,7 @@ $@"{largeNewLine}
 
 > {consoleTyped}");
         }*/
+
+
     }
 }
