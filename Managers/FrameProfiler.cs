@@ -38,6 +38,7 @@ namespace iiMenu.Managers
         private static readonly long[] stackHeap = new long[MaxDepth];
         private static int sectionCount;
         private static int stackDepth;
+        private static bool sampleHeapFrame;
 
         private long lastTimestamp;
         private long lastHeap;
@@ -86,7 +87,7 @@ namespace iiMenu.Managers
 
             stackSlot[stackDepth] = FindSlot(name);
             stackStart[stackDepth] = Stopwatch.GetTimestamp();
-            stackHeap[stackDepth] = GC.GetTotalMemory(false);
+            stackHeap[stackDepth] = sampleHeapFrame ? GC.GetTotalMemory(false) : 0;
             stackDepth++;
         }
 
@@ -105,6 +106,9 @@ namespace iiMenu.Managers
                 return;
 
             sectionTotals[slot] += (now - start) * 1000.0 / Stopwatch.Frequency;
+
+            if (heapAtStart <= 0)
+                return;
 
             long allocated = GC.GetTotalMemory(false) - heapAtStart;
 
@@ -127,9 +131,10 @@ namespace iiMenu.Managers
 
         private IEnumerator FrameLoop()
         {
+            WaitForEndOfFrame wait = new WaitForEndOfFrame();
             while (true)
             {
-                yield return new WaitForEndOfFrame();
+                yield return wait;
                 FrameTick();
             }
         }
@@ -145,10 +150,6 @@ namespace iiMenu.Managers
                 FlushSections();
                 return;
             }
-
-            long heap = GC.GetTotalMemory(false);
-            long heapDelta = heap - lastHeap;
-            lastHeap = heap;
 
             frameTotalMs += frameMs;
             frameTotalCount++;
@@ -166,17 +167,31 @@ namespace iiMenu.Managers
 
             float t = Time.realtimeSinceStartup;
 
-            if (frameMs >= SpikeThresholdMs && t - lastSpikeTime >= SpikeCooldownSeconds)
+            sampleHeapFrame = false;
+
+            bool spikeLog = frameMs >= SpikeThresholdMs && t - lastSpikeTime >= SpikeCooldownSeconds;
+            bool heartbeatLog = t - lastHeartbeatTime >= HeartbeatSeconds;
+            long heap = 0;
+            long heapDelta = 0;
+
+            if (spikeLog || heartbeatLog)
+            {
+                heap = GC.GetTotalMemory(false);
+                heapDelta = heap - lastHeap;
+                lastHeap = heap;
+            }
+
+            if (spikeLog)
             {
                 lastSpikeTime = t;
                 heartbeatSpikes++;
 
-                LogManager.Log($"[Frame] spike {frameMs:F1}ms | heap {heap / 1048576f:F1}MB ({heapDelta / 1024f:+0.0;-0.0;0.0}KB) | worst {worstFrameMs:F1}ms | {BuildSectionSummary()} | {SceneContext()}");
+                LogManager.Log($"[Frame] spike {frameMs:F1}ms | heap {heap / 1048576f:F1}MB ({heapDelta / 1024f:+0.0;-0.0;0.0}KB) | worst {worstFrameMs:F1}ms | {BuildSectionSummary()}");
 
                 lastTimestamp = Stopwatch.GetTimestamp();
             }
 
-            if (t - lastHeartbeatTime >= HeartbeatSeconds)
+            if (heartbeatLog)
             {
                 lastHeartbeatTime = t;
 
@@ -188,6 +203,8 @@ namespace iiMenu.Managers
                 verySlowFrames = 0;
                 heartbeatSpikes = 0;
                 worstFrameMs = 0f;
+
+                sampleHeapFrame = true;
             }
 
             FlushSections();
