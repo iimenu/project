@@ -9,6 +9,9 @@ namespace iiMenu.Patches.Menu
     {
         public static bool enabled;
 
+        private static readonly System.Reflection.FieldInfo fScryingPlane = AccessTools.Field(typeof(GorillaAmbushManager), "scryingPlane");
+        private static readonly System.Reflection.FieldInfo fScryingPlane3p = AccessTools.Field(typeof(GorillaAmbushManager), "scryingPlane3p");
+
         public static void Enable()
         {
             enabled = true;
@@ -31,12 +34,12 @@ namespace iiMenu.Patches.Menu
         {
             if (enabled && __instance.isGhostTag && rig.isOfflineVRRig)
             {
-                var scryingPlane = Traverse.Create(__instance).Field("scryingPlane").GetValue<MeshRenderer>();
+                var scryingPlane = (MeshRenderer)fScryingPlane.GetValue(__instance);
                 if (scryingPlane != null)
                 {
                     scryingPlane.enabled = true;
                 }
-                var scryingPlane3p = Traverse.Create(__instance).Field("scryingPlane3p").GetValue<MeshRenderer>();
+                var scryingPlane3p = (MeshRenderer)fScryingPlane3p.GetValue(__instance);
                 if (scryingPlane3p != null)
                 {
                     scryingPlane3p.enabled = true;
