@@ -161,8 +161,10 @@ namespace iiMenu.CanvasMenuUI.Settings
         void Update()
         {
             if (_tm == null || _m?.plugin == null) return;
-            _tm.text = _m.plugin.statusMessage;
-            _tm.color = _m.plugin.statusColor;
+            if (_tm.text != _m.plugin.statusMessage)
+                _tm.text = _m.plugin.statusMessage;
+            if (_tm.color != _m.plugin.statusColor)
+                _tm.color = _m.plugin.statusColor;
         }
     }
 }
