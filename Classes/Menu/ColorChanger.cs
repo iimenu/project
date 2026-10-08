@@ -49,7 +49,7 @@ namespace iiMenu.Classes.Menu
                     targetRenderer.material.color = colors.GetColor(0);
                 else
                 {
-                    if (targetRenderer.material.shader.name != "Universal Render Pipeline/Unlit" && targetRenderer.material.mainTexture == null)
+                    if (targetRenderer.material.mainTexture == null && targetRenderer.material.shader.name != "Universal Render Pipeline/Unlit")
                     {
                         targetRenderer.material = new Material(Shader.Find("Universal Render Pipeline/Unlit"))
                         {
