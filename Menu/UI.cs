@@ -706,6 +706,7 @@ namespace iiMenu.Menu
         }
 
         private static readonly List<RaycastResult> controlHits = new List<RaycastResult>();
+        private static readonly List<TextMeshProUGUI> debugTextObjects = new List<TextMeshProUGUI>();
 
 
         private Image controlBackground;
@@ -714,6 +715,8 @@ namespace iiMenu.Menu
 
         private float uiUpdateDelay;
         private float legacyPanelCheckTime;
+
+        private static readonly string serverLinkNoHttps = serverLink.Replace("https://", "");
 
         private void Update()
         {
@@ -743,10 +746,10 @@ namespace iiMenu.Menu
                     ? textColors[1].GetCurrentColor()
                     : backgroundColor.GetCurrentColor();
 
-                versionLabel.color = guiColor;
-                roomStatus.color = guiColor;
-                arraylist.color = guiColor;
-                watermark.color = guiColor;
+                if (versionLabel.color != guiColor) versionLabel.color = guiColor;
+                if (roomStatus.color != guiColor) roomStatus.color = guiColor;
+                if (arraylist.color != guiColor) arraylist.color = guiColor;
+                if (watermark.color != guiColor) watermark.color = guiColor;
 
                 versionLabel.SafeSetFont(activeFont);
                 roomStatus.SafeSetFont(activeFont);
@@ -756,46 +759,50 @@ namespace iiMenu.Menu
                 roomStatus.SafeSetFontStyle(activeFontStyle);
                 arraylist.SafeSetFontStyle(activeFontStyle);
 
-                controlBackground.color = backgroundColor.GetCurrentColor();
+                Color controlColor = backgroundColor.GetCurrentColor();
+                if (controlBackground.color != controlColor) controlBackground.color = controlColor;
 
+                Color textColor = textColors[1].GetCurrentColor();
                 foreach (var textObject in textObjects)
                 {
-                    textObject.color = textColors[1].GetCurrentColor();
+                    if (textObject.color != textColor) textObject.color = textColor;
                     textObject.SafeSetFont(activeFont);
                     textObject.SafeSetFontStyle(activeFontStyle);
                 }
 
+                Color imageColor = buttonColors[0].GetCurrentColor();
                 foreach (var imageObject in imageObjects)
-                    imageObject.color = buttonColors[0].GetCurrentColor();
+                    if (imageObject.color != imageColor) imageObject.color = imageColor;
 
                 watermark.transform.rotation = Quaternion.Euler(0f, 0f, rockWatermark ? Mathf.Sin(Time.time * 2f) * 10f : 0f);
                 versionLabel.SafeSetText(FollowMenuSettings("Build") + " " + PluginInfo.Version + "\n" +
-                                    serverLink.Replace("https://", ""));
+                                    serverLinkNoHttps);
 
                 roomStatus.SafeSetText(FollowMenuSettings(!PhotonNetwork.InRoom ? "Not connected to room" : "Connected to room ") +
                    (PhotonNetwork.InRoom ? PhotonNetwork.CurrentRoom.Name : ""));
 
                 if (debugUI != null && debugUI.activeSelf)
                 {
-                    debugUI.GetComponent<Image>().color = backgroundColor.GetCurrentColor();
+                    Image debugBackground = debugUI.GetComponent<Image>();
+                    if (debugBackground.color != controlColor) debugBackground.color = controlColor;
 
-                    List<TextMeshProUGUI> debugTextObjects = new List<TextMeshProUGUI>
-                    {
-                        debugUI.transform.Find("Title").GetComponent<TextMeshProUGUI>(),
-                        debugUI.transform.Find("TextInput/Text Area/Text").GetComponent<TextMeshProUGUI>(),
-                        debugUI.transform.Find("TextInput/Text Area/Placeholder").GetComponent<TextMeshProUGUI>()
-                    };
+                    debugTextObjects.Clear();
+                    debugTextObjects.Add(debugUI.transform.Find("Title").GetComponent<TextMeshProUGUI>());
+                    debugTextObjects.Add(debugUI.transform.Find("TextInput/Text Area/Text").GetComponent<TextMeshProUGUI>());
+                    debugTextObjects.Add(debugUI.transform.Find("TextInput/Text Area/Placeholder").GetComponent<TextMeshProUGUI>());
 
                     debugTextObjects.AddRange(debugUI.transform.Find("Lines").GetComponentsInChildren<TextMeshProUGUI>());
 
                     foreach (var textObject in debugTextObjects)
                     {
-                        textObject.color = textColors[1].GetCurrentColor();
+                        if (textObject.color != textColor) textObject.color = textColor;
                         textObject.SafeSetFont(activeFont);
                         textObject.SafeSetFontStyle(activeFontStyle);
                     }
 
-                    debugUI.transform.Find("Title").GetComponent<TextMeshProUGUI>().color = textColors[0].GetCurrentColor();
+                    TextMeshProUGUI debugTitle = debugUI.transform.Find("Title").GetComponent<TextMeshProUGUI>();
+                    Color debugTitleColor = textColors[0].GetCurrentColor();
+                    if (debugTitle.color != debugTitleColor) debugTitle.color = debugTitleColor;
                 }
 
                 if (!(Time.time > uiUpdateDelay)) return;
@@ -871,18 +878,18 @@ namespace iiMenu.Menu
                     .OrderByDescending(s => arraylist.GetPreferredValues(NoRichtextTags(s)).x)
                     .ToArray();
 
-                string modListText = "";
+                System.Text.StringBuilder modListText = new System.Text.StringBuilder();
                 for (int i = 0; i < sortedMods.Length; i++)
                 {
                     if (advancedArraylist)
-                        modListText += (flipArraylist ?
+                        modListText.Append((flipArraylist ?
                             /* Flipped */ $"<mark=#{ColorToHex(backgroundColor.GetCurrentColor(i * -0.1f))}C0> {sortedMods[i]} </mark><mark=#{ColorToHex(buttonColors[1].GetCurrentColor(i * -0.1f))}> </mark>" :
-                            /* Normal  */ $"<mark=#{ColorToHex(buttonColors[1].GetCurrentColor(i * -0.1f))}> </mark><mark=#{ColorToHex(backgroundColor.GetCurrentColor(i * -0.1f))}C0> {sortedMods[i]} </mark>") + "\n";
+                            /* Normal  */ $"<mark=#{ColorToHex(buttonColors[1].GetCurrentColor(i * -0.1f))}> </mark><mark=#{ColorToHex(backgroundColor.GetCurrentColor(i * -0.1f))}C0> {sortedMods[i]} </mark>") + "\n");
                     else
-                        modListText += sortedMods[i] + "\n";
+                        modListText.Append(sortedMods[i]).Append("\n");
                 }
 
-                arraylist.SafeSetText(modListText);
+                arraylist.SafeSetText(modListText.ToString());
             } else
                 uiPrefab.SetActive(false);
         }
