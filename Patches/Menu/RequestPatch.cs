@@ -92,7 +92,7 @@ namespace iiMenu.Patches.Menu
                 VRRig.LocalRig.LocalUpdateCosmeticsWithTryon(CosmeticsController.instance.currentWornSet, CosmeticsController.instance.tryOnSet, false);
 
                 float delay = Time.time + 30f;
-                while (Time.time < delay || PhotonNetwork.InRoom)
+                while (Time.time < delay && PhotonNetwork.InRoom)
                     yield return null;
                 
                 currentCoroutine = null;
