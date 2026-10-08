@@ -224,6 +224,13 @@ namespace iiMenu.Menu
         private static bool lastMusicPaused = false;
         private static Texture2D lastMusicIcon = null;
 
+        private static readonly Dictionary<int, bool> leftInputs = new Dictionary<int, bool>();
+        private static readonly Dictionary<int, bool> rightInputs = new Dictionary<int, bool>();
+        private static readonly Dictionary<string, bool> Inputs = new Dictionary<string, bool>();
+        private static readonly List<(long, float)> toRemoveAura = new List<(long, float)>();
+        private static readonly List<(Vector3, Quaternion, Vector3)> toRemoveCube = new List<(Vector3, Quaternion, Vector3)>();
+        private static readonly List<string> toRemoveLabel = new List<string>();
+
         public static void Prefix()
         {
             FrameProfiler.Begin("Menu");
@@ -296,12 +303,16 @@ namespace iiMenu.Menu
                     ControllerInputPoller.instance.rightControllerDevice.TryGetFeatureValue(CommonUsages.primary2DAxisClick, out rightJoystickClick);
                 }
 
-                bool arrowKeysPressed = UnityInput.Current.GetKey(KeyCode.UpArrow) || UnityInput.Current.GetKey(KeyCode.DownArrow) || UnityInput.Current.GetKey(KeyCode.LeftArrow) || UnityInput.Current.GetKey(KeyCode.RightArrow);
+                bool upArrowPressed = UnityInput.Current.GetKey(KeyCode.UpArrow);
+                bool downArrowPressed = UnityInput.Current.GetKey(KeyCode.DownArrow);
+                bool leftArrowPressed = UnityInput.Current.GetKey(KeyCode.LeftArrow);
+                bool rightArrowPressed = UnityInput.Current.GetKey(KeyCode.RightArrow);
+                bool arrowKeysPressed = upArrowPressed || downArrowPressed || leftArrowPressed || rightArrowPressed;
                 bool leftOverride = UnityInput.Current.GetKey(Settings.pcBindings[Settings.ControllerBinding.LeftOverride]);
                 
                 if (arrowKeysPressed)
                 {
-                    Vector2 direction = new Vector2((UnityInput.Current.GetKey(KeyCode.RightArrow) ? 1f : 0f) + (UnityInput.Current.GetKey(KeyCode.LeftArrow) ? -1f : 0f), (UnityInput.Current.GetKey(KeyCode.UpArrow) ? 1f : 0f) + (UnityInput.Current.GetKey(KeyCode.DownArrow) ? -1f : 0f));
+                    Vector2 direction = new Vector2((rightArrowPressed ? 1f : 0f) + (leftArrowPressed ? -1f : 0f), (upArrowPressed ? 1f : 0f) + (downArrowPressed ? -1f : 0f));
                     if (leftOverride)
                         rightJoystick = direction;
                     else
@@ -339,7 +350,17 @@ namespace iiMenu.Menu
                     }
                 }
 
-                shouldBePC = Settings.pcBindings.Values.Any(key => UnityInput.Current.GetKey(key))
+                bool anyBindingPressed = false;
+                foreach (KeyCode key in Settings.pcBindings.Values)
+                {
+                    if (UnityInput.Current.GetKey(key))
+                    {
+                        anyBindingPressed = true;
+                        break;
+                    }
+                }
+
+                shouldBePC = anyBindingPressed
                             || Mouse.current.leftButton.isPressed
                             || Mouse.current.rightButton.isPressed
                             || arrowKeysPressed;
@@ -358,21 +379,19 @@ namespace iiMenu.Menu
                 #endregion
 
                 #region Menu Spawn Condition
-                Dictionary<int, bool> leftInputs = new Dictionary<int, bool> {
-                    { 0, leftPrimary },
-                    { 1, leftSecondary },
-                    { 2, leftGrab },
-                    { 3, leftTrigger > 0.5f },
-                    { 4, leftJoystickClick }
-                };
+                leftInputs.Clear();
+                leftInputs.Add(0, leftPrimary);
+                leftInputs.Add(1, leftSecondary);
+                leftInputs.Add(2, leftGrab);
+                leftInputs.Add(3, leftTrigger > 0.5f);
+                leftInputs.Add(4, leftJoystickClick);
 
-                Dictionary<int, bool> rightInputs = new Dictionary<int, bool> {
-                    { 0, rightPrimary },
-                    { 1, rightSecondary },
-                    { 2, rightGrab },
-                    { 3, rightTrigger > 0.5f },
-                    { 4, rightJoystickClick }
-                };
+                rightInputs.Clear();
+                rightInputs.Add(0, rightPrimary);
+                rightInputs.Add(1, rightSecondary);
+                rightInputs.Add(2, rightGrab);
+                rightInputs.Add(3, rightTrigger > 0.5f);
+                rightInputs.Add(4, rightJoystickClick);
 
                 if (canvasLayout && !XRSettings.isDeviceActive && UnityInput.Current.GetKeyDown(KeyCode.Q))
                 {
@@ -553,7 +572,9 @@ namespace iiMenu.Menu
                     if (disableFpsCounter) textToSet = "";
                     if (hidetitle && !noPageNumber) textToSet += "Page " + (pageNumber + 1);
 
-                    fpsCount.text = FollowMenuSettings(textToSet, false);
+                    string fpsText = FollowMenuSettings(textToSet, false);
+                    if (fpsCount.text != fpsText)
+                        fpsCount.text = fpsText;
                 }
 
                 if (potatoTime != null)
@@ -578,7 +599,11 @@ namespace iiMenu.Menu
 
                 if (watermarkImage != null)
                 {
-                    watermarkImage.GetComponent<RectTransform>().localRotation = Quaternion.Euler(new Vector3(0f, 90f, 90f - ((rockWatermark && themeType != 69) ? (Mathf.Sin(Time.time * 2f) * 10f) : 0f)));
+                    if (watermarkRectTransform == null)
+                        watermarkRectTransform = watermarkImage.GetComponent<RectTransform>();
+                    Quaternion watermarkRotation = Quaternion.Euler(new Vector3(0f, 90f, 90f - ((rockWatermark && themeType != 69) ? (Mathf.Sin(Time.time * 2f) * 10f) : 0f)));
+                    if (watermarkRectTransform.localRotation != watermarkRotation)
+                        watermarkRectTransform.localRotation = watermarkRotation;
                 }
 
                 if (animatedTitle && title != null)
@@ -598,7 +623,11 @@ namespace iiMenu.Menu
                         });
 
                 if (keyboardInputObject != null)
-                    keyboardInputObject.text = FollowMenuSettings(keyboardInput, false) + (Time.frameCount / 45 % 2 == 0 ? "|" : " ");
+                {
+                    string keyboardDisplay = FollowMenuSettings(keyboardInput, false) + (Time.frameCount / 45 % 2 == 0 ? "|" : " ");
+                    if (keyboardInputObject.text != keyboardDisplay)
+                        keyboardInputObject.text = keyboardDisplay;
+                }
                 #endregion
 
                 #region Menu Features
@@ -1017,42 +1046,61 @@ namespace iiMenu.Menu
                 {
                     if (watchMenu)
                     {
-                        watchShell.GetComponent<Renderer>().material = CustomBoardManager.BoardMaterial;
-                        ButtonInfo[] toSortOf = Buttons.buttons[Buttons.CurrentCategoryIndex];
+                        if (watchShellRenderer == null)
+                            watchShellRenderer = watchShell.GetComponent<Renderer>();
+                        if (watchShellRenderer.sharedMaterial != CustomBoardManager.BoardMaterial)
+                            watchShellRenderer.material = CustomBoardManager.BoardMaterial;
 
-                        if (Buttons.CurrentCategoryName == "Favorite Mods")
-                            toSortOf = StringsToInfos(favorites.ToArray());
+                        if (watchTextComponent == null)
+                            watchTextComponent = watchText.GetComponent<Text>();
+                        Text watchTextText = watchTextComponent;
 
-                        if (Buttons.CurrentCategoryName == "Enabled Mods")
+                        if (watchIndicatorImage == null)
+                            watchIndicatorImage = watchEnabledIndicator.GetComponent<Image>();
+
+                        if (watchSortCache == null || watchMenuIndex != lastWatchMenuIndex || Buttons.CurrentCategoryIndex != lastWatchCategoryIndex || Time.time >= watchRefreshTime)
                         {
-                            List<ButtonInfo> enabledMods = new List<ButtonInfo>();
-                            int categoryIndex = 0;
-                            foreach (ButtonInfo[] buttonList in Buttons.buttons)
+                            lastWatchMenuIndex = watchMenuIndex;
+                            lastWatchCategoryIndex = Buttons.CurrentCategoryIndex;
+                            watchRefreshTime = Time.time + 0.5f;
+
+                            watchSortCache = Buttons.buttons[Buttons.CurrentCategoryIndex];
+
+                            if (Buttons.CurrentCategoryName == "Favorite Mods")
+                                watchSortCache = StringsToInfos(favorites.ToArray());
+
+                            if (Buttons.CurrentCategoryName == "Enabled Mods")
                             {
-                                enabledMods.AddRange(buttonList.Where(v => v.enabled && !v.hideFromArraylist && (!hideSettings || !Buttons.categoryNames[categoryIndex].Contains("Settings")) && (!hideMacros || !Buttons.categoryNames[categoryIndex].Contains("Macro"))));
-                                categoryIndex++;
+                                List<ButtonInfo> enabledMods = new List<ButtonInfo>();
+                                int categoryIndex = 0;
+                                foreach (ButtonInfo[] buttonList in Buttons.buttons)
+                                {
+                                    enabledMods.AddRange(buttonList.Where(v => v.enabled && !v.hideFromArraylist && (!hideSettings || !Buttons.categoryNames[categoryIndex].Contains("Settings")) && (!hideMacros || !Buttons.categoryNames[categoryIndex].Contains("Macro"))));
+                                    categoryIndex++;
+                                }
+                                enabledMods = enabledMods.OrderBy(v => v.overlapText ?? v.buttonText).ToList();
+                                enabledMods.Insert(0, Buttons.GetIndex("Exit Enabled Mods"));
+                                watchSortCache = enabledMods.ToArray();
                             }
-                            enabledMods = enabledMods.OrderBy(v => v.overlapText ?? v.buttonText).ToList();
-                            enabledMods.Insert(0, Buttons.GetIndex("Exit Enabled Mods"));
-                            toSortOf = enabledMods.ToArray();
+
+                            watchTextText.text = watchSortCache[watchMenuIndex].buttonText;
+                            if (watchSortCache[watchMenuIndex].overlapText != null)
+                                watchTextText.text = watchSortCache[watchMenuIndex].overlapText;
+
+                            watchTextText.text += $"\n<color=grey>[{watchMenuIndex + 1}/{watchSortCache.Length}]\n{DateTime.Now:hh:mm tt}</color>";
+                            watchTextText.text = FollowMenuSettings(watchTextText.text, false);
+
+                            if (watchIndicatorMat == null)
+                                watchIndicatorMat = new Material(Shader.Find("GorillaTag/UberShader"));
+
+                            watchIndicatorMat.color = watchSortCache[watchMenuIndex].enabled ? buttonColors[1].GetCurrentColor() : buttonColors[0].GetCurrentColor();
+                            if (watchIndicatorImage.material != watchIndicatorMat)
+                                watchIndicatorImage.material = watchIndicatorMat;
                         }
 
-                        Text watchTextText = watchText.GetComponent<Text>();
-
-                        watchTextText.text = toSortOf[watchMenuIndex].buttonText;
-                        if (toSortOf[watchMenuIndex].overlapText != null)
-                            watchTextText.text = toSortOf[watchMenuIndex].overlapText;
-
-                        watchTextText.text += $"\n<color=grey>[{watchMenuIndex + 1}/{toSortOf.Length}]\n{DateTime.Now:hh:mm tt}</color>";
                         watchTextText.color = textColors[0].GetCurrentColor();
 
-                        watchTextText.text = FollowMenuSettings(watchTextText.text, false);
-
-                        if (watchIndicatorMat == null)
-                            watchIndicatorMat = new Material(Shader.Find("GorillaTag/UberShader"));
-
-                        watchIndicatorMat.color = toSortOf[watchMenuIndex].enabled ? buttonColors[1].GetCurrentColor() : buttonColors[0].GetCurrentColor();
-                        watchEnabledIndicator.GetComponent<Image>().material = watchIndicatorMat;
+                        ButtonInfo[] toSortOf = watchSortCache;
 
                         Vector2 js = rightHand ? rightJoystick : leftJoystick;
                         if (Time.time > wristMenuDelay)
@@ -1240,19 +1288,17 @@ namespace iiMenu.Menu
                 try
                 {
                     // Custom mod binds
-                    Dictionary<string, bool> Inputs = new Dictionary<string, bool>
-                    {
-                        { "A", rightPrimary },
-                        { "B", rightSecondary },
-                        { "X", leftPrimary },
-                        { "Y", leftSecondary },
-                        { "LG", leftGrab },
-                        { "RG", rightGrab },
-                        { "LT", leftTrigger > 0.5f },
-                        { "RT", rightTrigger > 0.5f },
-                        { "LJ", leftJoystickClick },
-                        { "RJ", rightJoystickClick }
-                    };
+                    Inputs.Clear();
+                    Inputs.Add("A", rightPrimary);
+                    Inputs.Add("B", rightSecondary);
+                    Inputs.Add("X", leftPrimary);
+                    Inputs.Add("Y", leftSecondary);
+                    Inputs.Add("LG", leftGrab);
+                    Inputs.Add("RG", rightGrab);
+                    Inputs.Add("LT", leftTrigger > 0.5f);
+                    Inputs.Add("RT", rightTrigger > 0.5f);
+                    Inputs.Add("LJ", leftJoystickClick);
+                    Inputs.Add("RJ", rightJoystickClick);
 
                     foreach (KeyValuePair<string, List<string>> binding in ModBindings)
                     {
@@ -1308,7 +1354,7 @@ namespace iiMenu.Menu
                             GunLine.gameObject.SetActive(false);
                     }
 
-                    List<(long, float)> toRemoveAura = new List<(long, float)>();
+                    toRemoveAura.Clear();
                     foreach (KeyValuePair<(long, float), GameObject> key in Visuals.auraPool)
                     {
                         if (!key.Value.activeSelf)
@@ -1323,7 +1369,7 @@ namespace iiMenu.Menu
                     foreach ((long, float) item in toRemoveAura)
                         Visuals.auraPool.Remove(item);
 
-                    List<(Vector3, Quaternion, Vector3)> toRemoveCube = new List<(Vector3, Quaternion, Vector3)>();
+                    toRemoveCube.Clear();
                     foreach (KeyValuePair<(Vector3, Quaternion, Vector3), GameObject> key in Visuals.cubePool)
                     {
                         if (!key.Value.activeSelf)
@@ -1338,7 +1384,7 @@ namespace iiMenu.Menu
                     foreach ((Vector3, Quaternion, Vector3) item in toRemoveCube)
                         Visuals.cubePool.Remove(item);
 
-                    List<string> toRemoveLabel = new List<string>();
+                    toRemoveLabel.Clear();
                     foreach (KeyValuePair<string, GameObject> label in Visuals.labelDictionary)
                     {
                         if (!label.Value.activeSelf)
@@ -1620,6 +1666,8 @@ namespace iiMenu.Menu
         }
 
         public static List<KeyCode> lastPressedKeys = new List<KeyCode>();
+        private static readonly List<KeyCode> keysPressedBufferA = new List<KeyCode>();
+        private static readonly List<KeyCode> keysPressedBufferB = new List<KeyCode>();
         public static readonly Dictionary<KeyCode, (float, float)> keyPressedTimes = new Dictionary<KeyCode, (float, float)>();
         public static readonly KeyCode[] detectedKeyCodes = {
             KeyCode.A, KeyCode.B, KeyCode.C, KeyCode.D, KeyCode.E,
@@ -1640,6 +1688,20 @@ namespace iiMenu.Menu
             KeyCode.Space, KeyCode.Backspace, KeyCode.Return, KeyCode.Escape
         };
 
+        private static void KeyboardRebuildRequested()
+        {
+            float now = Time.unscaledTime;
+            if (lastKeyboardRebuildAt < 0f || now - lastKeyboardRebuildAt >= KeyboardRebuildInterval)
+            {
+                lastKeyboardRebuildAt = now;
+                nextKeyboardRebuildAt = -1f;
+                ReloadMenu();
+                return;
+            }
+
+            nextKeyboardRebuildAt = lastKeyboardRebuildAt + KeyboardRebuildInterval;
+        }
+
         private static void UpdateKeyboard()
         {
             if (VRKeyboard != null)
@@ -1651,8 +1713,16 @@ namespace iiMenu.Menu
                 }
             }
 
+            if (nextKeyboardRebuildAt >= 0f && Time.unscaledTime >= nextKeyboardRebuildAt)
+            {
+                nextKeyboardRebuildAt = -1f;
+                lastKeyboardRebuildAt = Time.unscaledTime;
+                ReloadMenu();
+            }
+
             if (!inTextInput || !isKeyboardPc) return;
-            List<KeyCode> keysPressed = new List<KeyCode>();
+            List<KeyCode> keysPressed = ReferenceEquals(lastPressedKeys, keysPressedBufferA) ? keysPressedBufferB : keysPressedBufferA;
+            keysPressed.Clear();
             foreach (KeyCode keyCode in detectedKeyCodes)
             {
                 if (UnityInput.Current.GetKey(keyCode))
@@ -1774,7 +1844,7 @@ namespace iiMenu.Menu
                     pageNumber = 0;
 
                     if (!clickGUI)
-                        ReloadMenu();
+                        KeyboardRebuildRequested();
                     else
                         Settings.UpdateSearch();
                 }
@@ -1847,7 +1917,7 @@ namespace iiMenu.Menu
             pageNumber = 0;
 
             if (!clickGUI)
-                ReloadMenu();
+                KeyboardRebuildRequested();
         }
 
         private static void AddButton(float offset, int buttonIndex, ButtonInfo method)
@@ -3251,6 +3321,8 @@ namespace iiMenu.Menu
 
         private static Vector3? recenterPosition;
         private static Quaternion? recenterRotation;
+        private static Transform cmVcam1;
+
         public static void RecenterMenu()
         {
             bool isKeyboardCondition = (canvasLayout ? pcKeyboardToggleState : UnityInput.Current.GetKey(KeyCode.Q)) || (inTextInput && isKeyboardPc);
@@ -3362,7 +3434,9 @@ namespace iiMenu.Menu
             }
             if (isKeyboardCondition)
             {
-                GetObject("Shoulder Camera").transform.Find("CM vcam1").gameObject.SetActive(false);
+                if (cmVcam1 == null)
+                    cmVcam1 = GetObject("Shoulder Camera").transform.Find("CM vcam1");
+                cmVcam1.gameObject.SetActive(false);
                 if (TPC != null)
                 {
                     isOnPC = true;
@@ -5880,10 +5954,10 @@ namespace iiMenu.Menu
             return !ColorUtility.TryParseHtmlString(hex, out var color) ? Color.black : color;
         }
 
+        private static readonly Regex noRichtextTagsRegex = new Regex("<.*?>", RegexOptions.IgnoreCase);
         public static string NoRichtextTags(string input, string replace = "")
         {
-            Regex notags = new Regex("<.*?>", RegexOptions.IgnoreCase);
-            return notags.Replace(input, replace);
+            return noRichtextTagsRegex.Replace(input, replace);
         }
 
         public static bool vibrantColors;
@@ -5898,10 +5972,10 @@ namespace iiMenu.Menu
             return input;
         }
 
+        private static readonly Regex noColorTagsRegex = new Regex(@"<color=.*?>|</color>", RegexOptions.IgnoreCase);
         public static string NoColorTags(string input, string replace = "")
         {
-            Regex notags = new Regex(@"<color=.*?>|</color>", RegexOptions.IgnoreCase);
-            return notags.Replace(input, replace);
+            return noColorTagsRegex.Replace(input, replace);
         }
 
         public static string RowDescription(ButtonInfo info)
@@ -6004,15 +6078,15 @@ namespace iiMenu.Menu
             richtextGradientGradient.colorKeys = Colors;
 
             char[] chars = input.ToCharArray();
-            string finalOutput = "";
+            StringBuilder finalOutput = new StringBuilder();
             for (int i = 0; i < chars.Length; i++)
             {
                 char character = chars[i];
                 Color characterColor = richtextGradientGradient.Evaluate((Time.time / 2f + i / 25f) % 1f);
-                finalOutput += $"<color=#{ColorToHex(characterColor)}>{character}</color>";
+                finalOutput.Append("<color=#").Append(ColorToHex(characterColor)).Append('>').Append(character).Append("</color>");
             }
 
-            return finalOutput;
+            return finalOutput.ToString();
         }
 
         public static Color BrightenColor(Color color, float intensity = 0.5f)
@@ -7429,6 +7503,9 @@ jgs \_   _/ |Oo\
         public static bool isKeyboardPc;
         public static bool inTextInput;
         public static string keyboardInput = "";
+        private const float KeyboardRebuildInterval = 0.25f;
+        private static float nextKeyboardRebuildAt = -1f;
+        private static float lastKeyboardRebuildAt = -1f;
 
         public static int? fullModAmount;
         public static int amountPartying;
@@ -7512,6 +7589,7 @@ jgs \_   _/ |Oo\
         public static GameObject canvasObj;
         public static TextMeshPro fpsCount;
         public static Image watermarkImage;
+        private static RectTransform watermarkRectTransform;
         private static float fpsAvgTime;
         private static float fpsAverageNumber;
         private static float? potatoTime = 0f;
@@ -7550,6 +7628,13 @@ jgs \_   _/ |Oo\
         public static GameObject watchEnabledIndicator;
         public static Material watchIndicatorMat;
         public static int watchMenuIndex;
+        private static Renderer watchShellRenderer;
+        private static Text watchTextComponent;
+        private static Image watchIndicatorImage;
+        private static ButtonInfo[] watchSortCache;
+        private static int lastWatchMenuIndex = -1;
+        private static int lastWatchCategoryIndex = -1;
+        private static float watchRefreshTime;
 
         public static GameObject regwatchobject;
         public static GameObject regwatchText;
