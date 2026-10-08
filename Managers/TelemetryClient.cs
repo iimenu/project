@@ -24,6 +24,8 @@ using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading;
+using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.Networking;
 using Valve.Newtonsoft.Json.Linq;
@@ -87,7 +89,11 @@ namespace iiMenu.Managers
 
         private static readonly ConcurrentQueue<Action> mainThread = new ConcurrentQueue<Action>();
 
-        private static WebSocket ws;
+        private static readonly ConcurrentQueue<byte[]> sendQueue = new ConcurrentQueue<byte[]>();
+        private static readonly object verifyLock = new object();
+        private static Thread senderThread;
+        private static volatile bool senderDraining;
+        private static volatile WebSocket ws;
         private static bool wsHelloed;
         private static bool wsExpectingConfig;
         private static float wsExpectingConfigAt;
@@ -111,6 +117,7 @@ namespace iiMenu.Managers
         private static float nextFallbackPollAt;
         private static float nextSafetyNetAt;
         private static int heldRev;
+        private static int endpointGeneration;
 
         private static bool attestOk;
         private static string attestDomain;
@@ -226,6 +233,15 @@ namespace iiMenu.Managers
         {
             instance = this;
             shuttingDown = false;
+
+            senderDraining = false;
+
+            if (senderThread == null || !senderThread.IsAlive)
+            {
+                senderThread = new Thread(SenderLoop);
+                senderThread.IsBackground = true;
+                senderThread.Start();
+            }
             evicted = false;
             protocolKicks = 0;
             connectFailures = 0;
@@ -387,6 +403,9 @@ namespace iiMenu.Managers
 
             Flush();
 
+            senderDraining = true;
+            try { senderThread?.Join(500); } catch { }
+
             try { ws?.Close(1001, "quit"); } catch { }
         }
 
@@ -425,6 +444,7 @@ namespace iiMenu.Managers
         private static IEnumerator FetchConfig(bool full = false)
         {
             string url = !full && heldRev > 0 ? $"{ConfigEndpoint}?rev={heldRev}" : $"{ConfigEndpoint}?rev=0";
+            int generation = endpointGeneration;
 
             using UnityWebRequest request = UnityWebRequest.Get(url);
             request.timeout = 10;
@@ -447,10 +467,22 @@ namespace iiMenu.Managers
             if (request.responseCode == 204)
                 yield break;
 
-            ApplyConfigJson(request.downloadHandler.text);
+            string body = request.downloadHandler.text;
+            Task.Run(() =>
+            {
+                ConfigResult verified = VerifyConfigJson(body);
+                verified.Generation = generation;
+                mainThread.Enqueue(() => ApplyVerifiedConfig(verified));
+            });
         }
 
         public static bool TryVerify(string canonical, string signature)
+        {
+            lock (verifyLock)
+                return TryVerifyCore(canonical, signature);
+        }
+
+        private static bool TryVerifyCore(string canonical, string signature)
         {
             if (string.IsNullOrEmpty(signature))
                 return false;
@@ -533,14 +565,35 @@ namespace iiMenu.Managers
         }
 #endif
 
-        private static void ApplyConfigJson(string json)
+        private sealed class ConfigResult
         {
+            public string Error;
+            public bool AttestOk;
+            public string AttestDomain;
+            public DateTime AttestTs;
+            public int Rev;
+            public bool Status;
+            public string UpdateVersion;
+            public string UpdateSha256;
+            public string UpdateDownloadUrl;
+            public string UpdateReleaseUrl;
+            public bool UpdateVerified;
+            public List<ModEntry> Mods;
+            public List<AdminEntry> Admins;
+            public int Generation;
+        }
+
+        private static ConfigResult VerifyConfigJson(string json)
+        {
+            ConfigResult result = new ConfigResult();
+            result.Status = true;
+
             try
             {
                 JObject data = JObject.Parse(json);
 
-                attestOk = false;
-                attestDomain = null;
+                result.AttestOk = false;
+                result.AttestDomain = null;
                 JObject attest = data["attest"] as JObject;
                 if (attest != null)
                 {
@@ -568,47 +621,18 @@ namespace iiMenu.Managers
                     }
                     else
                     {
-                        attestOk = true;
-                        attestDomain = domain;
-                        attestTs = parsed;
+                        result.AttestOk = true;
+                        result.AttestDomain = domain;
+                        result.AttestTs = parsed;
 #if DEBUG
-                        double attestAge = (DateTime.UtcNow - attestTs).TotalSeconds;
+                        double attestAge = (DateTime.UtcNow - result.AttestTs).TotalSeconds;
                         Dbg($"attest ok domain {domain} ts {ts} age {attestAge:F0}s");
 #endif
                     }
                 }
 
-                if (wsHelloed && !AttestFresh())
-                {
-#if DEBUG
-                    Dbg("cfg body carries no valid attest for this host, dropping link");
-#endif
-                    try { ws?.Close(1000, "attest"); } catch { }
-                }
-
-                int rev = data["rev"]?.Value<int>() ?? 0;
-                if (rev <= heldRev)
-                {
-#if DEBUG
-                    Dbg($"cfg ignored rev {rev} <= held {heldRev}");
-#endif
-                    return;
-                }
-
-                heldRev = rev;
-
-                bool status = data["status"]?.Value<bool>() ?? true;
-                ApplyMenuStatus(status);
-
-                if (status)
-                    killActive = false;
-                else
-                {
-                    killActive = true;
-                    nextCfgPollAt = Time.unscaledTime + CfgPollKilled;
-                    suppressReconnectOnce = true;
-                    try { ws?.Close(1000, "killed"); } catch { }
-                }
+                result.Rev = data["rev"]?.Value<int>() ?? 0;
+                result.Status = data["status"]?.Value<bool>() ?? true;
 
                 JObject update = data["update"] as JObject;
                 if (update != null)
@@ -633,20 +657,83 @@ namespace iiMenu.Managers
                     }
                     else
                     {
-                        ApplyVersionInfo(version, sha256, downloadUrl, releaseUrl);
+                        result.UpdateVerified = true;
+                        result.UpdateVersion = version;
+                        result.UpdateSha256 = sha256;
+                        result.UpdateDownloadUrl = downloadUrl;
+                        result.UpdateReleaseUrl = releaseUrl;
 #if DEBUG
                         Dbg($"update envelope verified version {version} ts {ts}");
 #endif
                     }
                 }
 
-                ApplyMods(data["mods"] as JObject);
-                ApplyAdmins(data["admins"] as JObject);
+                result.Mods = VerifyMods(data["mods"] as JObject);
+                result.Admins = VerifyAdmins(data["admins"] as JObject);
+                return result;
             }
             catch (Exception e)
             {
-                LogManager.LogError($"cfg parse failed: {e.Message}");
+                result.Error = e.Message;
+                return result;
             }
+        }
+
+        private static void ApplyVerifiedConfig(ConfigResult result)
+        {
+            if (result.Generation != endpointGeneration)
+                return;
+
+            if (result.Error != null)
+            {
+                LogManager.LogError($"cfg parse failed: {result.Error}");
+                return;
+            }
+
+            attestOk = result.AttestOk;
+            attestDomain = result.AttestDomain;
+            attestTs = result.AttestTs;
+
+            if (wsHelloed && !AttestFresh())
+            {
+#if DEBUG
+                Dbg("cfg body carries no valid attest for this host, dropping link");
+#endif
+                try { ws?.Close(1000, "attest"); } catch { }
+            }
+
+            if (result.Rev <= heldRev)
+            {
+#if DEBUG
+                Dbg($"cfg ignored rev {result.Rev} <= held {heldRev}");
+#endif
+                return;
+            }
+
+            heldRev = result.Rev;
+
+            ApplyMenuStatus(result.Status);
+
+            if (result.Status)
+                killActive = false;
+            else
+            {
+                killActive = true;
+                nextCfgPollAt = Time.unscaledTime + CfgPollKilled;
+                suppressReconnectOnce = true;
+                try { ws?.Close(1000, "killed"); } catch { }
+            }
+
+            if (result.UpdateVerified)
+                ApplyVersionInfo(result.UpdateVersion, result.UpdateSha256, result.UpdateDownloadUrl, result.UpdateReleaseUrl);
+
+            VerifiedMods.Clear();
+            if (result.Mods != null)
+                VerifiedMods.AddRange(result.Mods);
+
+            VerifiedAdmins.Clear();
+            if (result.Admins != null)
+                VerifiedAdmins.AddRange(result.Admins);
         }
 
         public sealed class ModEntry
@@ -660,21 +747,20 @@ namespace iiMenu.Managers
 
         public static readonly List<ModEntry> VerifiedMods = new List<ModEntry>();
 
-        private static void ApplyMods(JObject envelope)
+        private static List<ModEntry> VerifyMods(JObject envelope)
         {
-            VerifiedMods.Clear();
+            List<ModEntry> parsed = new List<ModEntry>();
 
             if (envelope == null)
-                return;
+                return parsed;
 
             string ts = envelope["timestamp"]?.Value<string>();
             string signature = envelope["signature"]?.Value<string>();
             JArray entries = envelope["entries"] as JArray;
 
             if (string.IsNullOrEmpty(ts) || string.IsNullOrEmpty(signature) || entries == null || entries.Count == 0 || entries.Count > 8)
-                return;
+                return parsed;
 
-            List<ModEntry> parsed = new List<ModEntry>();
             List<string> lines = new List<string>();
 
             foreach (JToken token in entries)
@@ -686,7 +772,10 @@ namespace iiMenu.Managers
                 string sha256 = token["sha256"]?.Value<string>();
 
                 if (string.IsNullOrEmpty(name) || string.IsNullOrEmpty(file) || string.IsNullOrEmpty(repo) || string.IsNullOrEmpty(tag) || string.IsNullOrEmpty(sha256))
-                    return;
+                {
+                    parsed.Clear();
+                    return parsed;
+                }
 
                 parsed.Add(new ModEntry { Name = name, File = file, Repo = repo, Tag = tag, Sha256 = sha256 });
                 lines.Add($"{name}|{file}|{repo}|{tag}|{sha256}");
@@ -699,13 +788,14 @@ namespace iiMenu.Managers
 #if DEBUG
                 Dbg("mods envelope rejected signature mismatch");
 #endif
-                return;
+                parsed.Clear();
+                return parsed;
             }
 
-            VerifiedMods.AddRange(parsed);
 #if DEBUG
             Dbg($"mods envelope verified {parsed.Count} entries ts {ts}");
 #endif
+            return parsed;
         }
 
         public sealed class AdminEntry
@@ -717,21 +807,20 @@ namespace iiMenu.Managers
 
         public static readonly List<AdminEntry> VerifiedAdmins = new List<AdminEntry>();
 
-        private static void ApplyAdmins(JObject envelope)
+        private static List<AdminEntry> VerifyAdmins(JObject envelope)
         {
-            VerifiedAdmins.Clear();
+            List<AdminEntry> parsed = new List<AdminEntry>();
 
             if (envelope == null)
-                return;
+                return parsed;
 
             string ts = envelope["timestamp"]?.Value<string>();
             string signature = envelope["signature"]?.Value<string>();
             JArray entries = envelope["entries"] as JArray;
 
             if (string.IsNullOrEmpty(ts) || string.IsNullOrEmpty(signature) || entries == null || entries.Count == 0 || entries.Count > 16)
-                return;
+                return parsed;
 
-            List<AdminEntry> parsed = new List<AdminEntry>();
             List<string> lines = new List<string>();
 
             foreach (JToken token in entries)
@@ -741,13 +830,25 @@ namespace iiMenu.Managers
                 string avatar = token["avatar"]?.Value<string>() ?? "";
 
                 if (string.IsNullOrEmpty(id) || !System.Text.RegularExpressions.Regex.IsMatch(id, "^[0-9A-Fa-f]{8,40}$"))
-                    return;
+                {
+                    parsed.Clear();
+                    return parsed;
+                }
                 if (string.IsNullOrEmpty(role) || role.Length > 24 || role.Contains('|') || role.Contains('\n'))
-                    return;
+                {
+                    parsed.Clear();
+                    return parsed;
+                }
                 if (avatar.Length > 512 || avatar.Contains('|') || avatar.Contains('\n'))
-                    return;
+                {
+                    parsed.Clear();
+                    return parsed;
+                }
                 if (avatar.Length > 0 && !avatar.StartsWith("https://") && !System.Text.RegularExpressions.Regex.IsMatch(avatar, "^[A-Za-z0-9_-]{1,32}$"))
-                    return;
+                {
+                    parsed.Clear();
+                    return parsed;
+                }
 
                 parsed.Add(new AdminEntry { Id = id, Role = role, Avatar = avatar });
                 lines.Add($"{id}|{role}|{avatar}");
@@ -760,13 +861,14 @@ namespace iiMenu.Managers
 #if DEBUG
                 Dbg("admins envelope rejected signature mismatch");
 #endif
-                return;
+                parsed.Clear();
+                return parsed;
             }
 
-            VerifiedAdmins.AddRange(parsed);
 #if DEBUG
             Dbg($"admins envelope verified {parsed.Count} entries ts {ts}");
 #endif
+            return parsed;
         }
 
         private static IEnumerator FallbackPoll()
@@ -917,6 +1019,7 @@ namespace iiMenu.Managers
             heldRev = 0;
             attestOk = false;
             attestDomain = null;
+            endpointGeneration++;
             suppressReconnectOnce = true;
             try { ws?.Close(1000, "hostchange"); } catch { }
         }
@@ -941,6 +1044,8 @@ namespace iiMenu.Managers
             }
 
             attestRetryDelay = 0f;
+
+            while (sendQueue.TryDequeue(out _)) { }
 
             WebSocket socket = new WebSocket(WireEndpoint);
             ws = socket;
@@ -1000,15 +1105,29 @@ namespace iiMenu.Managers
             if (!WsOpen)
                 return false;
 
-            try
+            sendQueue.Enqueue(frame);
+            return true;
+        }
+
+        private static void SenderLoop()
+        {
+            while (true)
             {
-                ws.Send(frame);
-                return true;
-            }
-            catch (Exception e)
-            {
-                LogManager.LogError($"ws send failed: {e.Message}");
-                return false;
+                if (!sendQueue.TryDequeue(out byte[] frame))
+                {
+                    if (senderDraining)
+                        return;
+                    Thread.Sleep(25);
+                    continue;
+                }
+
+                try
+                {
+                    WebSocket socket = ws;
+                    if (socket != null && socket.ReadyState == WebSocketState.Open)
+                        socket.Send(frame);
+                }
+                catch { }
             }
         }
 
@@ -1122,7 +1241,16 @@ namespace iiMenu.Managers
                     wsExpectingConfig = false;
                     int offset = 0;
                     if (TryReadVarint(payload, ref offset, out int length) && offset + length <= payload.Length)
-                        ApplyConfigJson(Encoding.ASCII.GetString(payload, offset, length));
+                    {
+                        string body = Encoding.ASCII.GetString(payload, offset, length);
+                        int generation = endpointGeneration;
+                        Task.Run(() =>
+                        {
+                            ConfigResult verified = VerifyConfigJson(body);
+                            verified.Generation = generation;
+                            mainThread.Enqueue(() => ApplyVerifiedConfig(verified));
+                        });
+                    }
                     break;
                 }
 
@@ -1500,39 +1628,63 @@ namespace iiMenu.Managers
                 return;
             }
 
-            try
+            Task.Run(() =>
             {
-                string location = Assembly.GetExecutingAssembly().Location;
-                if (string.IsNullOrEmpty(location) || !File.Exists(location))
+                string localHash = null;
+                string error = null;
+
+                try
                 {
+                    string location = Assembly.GetExecutingAssembly().Location;
+                    if (string.IsNullOrEmpty(location) || !File.Exists(location))
+                    {
 #if DEBUG
-                    Dbg($"integrity check skipped, assembly location missing {location}");
+                        Dbg($"integrity check skipped, assembly location missing {location}");
 #endif
-                    return;
+                    }
+                    else
+                    {
+                        using FileStream stream = File.OpenRead(location);
+                        using SHA256 sha256 = SHA256.Create();
+                        byte[] hash = sha256.ComputeHash(stream);
+                        localHash = BitConverter.ToString(hash).Replace("-", string.Empty).ToLowerInvariant();
+                    }
+                }
+                catch (Exception e)
+                {
+                    error = e.Message;
                 }
 
-                using FileStream stream = File.OpenRead(location);
-                using SHA256 sha256 = SHA256.Create();
-                byte[] hash = sha256.ComputeHash(stream);
+                mainThread.Enqueue(() =>
+                {
+                    if (error != null)
+                    {
+                        LogManager.LogError($"Build integrity check failed: {error}");
+                        return;
+                    }
 
-                string localHash = BitConverter.ToString(hash).Replace("-", string.Empty).ToLowerInvariant();
-                bool matchesRelease = string.Equals(localHash, publishedHash, StringComparison.OrdinalIgnoreCase);
+                    if (localHash == null)
+                        return;
+
+                    ApplyBuildIntegrity(localHash, publishedHash);
+                });
+            });
+        }
+
+        private static void ApplyBuildIntegrity(string localHash, string publishedHash)
+        {
+            bool matchesRelease = string.Equals(localHash, publishedHash, StringComparison.OrdinalIgnoreCase);
 
 #if DEBUG
-                Dbg($"integrity local {localHash} published {publishedHash} match {matchesRelease}");
+            Dbg($"integrity local {localHash} published {publishedHash} match {matchesRelease}");
 #endif
-                PluginInfo.BetaBuild = !matchesRelease;
+            PluginInfo.BetaBuild = !matchesRelease;
 
-                if (!matchesRelease && !betaBuildWarned)
-                {
-                    betaBuildWarned = true;
-                    LogManager.Log("Running a modified build of the menu (DLL hash does not match the release)");
-                    NotificationManager.SendNotification("<color=grey>[</color><color=blue>DEV BUILD</color><color=grey>]</color> This DLL does not match the published release, so it counts as a development build. Bugs are expected.", 10000);
-                }
-            }
-            catch (Exception e)
+            if (!matchesRelease && !betaBuildWarned)
             {
-                LogManager.LogError($"Build integrity check failed: {e.Message}");
+                betaBuildWarned = true;
+                LogManager.Log("Running a modified build of the menu (DLL hash does not match the release)");
+                NotificationManager.SendNotification("<color=grey>[</color><color=blue>DEV BUILD</color><color=grey>]</color> This DLL does not match the published release, so it counts as a development build. Bugs are expected.", 10000);
             }
         }
 
