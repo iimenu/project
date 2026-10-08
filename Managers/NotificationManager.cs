@@ -15,6 +15,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -92,7 +93,7 @@ namespace iiMenu.Managers
 
             canvas = new GameObject("Canvas");
             canvas.AddComponent<Canvas>();
-            canvas.AddComponent<CanvasScaler>();
+            canvasScaler = canvas.AddComponent<CanvasScaler>();
             canvas.AddComponent<GraphicRaycaster>();
 
             Canvas canvasComponent = canvas.GetComponent<Canvas>();
@@ -146,6 +147,22 @@ namespace iiMenu.Managers
         }
 
         private float updateArraylistTimer;
+        private float updateInformationTimer;
+        private static readonly Dictionary<string, float> arraylistWidthCache = new Dictionary<string, float>();
+        private static TMP_FontAsset arraylistWidthFont;
+        private static float arraylistWidthFontSize;
+        private static FontStyles arraylistWidthFontStyle;
+        private static bool arraylistWidthRichText;
+        private const int MaxCachedArraylistWidths = 512;
+        private CanvasScaler canvasScaler;
+        private static bool informationTextHadContent;
+        private static bool arraylistTextHadContent;
+        private static string lastLowerArraylist;
+        private static string lastLowerNotifi;
+        private static string lastLowerInfo;
+        private static string lastUpperArraylist;
+        private static string lastUpperNotifi;
+        private static string lastUpperInfo;
         private void FixedUpdate()
         {
             try
@@ -156,7 +173,8 @@ namespace iiMenu.Managers
                     hasInitialized = true;
                 }
 
-                canvas.GetComponent<CanvasScaler>().dynamicPixelsPerUnit = 2f;
+                if (canvasScaler != null)
+                    canvasScaler.dynamicPixelsPerUnit = 2f;
 
                 canvas.transform.position = mainCamera.transform.TransformPoint(0f, 0f, 1.6f);
                 canvas.transform.rotation = mainCamera.transform.rotation * Quaternion.Euler(0, 90, 0);
@@ -194,18 +212,27 @@ namespace iiMenu.Managers
 
                 if (information.Count > 0)
                 {
-                    Color targetColor = Buttons.GetIndex("Swap GUI Colors").enabled ? buttonColors[1].GetCurrentColor() : backgroundColor.GetCurrentColor();
+                    if (Time.time > updateInformationTimer)
+                    {
+                        updateInformationTimer = Time.time + 0.1f;
+                        Color targetColor = Buttons.GetIndex("Swap GUI Colors").enabled ? buttonColors[1].GetCurrentColor() : backgroundColor.GetCurrentColor();
 
-                    List<string> statsLines = information
-                        .Select(item => $"<color=#{ColorToHex(targetColor)}>{item.Key}</color> <color=#{ColorToHex(textColors[1].GetColor(0))}>{item.Value}</color>")
-                        .OrderByDescending(item => informationText.GetPreferredValues(NoRichtextTags(item)).x)
-                        .ToList();
+                        List<string> statsLines = information
+                            .Select(item => $"<color=#{ColorToHex(targetColor)}>{item.Key}</color> <color=#{ColorToHex(textColors[1].GetColor(0))}>{item.Value}</color>")
+                            .OrderByDescending(item => informationText.GetPreferredValues(NoRichtextTags(item)).x)
+                            .ToList();
 
-                    informationText.SafeSetText(string.Join("\n", statsLines));
-                    informationText.color = Color.white;
+                        informationText.SafeSetText(string.Join("\n", statsLines));
+                        if (informationText.color != Color.white)
+                            informationText.color = Color.white;
+                        informationTextHadContent = true;
+                    }
                 }
-                else if (!informationText.text.IsNullOrEmpty())
+                else if (informationTextHadContent)
+                {
                     informationText.SafeSetText("");
+                    informationTextHadContent = false;
+                }
 
                 if (showEnabledModsVR)
                 {
@@ -238,55 +265,108 @@ namespace iiMenu.Managers
                             categoryIndex++;
                         }
 
+                        RefreshArraylistWidthCache();
+
                         string[] sortedMods = enabledMods
-                            .OrderByDescending(s => arraylistText.GetPreferredValues(NoRichtextTags(s)).x)
+                            .OrderByDescending(s => CachedArraylistWidth(s))
                             .ToArray();
 
-                        string modListText = "";
+                        StringBuilder modListBuilder = new StringBuilder();
                         for (int i = 0; i < sortedMods.Length; i++)
                         {
                             if (advancedArraylist)
-                                modListText += (flipArraylist ?
+                                modListBuilder.Append(flipArraylist ?
                                 /* Flipped */ $"<mark=#{ColorToHex(backgroundColor.GetCurrentColor(i * -0.1f))}80>{sortedMods[i]}</mark><mark=#{ColorToHex(buttonColors[1].GetCurrentColor(i * -0.1f))}> </mark>" :
-                                /* Normal  */ $"<mark=#{ColorToHex(buttonColors[1].GetCurrentColor(i * -0.1f))}> </mark><mark=#{ColorToHex(backgroundColor.GetCurrentColor(i * -0.1f))}80>{sortedMods[i]}</mark>") + "\n";
+                                /* Normal  */ $"<mark=#{ColorToHex(buttonColors[1].GetCurrentColor(i * -0.1f))}> </mark><mark=#{ColorToHex(backgroundColor.GetCurrentColor(i * -0.1f))}80>{sortedMods[i]}</mark>").Append('\n');
                             else
-                                modListText += sortedMods[i] + "\n";
+                                modListBuilder.Append(sortedMods[i]).Append('\n');
                         }
 
-                        arraylistText.SafeSetText(modListText);
-                        arraylistText.color = Buttons.GetIndex("Swap GUI Colors").enabled ? textColors[1].GetColor(0) : backgroundColor.GetCurrentColor();
+                        arraylistText.SafeSetText(modListBuilder.ToString());
+                        arraylistTextHadContent = sortedMods.Length > 0;
+                        Color arraylistColor = Buttons.GetIndex("Swap GUI Colors").enabled ? textColors[1].GetColor(0) : backgroundColor.GetCurrentColor();
+                        if (arraylistText.color != arraylistColor)
+                            arraylistText.color = arraylistColor;
                     }
                 }
-                else if (!arraylistText.text.IsNullOrEmpty())
+                else if (arraylistTextHadContent)
+                {
                     arraylistText.SafeSetText("");
+                    arraylistTextHadContent = false;
+                }
 
                 if (lowercaseMode)
                 {
-                    if (!arraylistText.text.IsNullOrEmpty())
-                        arraylistText.SafeSetText(arraylistText.text.ToLower());
-
-                    if (!notificationText.text.IsNullOrEmpty())
-                        notificationText.SafeSetText(notificationText.text.ToLower());
-
-                    if (!informationText.text.IsNullOrEmpty())
-                        informationText.SafeSetText(informationText.text.ToLower());
+                    ApplyLowercase(arraylistText, ref lastLowerArraylist);
+                    ApplyLowercase(notificationText, ref lastLowerNotifi);
+                    ApplyLowercase(informationText, ref lastLowerInfo);
                 }
 
                 if (uppercaseMode)
                 {
-                    if (!arraylistText.text.IsNullOrEmpty())
-                        arraylistText.SafeSetText(arraylistText.text.ToUpper());
-
-                    if (!notificationText.text.IsNullOrEmpty())
-                        notificationText.SafeSetText(notificationText.text.ToUpper());
-
-                    if (!informationText.text.IsNullOrEmpty())
-                        informationText.SafeSetText(informationText.text.ToUpper());
+                    ApplyUppercase(arraylistText, ref lastUpperArraylist);
+                    ApplyUppercase(notificationText, ref lastUpperNotifi);
+                    ApplyUppercase(informationText, ref lastUpperInfo);
                 }
 
                 canvas.layer = Buttons.GetIndex("Hide Notifications on Camera").enabled ? 19 : 0;
             }
             catch (Exception e) { LogManager.Log(e); }
+        }
+
+        private void RefreshArraylistWidthCache()
+        {
+            if (arraylistWidthFont == arraylistText.font &&
+                Math.Abs(arraylistWidthFontSize - arraylistText.fontSize) <= 0.01f &&
+                arraylistWidthFontStyle == arraylistText.fontStyle &&
+                arraylistWidthRichText == arraylistText.richText &&
+                arraylistWidthCache.Count < MaxCachedArraylistWidths)
+                return;
+
+            arraylistWidthCache.Clear();
+            arraylistWidthFont = arraylistText.font;
+            arraylistWidthFontSize = arraylistText.fontSize;
+            arraylistWidthFontStyle = arraylistText.fontStyle;
+            arraylistWidthRichText = arraylistText.richText;
+        }
+
+        private float CachedArraylistWidth(string text)
+        {
+            if (!arraylistWidthCache.TryGetValue(text, out float width))
+            {
+                width = arraylistText.GetPreferredValues(NoRichtextTags(text)).x;
+                arraylistWidthCache[text] = width;
+            }
+
+            return width;
+        }
+
+        private static void ApplyLowercase(TMP_Text tmp, ref string lastApplied)
+        {
+            if (tmp == null)
+                return;
+
+            string current = tmp.text;
+            if (current.IsNullOrEmpty() || current == lastApplied)
+                return;
+
+            string lowered = current.ToLower();
+            tmp.SafeSetText(lowered);
+            lastApplied = lowered;
+        }
+
+        private static void ApplyUppercase(TMP_Text tmp, ref string lastApplied)
+        {
+            if (tmp == null)
+                return;
+
+            string current = tmp.text;
+            if (current.IsNullOrEmpty() || current == lastApplied)
+                return;
+
+            string uppered = current.ToUpper();
+            tmp.SafeSetText(uppered);
+            lastApplied = uppered;
         }
 
         /// <summary>
