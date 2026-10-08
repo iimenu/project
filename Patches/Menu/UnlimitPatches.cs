@@ -60,21 +60,6 @@ namespace iiMenu.Patches.Menu
             }
         }
 
-        [HarmonyPatch(typeof(BuilderPiecePrivatePlot), nameof(BuilderPiecePrivatePlot.CanPlayerAttachToPlot))]
-        public class UnlimitPatch4
-        {
-            public static bool Prefix(ref bool __result)
-            {
-                if (enabled)
-                {
-                    __result = true;
-                    return false;
-                }
-
-                return true;
-            }
-        }
-
         [HarmonyPatch(typeof(BuilderPiecePrivatePlot), nameof(BuilderPiecePrivatePlot.CanPlayerGrabFromPlot))]
         public class UnlimitPatch5
         {
@@ -195,38 +180,8 @@ namespace iiMenu.Patches.Menu
             }
         }
 
-        [HarmonyPatch(typeof(BuilderTable), nameof(BuilderTable.ValidateGrabPieceState))]
-        public class UnlimitPatch13
-        {
-            public static bool Prefix(ref bool __result)
-            {
-                if (enabled)
-                {
-                    __result = true;
-                    return false;
-                }
-
-                return true;
-            }
-        }
-
         [HarmonyPatch(typeof(BuilderTable), nameof(BuilderTable.ValidatePieceWorldTransform))]
         public class UnlimitPatch14
-        {
-            public static bool Prefix(ref bool __result)
-            {
-                if (enabled)
-                {
-                    __result = true;
-                    return false;
-                }
-
-                return true;
-            }
-        }
-
-        [HarmonyPatch(typeof(BuilderTable), nameof(BuilderTable.ValidatePieceWorldTransform))]
-        public class UnlimitPatch15
         {
             public static bool Prefix(ref bool __result)
             {
