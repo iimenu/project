@@ -158,6 +158,9 @@ namespace iiMenu.Managers
         private static Transform orbCore;
         private static Transform orbHalo;
         private static Transform[] orbRings;
+        private static LineRenderer[] orbRingLines;
+        private static Renderer orbCoreRenderer;
+        private static Renderer orbHaloRenderer;
         private static Quaternion[] orbRingBase;
         private static readonly float[] orbRingSpin = { 26f, -34f, 44f };
         private static Coroutine orbCoroutine;
@@ -302,6 +305,8 @@ namespace iiMenu.Managers
 
             orbCore = MakeOrbSphere("Core", 0.022f, Color.white);
             orbHalo = MakeOrbSphere("Halo", 0.075f, new Color(1f, 1f, 1f, 0.10f));
+            orbCoreRenderer = orbCore.GetComponent<Renderer>();
+            orbHaloRenderer = orbHalo.GetComponent<Renderer>();
 
             float[] radii = { 0.052f, 0.066f, 0.080f };
             float[] alphas = { 0.85f, 0.55f, 0.35f };
@@ -314,10 +319,12 @@ namespace iiMenu.Managers
 
             orbRings = new Transform[radii.Length];
             orbRingBase = new Quaternion[radii.Length];
+            orbRingLines = new LineRenderer[radii.Length];
 
             for (int i = 0; i < radii.Length; i++)
             {
                 orbRings[i] = MakeOrbRing($"Arc {i + 1}", radii[i], 0.0032f, alphas[i]);
+                orbRingLines[i] = orbRings[i].GetComponent<LineRenderer>();
                 orbRingBase[i] = Quaternion.Euler(tilts[i]);
             }
         }
@@ -420,7 +427,7 @@ namespace iiMenu.Managers
                                 ? orbRingBase[i] * Quaternion.Euler(0f, 0f, baseSpin)
                                 : Quaternion.Euler(sway, baseSpin, 0f);
 
-                            LineRenderer line = orbRings[i].GetComponent<LineRenderer>();
+                            LineRenderer line = orbRingLines != null && i < orbRingLines.Length ? orbRingLines[i] : null;
                             if (line != null)
                             {
                                 line.startColor = new Color(color.r, color.g, color.b, alphas[i] * stateAlpha);
@@ -433,18 +440,16 @@ namespace iiMenu.Managers
                     {
                         orbCore.localScale = Vector3.one * 0.022f * pulse;
 
-                        Renderer coreRenderer = orbCore.GetComponent<Renderer>();
-                        if (coreRenderer != null && coreRenderer.material != null)
-                            coreRenderer.material.color = new Color(1f, 1f, 1f, stateAlpha);
+                        if (orbCoreRenderer != null && orbCoreRenderer.material != null)
+                            orbCoreRenderer.material.color = new Color(1f, 1f, 1f, stateAlpha);
                     }
 
                     if (orbHalo != null)
                     {
                         orbHalo.localScale = Vector3.one * (0.075f * pulse);
 
-                        Renderer haloRenderer = orbHalo.GetComponent<Renderer>();
-                        if (haloRenderer != null && haloRenderer.material != null)
-                            haloRenderer.material.color = new Color(color.r, color.g, color.b, 0.09f * stateAlpha);
+                        if (orbHaloRenderer != null && orbHaloRenderer.material != null)
+                            orbHaloRenderer.material.color = new Color(color.r, color.g, color.b, 0.09f * stateAlpha);
                     }
                 }
                 else if (orbRoot.activeSelf)
@@ -468,6 +473,9 @@ namespace iiMenu.Managers
             orbCore = null;
             orbHalo = null;
             orbRings = null;
+            orbRingLines = null;
+            orbCoreRenderer = null;
+            orbHaloRenderer = null;
             orbRingBase = null;
         }
 
