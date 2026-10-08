@@ -163,6 +163,7 @@ namespace iiMenu.CanvasMenuUI.Main
         const float SpringDamping = 22f;
 
         readonly Dictionary<MenuButton, float> _pressFlashT = new Dictionary<MenuButton, float>();
+        readonly List<MenuButton> _keyScratch = new List<MenuButton>();
 
         AudioSource _audio;
 
@@ -923,10 +924,16 @@ namespace iiMenu.CanvasMenuUI.Main
 
         enum SoundId { MenuOpen, MenuClose, ButtonClick, ToggleClick, TabSwitch }
 
+        static readonly Dictionary<SoundId, AudioClip> _clipCache = new Dictionary<SoundId, AudioClip>();
+
         void PlaySound(SoundId id)
         {
             if (_audio == null) return;
-            AudioClip clip = GenerateClip(id);
+            if (!_clipCache.TryGetValue(id, out AudioClip clip))
+            {
+                clip = GenerateClip(id);
+                _clipCache[id] = clip;
+            }
             if (clip != null) _audio.PlayOneShot(clip, id == SoundId.MenuOpen ? 0.5f : 0.35f);
         }
 
@@ -1026,7 +1033,9 @@ namespace iiMenu.CanvasMenuUI.Main
 
                 if (b.statusTM != null && !b.suppressToggleStatus)
                 {
-                    b.statusTM.text = on ? "ON" : "OFF";
+                    string statusText = on ? "ON" : "OFF";
+                    if (b.statusTM.text != statusText)
+                        b.statusTM.text = statusText;
                     if (b.neutralToggleRow)
                     {
                         b.statusTM.color = new Color(THEMES[_themeIdx].txt.r * 0.92f, THEMES[_themeIdx].txt.g * 0.92f,
@@ -1409,6 +1418,8 @@ namespace iiMenu.CanvasMenuUI.Main
             return pick;
         }
 
+        static readonly Comparison<RaycastHit> _hitDistanceCompare = (a, b) => a.distance.CompareTo(b.distance);
+
         void UpdateLaser(Transform hand, LineRenderer lr, GameObject dot, bool isLeft)
         {
             if (hand == null || lr == null || dot == null)
@@ -1458,7 +1469,7 @@ namespace iiMenu.CanvasMenuUI.Main
 
             var hits = Physics.RaycastAll(
                 new Ray(rayOrigin, dir), menuRayLen, ~0, QueryTriggerInteraction.Collide);
-            System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
+            System.Array.Sort(hits, _hitDistanceCompare);
 
             MenuButton hovered = null;
             Vector3 hitPoint = rayOrigin + dir * menuRayLen;
@@ -1623,7 +1634,7 @@ namespace iiMenu.CanvasMenuUI.Main
                 ? Physics.SphereCastAll(ray, radius, 60f, ~0, QueryTriggerInteraction.Collide)
                 : Physics.RaycastAll(ray, 60f, ~0, QueryTriggerInteraction.Collide);
 
-            System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
+            System.Array.Sort(hits, _hitDistanceCompare);
 
             for (int i = 0; i < hits.Length; i++)
             {
@@ -1652,7 +1663,9 @@ namespace iiMenu.CanvasMenuUI.Main
             for (int i = _modsContentRoot.childCount - 1; i >= 0; i--)
                 Kill(_modsContentRoot.GetChild(i).gameObject);
 
-            foreach (var btn in new List<MenuButton>(_pressFlashT.Keys))
+            _keyScratch.Clear();
+            _keyScratch.AddRange(_pressFlashT.Keys);
+            foreach (var btn in _keyScratch)
             {
                 if (btn == null || btn.go == null)
                 {
@@ -2185,8 +2198,9 @@ new Vector3(0f, y, -0.004f), TS_ROW * 0.9f, THEMES[_themeIdx].sub, TextAnchor.Mi
 
         void UpdateRowSlides(float dt)
         {
-            var keys = new System.Collections.Generic.List<MenuButton>(_rowSlideT.Keys);
-            foreach (var btn in keys)
+            _keyScratch.Clear();
+            _keyScratch.AddRange(_rowSlideT.Keys);
+            foreach (var btn in _keyScratch)
             {
                 if (btn.go == null) continue;
                 _rowSlideT[btn] += dt;
@@ -2209,8 +2223,9 @@ new Vector3(0f, y, -0.004f), TS_ROW * 0.9f, THEMES[_themeIdx].sub, TextAnchor.Mi
             if (_pressFlashT.Count == 0)
                 return;
 
-            var keys = new System.Collections.Generic.List<MenuButton>(_pressFlashT.Keys);
-            foreach (var btn in keys)
+            _keyScratch.Clear();
+            _keyScratch.AddRange(_pressFlashT.Keys);
+            foreach (var btn in _keyScratch)
             {
                 if (btn == null || btn.go == null)
                 {
