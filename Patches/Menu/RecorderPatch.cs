@@ -17,6 +17,8 @@ namespace iiMenu.Patches.Menu
     public class RecorderPatch
     {
         public static bool enabled = true;
+
+        private static readonly System.Func<IAudioDesc> inputFactory = () => VoiceManager.Get();
         [HarmonyPatch(nameof(Recorder.SourceType), MethodType.Getter)]
         public static bool Prefix(ref Recorder.InputSourceType __result)
         {
@@ -34,7 +36,7 @@ namespace iiMenu.Patches.Menu
         {
             if (enabled)
             {
-                __result = () => VoiceManager.Get();
+                __result = inputFactory;
                 return false;
             }
             return true;
