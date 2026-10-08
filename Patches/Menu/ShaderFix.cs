@@ -18,11 +18,12 @@ namespace iiMenu.Patches.Menu
     {
         private static void Postfix(GameObject __result)
         {
+            Renderer renderer = __result.GetComponent<Renderer>();
             if (crystallizeMenu && CrystalMaterial != null)
-                __result.GetComponent<Renderer>().material = CrystalMaterial;
+                renderer.material = CrystalMaterial;
             else if (transparentMenu)
             {
-                Material material = __result.GetComponent<Renderer>().material;
+                Material material = renderer.material;
                 material.shader = Shader.Find(shinyMenu ? "Universal Render Pipeline/Lit" : "Universal Render Pipeline/Unlit");
 
                 material.SetFloat("_Surface", 1);
@@ -33,9 +34,9 @@ namespace iiMenu.Patches.Menu
                 material.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
                 material.renderQueue = (int)RenderQueue.Transparent;
             } else
-                __result.GetComponent<Renderer>().material.shader = Shader.Find(shinyMenu ? "Universal Render Pipeline/Lit" : "GorillaTag/UberShader");
+                renderer.material.shader = Shader.Find(shinyMenu ? "Universal Render Pipeline/Lit" : "GorillaTag/UberShader");
             
-            __result.GetComponent<Renderer>().material.color = backgroundColor.GetColor(0);
+            renderer.material.color = backgroundColor.GetColor(0);
         }
     }
 }
