@@ -186,6 +186,10 @@ namespace iiMenu.Managers
         }
 
         public static GameObject Kyle;
+        public static Transform emoteSpine;
+        public static Transform emoteLeftHand;
+        public static Transform emoteRightHand;
+        public static Transform emoteHead;
         public static float emoteTime;
         
         
@@ -268,6 +272,10 @@ namespace iiMenu.Managers
             if (Kyle == null)
                 return;
             HardenRig(Kyle);
+            emoteSpine = Kyle.transform.Find("KyleRobot/ROOT/Hips/Spine1/Spine2");
+            emoteLeftHand = Kyle.transform.Find("KyleRobot/ROOT/Hips/Spine1/Spine2/LeftShoulder/LeftUpperArm/LeftArm/LeftHand");
+            emoteRightHand = Kyle.transform.Find("KyleRobot/ROOT/Hips/Spine1/Spine2/RightShoulder/RightUpperArm/RightArm/RightHand");
+            emoteHead = Kyle.transform.Find("KyleRobot/ROOT/Hips/Spine1/Spine2/Neck/Head");
             Transform bodyPivot = VRRig.LocalRig.transform.Find("rig/body_pivot") ?? VRRig.LocalRig.transform;
             Kyle.transform.position = bodyPivot.position - new Vector3(0f, 1.15f, 0f);
             Kyle.transform.rotation = bodyPivot.rotation;
@@ -340,18 +348,18 @@ namespace iiMenu.Managers
 
                 if (Time.time < EmoteManager.emoteTime)
                 {
-                    if (EmoteManager.Kyle != null)
+                    if (EmoteManager.Kyle != null && EmoteManager.emoteSpine != null && EmoteManager.emoteLeftHand != null && EmoteManager.emoteRightHand != null)
                     {
                         VRRig.LocalRig.enabled = false;
 
-                        VRRig.LocalRig.transform.position = EmoteManager.Kyle.transform.Find("KyleRobot/ROOT/Hips/Spine1/Spine2").transform.position - (EmoteManager.Kyle.transform.Find("KyleRobot/ROOT/Hips/Spine1/Spine2").transform.right / 2.5f);
-                        VRRig.LocalRig.transform.rotation = Quaternion.Euler(new Vector3(0f, EmoteManager.Kyle.transform.Find("KyleRobot/ROOT/Hips/Spine1/Spine2").transform.rotation.eulerAngles.y, 0f));
+                        VRRig.LocalRig.transform.position = EmoteManager.emoteSpine.position - (EmoteManager.emoteSpine.right / 2.5f);
+                        VRRig.LocalRig.transform.rotation = Quaternion.Euler(new Vector3(0f, EmoteManager.emoteSpine.rotation.eulerAngles.y, 0f));
 
-                        VRRig.LocalRig.leftHand.rigTarget.transform.position = EmoteManager.Kyle.transform.Find("KyleRobot/ROOT/Hips/Spine1/Spine2/LeftShoulder/LeftUpperArm/LeftArm/LeftHand").transform.position;
-                        VRRig.LocalRig.rightHand.rigTarget.transform.position = EmoteManager.Kyle.transform.Find("KyleRobot/ROOT/Hips/Spine1/Spine2/RightShoulder/RightUpperArm/RightArm/RightHand").transform.position;
+                        VRRig.LocalRig.leftHand.rigTarget.transform.position = EmoteManager.emoteLeftHand.position;
+                        VRRig.LocalRig.rightHand.rigTarget.transform.position = EmoteManager.emoteRightHand.position;
 
-                        VRRig.LocalRig.leftHand.rigTarget.transform.rotation = EmoteManager.Kyle.transform.Find("KyleRobot/ROOT/Hips/Spine1/Spine2/LeftShoulder/LeftUpperArm/LeftArm/LeftHand").transform.rotation * Quaternion.Euler(0, 0, 75);
-                        VRRig.LocalRig.rightHand.rigTarget.transform.rotation = EmoteManager.Kyle.transform.Find("KyleRobot/ROOT/Hips/Spine1/Spine2/RightShoulder/RightUpperArm/RightArm/RightHand").transform.rotation * Quaternion.Euler(180, 0, -75);
+                        VRRig.LocalRig.leftHand.rigTarget.transform.rotation = EmoteManager.emoteLeftHand.rotation * Quaternion.Euler(0, 0, 75);
+                        VRRig.LocalRig.rightHand.rigTarget.transform.rotation = EmoteManager.emoteRightHand.rotation * Quaternion.Euler(180, 0, -75);
                     }
                 }
                 else
@@ -363,6 +371,10 @@ namespace iiMenu.Managers
                         
                         Object.Destroy(EmoteManager.Kyle);
                         EmoteManager.Kyle = null;
+                        EmoteManager.emoteSpine = null;
+                        EmoteManager.emoteLeftHand = null;
+                        EmoteManager.emoteRightHand = null;
+                        EmoteManager.emoteHead = null;
 
                         if (GorillaTagger.Instance.myRecorder != null)
                         {
@@ -391,7 +403,10 @@ namespace iiMenu.Managers
                 if (GorillaLocomotion.GTPlayer.Instance == null || Time.time >= EmoteManager.emoteTime || EmoteManager.Kyle == null)
                     return;
 
-                VRRig.LocalRig.head.rigTarget.transform.rotation = EmoteManager.Kyle.transform.Find("KyleRobot/ROOT/Hips/Spine1/Spine2/Neck/Head").transform.rotation * Quaternion.Euler(0f, 0f, 90f);
+                if (EmoteManager.emoteHead == null)
+                    return;
+
+                VRRig.LocalRig.head.rigTarget.transform.rotation = EmoteManager.emoteHead.rotation * Quaternion.Euler(0f, 0f, 90f);
                 if (VRRig.LocalRig.headMesh != null)
                 {
                     VRRig.LocalRig.headMesh.transform.rotation = VRRig.LocalRig.head.rigTarget.transform.rotation;
