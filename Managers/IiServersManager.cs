@@ -742,6 +742,12 @@ namespace iiMenu.Managers
                     return false;
                 }
 
+                if (!IsValidAppId(appId.Trim()))
+                {
+                    LogManager.LogError($"iiServers parse ({source}): appId is not a valid id in {json.Substring(0, Math.Min(300, json.Length))}");
+                    return false;
+                }
+
                 if (codes.Count > 0)
                     roomCodes = codes;
 
@@ -759,6 +765,9 @@ namespace iiMenu.Managers
                 return false;
             }
         }
+
+        private static bool IsValidAppId(string appId) =>
+            appId != null && appId.Length == 36 && Guid.TryParseExact(appId, "D", out _);
 
         private static bool ApplyLocalConfigFile()
         {
