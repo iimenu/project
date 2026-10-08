@@ -106,6 +106,9 @@ namespace iiMenu.Managers
 
         private static readonly Dictionary<TextMeshPro, Color> textColorArchive = new Dictionary<TextMeshPro, Color>();
 
+        private static readonly List<TextMeshPro> deadCharacterKeys = new List<TextMeshPro>();
+        private static readonly List<TextMeshPro> deadColorKeys = new List<TextMeshPro>();
+
         private static bool _customBoardFonts;
         public static bool CustomBoardFonts
         {
@@ -211,6 +214,20 @@ namespace iiMenu.Managers
         private static float nextMonitorSearch;
         private static float nextConductSearch;
         private float nextBoardRootSearch;
+        private Renderer computerMonitorRenderer;
+        private Renderer conductScreenRenderer;
+        private TextMeshPro motdHeading;
+        private TextMeshPro motdBody;
+        private string motdBuiltTemplate;
+        private string motdBuiltName;
+        private bool motdBuiltCustomName;
+        private bool motdBuiltBeta;
+        private int? motdBuiltMods;
+        private bool motdBuiltTranslate;
+        private bool motdBuiltLower;
+        private bool motdBuiltUpper;
+        private bool motdBuiltRedact;
+        private float nextMotdRefresh;
 
         public GameObject motdTitle;
         public GameObject motdText;
@@ -226,6 +243,18 @@ namespace iiMenu.Managers
             loggedMissingBoardObjects = false;
             nextBoardScanTime = 0f;
         }
+
+        private bool MotdInputsChanged() =>
+            motdHeading == null || motdBody == null ||
+            motdBuiltTemplate != motdTemplate ||
+            motdBuiltName != customMenuName ||
+            motdBuiltCustomName != doCustomName ||
+            motdBuiltBeta != PluginInfo.BetaBuild ||
+            motdBuiltMods != fullModAmount ||
+            motdBuiltTranslate != translate ||
+            motdBuiltLower != lowercaseMode ||
+            motdBuiltUpper != uppercaseMode ||
+            motdBuiltRedact != redactText;
 
         private static void ApplyJoinTriggerScreens()
         {
@@ -410,10 +439,13 @@ namespace iiMenu.Managers
             if (computerMonitor == null && Time.time >= nextMonitorSearch)
             {
                 computerMonitor = GetObject("Environment Objects/LocalObjects_Prefab/TreeRoom/TreeRoomInteractables/GorillaComputerObject/ComputerUI/monitor/monitorScreen");
+                computerMonitorRenderer = null;
                 nextMonitorSearch = Time.time + 5f;
             }
 
-            Renderer computerMonitorRenderer = computerMonitor?.GetComponent<Renderer>();
+            if (computerMonitorRenderer == null && computerMonitor != null)
+                computerMonitorRenderer = computerMonitor.GetComponent<Renderer>();
+
             if (computerMonitorRenderer != null)
             {
                 originalComputerMonitorMaterial ??= computerMonitorRenderer.sharedMaterial;
@@ -426,10 +458,13 @@ namespace iiMenu.Managers
             if (conductScreen == null && Time.time >= nextConductSearch)
             {
                 conductScreen = GetObject("Environment Objects/LocalObjects_Prefab/TreeRoom/TreeRoomInteractables/UI/CodeOfConduct_Group/StaticUnlit/screen");
+                conductScreenRenderer = null;
                 nextConductSearch = Time.time + 5f;
             }
 
-            Renderer conductScreenRenderer = conductScreen?.GetComponent<Renderer>();
+            if (conductScreenRenderer == null && conductScreen != null)
+                conductScreenRenderer = conductScreen.GetComponent<Renderer>();
+
             if (conductScreenRenderer != null)
             {
                 originalConductScreenMaterial ??= conductScreenRenderer.sharedMaterial;
@@ -448,26 +483,21 @@ namespace iiMenu.Managers
                     GameObject motdObject = GetObject("Environment Objects/LocalObjects_Prefab/TreeRoom/motdHeadingText");
                     motdTitle = Instantiate(motdObject, motdObject.transform.parent);
                     motdObject.SetActive(false);
+                    motdHeading = motdTitle.GetComponent<TextMeshPro>();
+                    if (!textMeshPro.Contains(motdHeading))
+                        textMeshPro.Add(motdHeading);
                 }
 
-                TextMeshPro motdHeadingText = motdTitle.GetComponent<TextMeshPro>();
-                if (!textMeshPro.Contains(motdHeadingText))
-                    textMeshPro.Add(motdHeadingText);
-
-                motdHeadingText.richText = true;
-                motdHeadingText.SafeSetFontSize(100);
-                motdHeadingText.SafeSetText($"Thanks for using {(doCustomName ? customMenuName : "ii <b>Reborn</b>")}!");
-                motdHeadingText.SafeSetFontStyle(activeFontStyle);
-                motdHeadingText.SafeSetFont(activeFont);
-                FollowMenuSettings(motdHeadingText, -4f);
-
-                if (doCustomName)
-                    motdHeadingText.SafeSetText("Thanks for using " + NoRichtextTags(customMenuName) + "!");
-
-                motdHeadingText.SafeSetText(FollowMenuSettings(motdHeadingText.text));
-
-                motdHeadingText.color = textColors[0].GetCurrentColor();
-                motdHeadingText.overflowMode = TextOverflowModes.Overflow;
+                motdHeading.richText = true;
+                motdHeading.SafeSetFontSize(100);
+                motdHeading.SafeSetFontStyle(activeFontStyle);
+                motdHeading.SafeSetFont(activeFont);
+                FollowMenuSettings(motdHeading, -4f);
+                if (motdHeading.overflowMode != TextOverflowModes.Overflow)
+                    motdHeading.overflowMode = TextOverflowModes.Overflow;
+                Color motdHeadingColor = textColors[0].GetCurrentColor();
+                if (motdHeading.color != motdHeadingColor)
+                    motdHeading.color = motdHeadingColor;
 
                 if (motdText == null)
                 {
@@ -476,20 +506,38 @@ namespace iiMenu.Managers
                     motdObject.SetActive(false);
 
                     motdText.GetComponent<PlayFabTitleDataTextDisplay>().enabled = false;
+                    motdBody = motdText.GetComponent<TextMeshPro>();
+                    if (!textMeshPro.Contains(motdBody))
+                        textMeshPro.Add(motdBody);
                 }
 
-                TextMeshPro motdBodyText = motdText.GetComponent<TextMeshPro>();
-                if (!textMeshPro.Contains(motdBodyText))
-                    textMeshPro.Add(motdBodyText);
+                motdBody.richText = true;
+                motdBody.SafeSetFontSize(100);
+                motdBody.SafeSetFontStyle(activeFontStyle);
+                motdBody.SafeSetFont(activeFont);
+                FollowMenuSettings(motdBody, -4f);
+                Color motdBodyColor = textColors[0].GetCurrentColor();
+                if (motdBody.color != motdBodyColor)
+                    motdBody.color = motdBodyColor;
 
-                motdBodyText.richText = true;
-                motdBodyText.SafeSetFontSize(100);
-                motdBodyText.color = textColors[0].GetCurrentColor();
-                motdBodyText.SafeSetFontStyle(activeFontStyle);
-                motdBodyText.SafeSetFont(activeFont);
-                FollowMenuSettings(motdBodyText, -4f);
+                if (MotdInputsChanged() || Time.time >= nextMotdRefresh)
+                {
+                    nextMotdRefresh = Time.time + 5f;
+                    motdBuiltTemplate = motdTemplate;
+                    motdBuiltName = customMenuName;
+                    motdBuiltCustomName = doCustomName;
+                    motdBuiltBeta = PluginInfo.BetaBuild;
+                    motdBuiltMods = fullModAmount;
+                    motdBuiltTranslate = translate;
+                    motdBuiltLower = lowercaseMode;
+                    motdBuiltUpper = uppercaseMode;
+                    motdBuiltRedact = redactText;
 
-                motdBodyText.SafeSetText(FollowMenuSettings(string.Format(motdTemplate, PluginInfo.Version, fullModAmount, PluginInfo.BetaBuild ? "Beta" : "Release", PluginInfo.BuildTimestamp )));
+                    string headingBase = doCustomName ? "Thanks for using " + NoRichtextTags(customMenuName) + "!" : "Thanks for using ii <b>Reborn</b>!";
+                    motdHeading.SafeSetText(FollowMenuSettings(headingBase));
+
+                    motdBody.SafeSetText(FollowMenuSettings(string.Format(motdTemplate, PluginInfo.Version, fullModAmount, PluginInfo.BetaBuild ? "Beta" : "Release", PluginInfo.BuildTimestamp )));
+                }
                 }
                 else
                     RestoreOriginalBoardScreens();
@@ -502,22 +550,34 @@ namespace iiMenu.Managers
                 Color targetColor = textColors[0].GetCurrentColor();
 
                 textMeshPro.RemoveAll(t => t == null);
-                var deadKeys = characterDistanceArchive.Keys.Where(k => k == null).ToList();
-                foreach (var k in deadKeys) characterDistanceArchive.Remove(k);
-                var deadColorKeys = textColorArchive.Keys.Where(k => k == null).ToList();
+                deadCharacterKeys.Clear();
+                foreach (var k in characterDistanceArchive.Keys)
+                    if (k == null) deadCharacterKeys.Add(k);
+                foreach (var k in deadCharacterKeys) characterDistanceArchive.Remove(k);
+                deadColorKeys.Clear();
+                foreach (var k in textColorArchive.Keys)
+                    if (k == null) deadColorKeys.Add(k);
                 foreach (var k in deadColorKeys) textColorArchive.Remove(k);
 
-                foreach (TextMeshPro txt in textMeshPro.Where(text => text.isActiveAndEnabled))
+                for (int i = 0; i < textMeshPro.Count; i++)
                 {
+                    TextMeshPro txt = textMeshPro[i];
+                    if (txt == null || !txt.isActiveAndEnabled)
+                        continue;
+
                     if (tintBoardText)
                     {
                         if (!textColorArchive.ContainsKey(txt))
                             textColorArchive[txt] = txt.color;
 
-                        txt.color = targetColor;
+                        if (txt.color != targetColor)
+                            txt.color = targetColor;
                     }
                     else if (textColorArchive.TryGetValue(txt, out Color archivedColor))
-                        txt.color = archivedColor;
+                    {
+                        if (txt.color != archivedColor)
+                            txt.color = archivedColor;
+                    }
 
                     if (!CustomBoardFonts) continue;
                     archiveGorillaTagFont ??= txt.font;
@@ -525,7 +585,8 @@ namespace iiMenu.Managers
                     if (!characterDistanceArchive.ContainsKey(txt))
                         characterDistanceArchive[txt] = txt.characterSpacing;
 
-                    txt.characterSpacing = 0f;
+                    if (txt.characterSpacing != 0f)
+                        txt.characterSpacing = 0f;
 
                     txt.SafeSetFont(activeFont);
                     txt.SafeSetFontStyle(activeFontStyle);
@@ -1132,13 +1193,11 @@ namespace iiMenu.Managers
 
         private void RestoreOriginalBoardScreens()
         {
-            Renderer renderer = computerMonitor?.GetComponent<Renderer>();
-            if (renderer != null && originalComputerMonitorMaterial != null)
-                renderer.sharedMaterial = originalComputerMonitorMaterial;
+            if (computerMonitorRenderer != null && originalComputerMonitorMaterial != null)
+                computerMonitorRenderer.sharedMaterial = originalComputerMonitorMaterial;
 
-            Renderer conductRenderer = conductScreen?.GetComponent<Renderer>();
-            if (conductRenderer != null && originalConductScreenMaterial != null)
-                conductRenderer.sharedMaterial = originalConductScreenMaterial;
+            if (conductScreenRenderer != null && originalConductScreenMaterial != null)
+                conductScreenRenderer.sharedMaterial = originalConductScreenMaterial;
         }
         #endregion
 
