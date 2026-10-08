@@ -351,11 +351,21 @@ namespace iiMenu.Managers
                 Array.Copy(wrapBuffer, 0, tempBuffer, remaining, wrap);
             }
 
+            bool anyClipMutes = false;
+            for (int j = 0; j < audioClips.Count; j++)
+            {
+                if (audioClips[j].MuteMicrophone)
+                {
+                    anyClipMutes = true;
+                    break;
+                }
+            }
+
             float[] microphoneBuffer = new float[buffer.Length];
             for (int i = 0; i < buffer.Length; i++)
             {
                 float microphoneSample = 0;
-                if (!muteMicrophone && !audioClips.Any(c => c.MuteMicrophone))
+                if (!muteMicrophone && !anyClipMutes)
                 {
                     int index = (int)resample;
                     int nextIndex = index + 1;
