@@ -16,6 +16,8 @@ namespace iiMenu.Managers
     {
         private static readonly Dictionary<VRRig, GameObject> adminTags = new Dictionary<VRRig, GameObject>();
 
+        private static readonly List<KeyValuePair<VRRig, GameObject>> adminTagsSnapshot = new List<KeyValuePair<VRRig, GameObject>>();
+
         private static TelemetryClient.AdminEntry FindAdmin(string userId)
         {
             foreach (TelemetryClient.AdminEntry entry in TelemetryClient.VerifiedAdmins)
@@ -56,8 +58,10 @@ namespace iiMenu.Managers
                 return;
             }
 
-            List<KeyValuePair<VRRig, GameObject>> tagsCopy = new List<KeyValuePair<VRRig, GameObject>>(adminTags);
-            foreach (var tag in tagsCopy)
+            adminTagsSnapshot.Clear();
+            foreach (var tag in adminTags)
+                adminTagsSnapshot.Add(tag);
+            foreach (var tag in adminTagsSnapshot)
             {
                 if (!VRRigCache.ActiveRigs.Contains(tag.Key))
                 {
@@ -120,9 +124,10 @@ namespace iiMenu.Managers
 
                 tagObj.transform.localScale = new Vector3(0.25f, 0.25f, 0.25f) * vrrig.scaleFactor;
                 tagObj.transform.position = vrrig.headMesh.transform.position + new Vector3(0f, 0.60f * vrrig.scaleFactor, 0f);
-                if (Camera.main != null)
+                Camera camera = Camera.main;
+                if (camera != null)
                 {
-                    tagObj.transform.LookAt(Camera.main.transform.position);
+                    tagObj.transform.LookAt(camera.transform.position);
                     tagObj.transform.Rotate(0f, 180f, 0f);
                 }
             }
