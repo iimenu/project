@@ -90,7 +90,14 @@ namespace iiMenu.Utilities
                 if (p.Creator != null)
                 {
                     int creatorActorNumber = p.Creator.ActorNumber;
-                    player = NetworkSystem.Instance.AllNetPlayers.FirstOrDefault(candidate => candidate != null && candidate.ActorNumber == creatorActorNumber);
+                    foreach (NetPlayer candidate in NetworkSystem.Instance.AllNetPlayers)
+                    {
+                        if (candidate != null && candidate.ActorNumber == creatorActorNumber)
+                        {
+                            player = candidate;
+                            break;
+                        }
+                    }
                     if (player != null)
                         return true;
                 }
@@ -99,7 +106,14 @@ namespace iiMenu.Utilities
                     return false;
 
                 int ownerId = NetworkSystem.Instance.GetOwningPlayerID(p.rigSerializer.gameObject);
-                player = NetworkSystem.Instance.AllNetPlayers.FirstOrDefault(candidate => candidate.ActorNumber == ownerId);
+                foreach (NetPlayer candidate in NetworkSystem.Instance.AllNetPlayers)
+                {
+                    if (candidate.ActorNumber == ownerId)
+                    {
+                        player = candidate;
+                        break;
+                    }
+                }
             }
             catch
             {
