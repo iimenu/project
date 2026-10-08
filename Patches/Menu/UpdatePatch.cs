@@ -27,11 +27,12 @@ namespace iiMenu.Patches.Menu
         {
             if (enabled)
             {
-                string targetName = Main.CleanPlayerName(__instance.linePlayer.NickName) + " ERR";
+                string cleanedName = Main.CleanPlayerName(__instance.linePlayer.NickName);
+                string targetName = cleanedName + " ERR";
                 try
                 {
                     VRRig rig = __instance.linePlayer.VRRig();
-                    targetName = $"{Main.CleanPlayerName(__instance.linePlayer.NickName)}<size=50> <sprite name=\"{rig.GetPlatform()}\"> <sprite name=\"Ping{GetPing(rig)}\">{rig.fps}</size>";
+                    targetName = $"{cleanedName}<size=50> <sprite name=\"{rig.GetPlatform()}\"> <sprite name=\"Ping{GetPing(rig)}\">{rig.fps}</size>";
                 } catch { }
                 __instance.playerNameVisible = targetName;
             }
