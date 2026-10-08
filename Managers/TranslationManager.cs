@@ -28,6 +28,7 @@ namespace iiMenu.Managers
         private static readonly HashSet<string> loggedFailures = new HashSet<string>();
         private const float TranslationRetryDelay = 30f;
         private const float TranslationRequestInterval = 1f;
+        private const int MaxCachedTranslations = 2048;
         private static float nextRequestTime;
 
         /// <summary>
@@ -154,6 +155,18 @@ namespace iiMenu.Managers
                 yield break;
 
             nextRetryTime.Remove(text);
+
+            if (translateCache.Count >= MaxCachedTranslations)
+            {
+                string evicted = null;
+                foreach (string cached in translateCache.Keys)
+                {
+                    evicted = cached;
+                    break;
+                }
+                translateCache.Remove(evicted);
+            }
+
             translateCache[text] = translation;
             onTranslated?.Invoke(translation);
         }
