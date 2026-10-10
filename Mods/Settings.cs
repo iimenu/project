@@ -6205,7 +6205,7 @@ exit 0";
 
                     Vector3 direction = forward.normalized;
 
-                    Vector3 screenPoint = Camera.main.WorldToScreenPoint(startPos + direction * 5f);
+                    Vector3 screenPoint = iiMenu.Menu.Main.MainCam.WorldToScreenPoint(startPos + direction * 5f);
                     pointerData.position = screenPoint;
 
                     uiResults.Clear();

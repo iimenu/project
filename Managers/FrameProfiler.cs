@@ -24,7 +24,6 @@ namespace iiMenu.Managers
 
         public static bool Enabled = true;
         public static float SpikeThresholdMs = 25f;
-        public static float SpikeCooldownSeconds = 0.5f;
         public static float HeartbeatSeconds = 15f;
 
         private const int MaxSections = 16;
@@ -42,14 +41,12 @@ namespace iiMenu.Managers
 
         private long lastTimestamp;
         private long lastHeap;
-        private float lastSpikeTime;
         private float lastHeartbeatTime;
         private float worstFrameMs;
         private double frameTotalMs;
         private int frameTotalCount;
         private int slowFrames;
         private int verySlowFrames;
-        private int heartbeatSpikes;
 
         private void Awake()
         {
@@ -169,39 +166,25 @@ namespace iiMenu.Managers
 
             sampleHeapFrame = false;
 
-            bool spikeLog = frameMs >= SpikeThresholdMs && t - lastSpikeTime >= SpikeCooldownSeconds;
             bool heartbeatLog = t - lastHeartbeatTime >= HeartbeatSeconds;
             long heap = 0;
-            long heapDelta = 0;
 
-            if (spikeLog || heartbeatLog)
+            if (heartbeatLog)
             {
                 heap = GC.GetTotalMemory(false);
-                heapDelta = heap - lastHeap;
                 lastHeap = heap;
-            }
-
-            if (spikeLog)
-            {
-                lastSpikeTime = t;
-                heartbeatSpikes++;
-
-                LogManager.Log($"[Frame] spike {frameMs:F1}ms | heap {heap / 1048576f:F1}MB ({heapDelta / 1024f:+0.0;-0.0;0.0}KB) | worst {worstFrameMs:F1}ms | {BuildSectionSummary()}");
-
-                lastTimestamp = Stopwatch.GetTimestamp();
             }
 
             if (heartbeatLog)
             {
                 lastHeartbeatTime = t;
 
-                LogManager.Log($"[Frame] avg {frameTotalMs / Mathf.Max(1, frameTotalCount):F1}ms worst {worstFrameMs:F1}ms frames {frameTotalCount} slow {slowFrames} verySlow {verySlowFrames} spikes {heartbeatSpikes} | heap {heap / 1048576f:F1}MB | {BuildAllocSummary()} | {SceneContext()}");
+                LogManager.Log($"[Frame] avg {frameTotalMs / Mathf.Max(1, frameTotalCount):F1}ms worst {worstFrameMs:F1}ms frames {frameTotalCount} slow {slowFrames} verySlow {verySlowFrames} | heap {heap / 1048576f:F1}MB | {BuildAllocSummary()} | {SceneContext()}");
 
                 frameTotalMs = 0;
                 frameTotalCount = 0;
                 slowFrames = 0;
                 verySlowFrames = 0;
-                heartbeatSpikes = 0;
                 worstFrameMs = 0f;
 
                 sampleHeapFrame = true;

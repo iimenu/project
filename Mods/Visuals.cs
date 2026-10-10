@@ -5840,6 +5840,49 @@ namespace iiMenu.Mods
             }
         }
 
+        public static void MasterTracer()
+        {
+            if (DoPerformanceCheck())
+                return;
+
+            if (GorillaGameManager.instance == null || NetworkSystem.Instance == null)
+                return;
+
+            NetPlayer master = NetworkSystem.Instance.MasterClient;
+            if (master == null || master.IsLocal)
+                return;
+
+            VRRig masterRig = null;
+            foreach (VRRig rig in VRRigCache.ActiveRigs)
+            {
+                if (rig != null && !rig.isLocal && rig.Creator != null && rig.Creator.ActorNumber == master.ActorNumber)
+                {
+                    masterRig = rig;
+                    break;
+                }
+            }
+            if (masterRig == null)
+                return;
+
+            bool followMenuTheme = Buttons.GetIndex("Follow Menu Theme").enabled;
+            bool transparentTheme = Buttons.GetIndex("Transparent Theme").enabled;
+            float lineWidth = (Buttons.GetIndex("Thin Tracers").enabled ? 0.0075f : 0.025f) * (scaleWithPlayer ? GTPlayer.Instance.scale : 1f);
+
+            Color lineColor = new Color(1f, 0.8f, 0f);
+            if (followMenuTheme)
+                lineColor = backgroundColor.GetCurrentColor();
+            if (transparentTheme)
+                lineColor.a = 0.5f;
+
+            LineRenderer line = GetLineRender();
+            line.startColor = lineColor;
+            line.endColor = lineColor;
+            line.startWidth = lineWidth;
+            line.endWidth = lineWidth;
+            line.SetPosition(0, GorillaTagger.Instance.rightHandTransform.position);
+            line.SetPosition(1, masterRig.headMesh.transform.position);
+        }
+
         public static void InfectionTracers()
         {
             if (DoPerformanceCheck())
