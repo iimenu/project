@@ -1782,7 +1782,7 @@ namespace iiMenu.Managers
             return selfUid;
         }
 
-        // 0x10 ROOM_ENTER: RoomRef, region, flags(bit0 = room visible), game mode, player count
+        // 0x10 ROOM_ENTER: RoomRef, region, flags(bit0 = room visible), game mode, player count, server address(<=64, optional trailing)
         private static byte[] EncodeRoomEnter()
         {
             Writer w = new Writer();
@@ -1791,6 +1791,7 @@ namespace iiMenu.Managers
             w.Write((byte)(currentRoomVisible ? 1 : 0));
             WriteString(w, Cap(NetworkSystem.Instance.GameModeString, 128));
             w.WriteVarint(PhotonNetwork.PlayerList.Length);
+            WriteString(w, Cap(PhotonNetwork.ServerAddress, 64));
             return w.Bytes;
         }
 
