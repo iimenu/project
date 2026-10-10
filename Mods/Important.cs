@@ -731,7 +731,6 @@ exit";
         
         public static void EnsureIntegrationProgram() { iiMenu.Managers.SmtcReader.Begin(); }
         public static System.Collections.IEnumerator UpdateDataCoroutinePublic(float delay = 0f) { yield break; }
-        public static void DownloadQuickSong() {}
 
         private static byte[] lastArtBytes;
         private static UnityEngine.Texture2D _icon = new UnityEngine.Texture2D(2, 2);

@@ -51,9 +51,7 @@ namespace iiMenu.Mods
                 NetPlayer candidate = candidates[i];
                 if (!IsVoiceSlotClaimable(candidate))
                 {
-                    if (talkThroughRigFirstSeen.Remove(candidate.ActorNumber))
-                    {
-                    }
+                    talkThroughRigFirstSeen.Remove(candidate.ActorNumber);
                     continue;
                 }
                 if (!talkThroughRigFirstSeen.ContainsKey(candidate.ActorNumber))

@@ -27,10 +27,5 @@ namespace iiMenu.Patches.Menu
             public static bool Prefix() => !enabled;
         }
 
-        [HarmonyPatch(typeof(GorillaServer), nameof(GorillaServer.UploadGorillanalytics))]
-        public class BlockAnalyticsUpload
-        {
-            public static bool Prefix() => !enabled;
-        }
     }
 }
