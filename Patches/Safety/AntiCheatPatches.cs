@@ -117,7 +117,7 @@ namespace iiMenu.Patches.Safety
         }
 
         [SecurityPatch]
-        [HarmonyPatch(typeof(GorillaNetworkPublicTestsJoin), nameof(GorillaNetworkPublicTestsJoin.GracePeriod))]
+        [HarmonyPatch(typeof(GorillaNetworkPublicTestsJoin), nameof(GorillaNetworkPublicTestsJoin.GracePeriod), MethodType.Enumerator)]
         public class GracePeriodPatch1
         {
             private static bool Prefix() =>
@@ -125,7 +125,7 @@ namespace iiMenu.Patches.Safety
         }
 
         [SecurityPatch]
-        [HarmonyPatch(typeof(GorillaNetworkPublicTestJoin2), nameof(GorillaNetworkPublicTestJoin2.GracePeriod))]
+        [HarmonyPatch(typeof(GorillaNetworkPublicTestJoin2), nameof(GorillaNetworkPublicTestJoin2.GracePeriod), MethodType.Enumerator)]
         public class GracePeriodPatch2
         {
             private static bool Prefix() =>

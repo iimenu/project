@@ -507,7 +507,7 @@ namespace iiMenu.Mods
                 if (GetGunInput(true))
                 {
                     VRRig gunTarget = iiMenu.Utilities.RigUtilities.GetRigFromHit(Ray);
-                    if (gunTarget && !gunTarget.IsLocal())
+                    if (gunTarget && !gunTarget.IsLocal() && gunTarget != lockTarget)
                     {
                         gunLocked = true;
                         lockTarget = gunTarget;
@@ -544,7 +544,7 @@ namespace iiMenu.Mods
                 if (GetGunInput(true))
                 {
                     VRRig gunTarget = iiMenu.Utilities.RigUtilities.GetRigFromHit(Ray);
-                    if (gunTarget && !gunTarget.IsLocal())
+                    if (gunTarget && !gunTarget.IsLocal() && gunTarget != lockTarget)
                     {
                         gunLocked = true;
                         lockTarget = gunTarget;
@@ -663,7 +663,7 @@ namespace iiMenu.Mods
                 if (GetGunInput(true))
                 {
                     VRRig gunTarget = iiMenu.Utilities.RigUtilities.GetRigFromHit(Ray);
-                    if (gunTarget && !gunTarget.IsLocal())
+                    if (gunTarget && !gunTarget.IsLocal() && gunTarget != lockTarget)
                     {
                         gunLocked = true;
                         lockTarget = gunTarget;
@@ -1738,7 +1738,7 @@ namespace iiMenu.Mods
                 if (GetGunInput(true))
                 {
                     VRRig gunTarget = iiMenu.Utilities.RigUtilities.GetRigFromHit(Ray);
-                    if (gunTarget && !gunTarget.IsLocal())
+                    if (gunTarget && !gunTarget.IsLocal() && gunTarget != lockTarget)
                     {
                         gunLocked = true;
                         lockTarget = gunTarget;
@@ -1796,7 +1796,7 @@ namespace iiMenu.Mods
                 if (GetGunInput(true))
                 {
                     VRRig gunTarget = iiMenu.Utilities.RigUtilities.GetRigFromHit(Ray);
-                    if (gunTarget && !gunTarget.IsLocal())
+                    if (gunTarget && !gunTarget.IsLocal() && gunTarget != lockTarget)
                     {
                         gunLocked = true;
                         lockTarget = gunTarget;
@@ -1854,7 +1854,7 @@ namespace iiMenu.Mods
                 if (GetGunInput(true))
                 {
                     VRRig gunTarget = iiMenu.Utilities.RigUtilities.GetRigFromHit(Ray);
-                    if (gunTarget && !gunTarget.IsLocal())
+                    if (gunTarget && !gunTarget.IsLocal() && gunTarget != lockTarget)
                     {
                         gunLocked = true;
                         lockTarget = gunTarget;
@@ -1916,7 +1916,7 @@ namespace iiMenu.Mods
                 if (GetGunInput(true))
                 {
                     VRRig gunTarget = iiMenu.Utilities.RigUtilities.GetRigFromHit(Ray);
-                    if (gunTarget && !gunTarget.IsLocal())
+                    if (gunTarget && !gunTarget.IsLocal() && gunTarget != lockTarget)
                     {
                         gunLocked = true;
                         lockTarget = gunTarget;
@@ -1974,7 +1974,7 @@ namespace iiMenu.Mods
                 if (GetGunInput(true))
                 {
                     VRRig gunTarget = iiMenu.Utilities.RigUtilities.GetRigFromHit(Ray);
-                    if (gunTarget && !gunTarget.IsLocal())
+                    if (gunTarget && !gunTarget.IsLocal() && gunTarget != lockTarget)
                     {
                         gunLocked = true;
                         lockTarget = gunTarget;
@@ -2343,7 +2343,7 @@ namespace iiMenu.Mods
                 if (GetGunInput(true))
                 {
                     VRRig gunTarget = iiMenu.Utilities.RigUtilities.GetRigFromHit(Ray);
-                    if (gunTarget && !gunTarget.IsLocal())
+                    if (gunTarget && !gunTarget.IsLocal() && gunTarget != lockTarget)
                     {
                         gunLocked = true;
                         lockTarget = gunTarget;
@@ -2354,6 +2354,86 @@ namespace iiMenu.Mods
             {
                 if (gunLocked)
                     gunLocked = false;
+            }
+        }
+
+        private static float lucyBackshotOriginalCatch = -1f;
+
+        public static void LucyBackshotsGun() => LucyThrustGun(false);
+
+        public static void LucyHeadGun() => LucyThrustGun(true);
+
+        private static void LucyThrustGun(bool underMode)
+        {
+            if (GetGunInput(false))
+            {
+                var GunData = RenderGun();
+                RaycastHit Ray = GunData.Ray;
+
+                if (gunLocked && lockTarget != null)
+                {
+                    HalloweenGhostChaser hgc = Lucy;
+                    if (hgc != null && OwnsGhost(hgc.GetView))
+                    {
+                        if (lucyBackshotOriginalCatch < 0f)
+                        {
+                            lucyBackshotOriginalCatch = hgc.catchDistance;
+                        }
+
+                        if (hgc.currentState == HalloweenGhostChaser.ChaseState.Grabbing)
+                        {
+                            hgc.currentState = HalloweenGhostChaser.ChaseState.Chasing;
+                        }
+                        hgc.catchDistance = 0f;
+                        hgc.targetPlayer = GetPlayerFromVRRig(lockTarget);
+                        hgc.followTarget = lockTarget.headMesh.transform;
+
+                        float thrust = (Mathf.Sin(Time.time * 7f) * 0.5f + 0.5f) * 0.35f;
+
+                        if (underMode)
+                        {
+                            Vector3 fwd = lockTarget.headMesh.transform.forward;
+                            fwd = new Vector3(fwd.x, 0f, fwd.z).normalized;
+                            Vector3 chestBottom = lockTarget.headMesh.transform.position + fwd * 0.25f - Vector3.up * 0.95f;
+                            Vector3 anchor = chestBottom - Vector3.up * 0.55f;
+                            hgc.transform.position = anchor - fwd * thrust;
+                            hgc.transform.LookAt(chestBottom);
+                        }
+                        else
+                        {
+                            Vector3 back = -lockTarget.headMesh.transform.forward;
+                            back = new Vector3(back.x, 0f, back.z).normalized;
+                            Vector3 basePos = lockTarget.headMesh.transform.position - Vector3.up * 0.45f + back * 0.45f;
+                            hgc.transform.position = basePos - back * thrust;
+                            hgc.transform.LookAt(new Vector3(lockTarget.headMesh.transform.position.x, hgc.transform.position.y, lockTarget.headMesh.transform.position.z));
+                        }
+                    }
+                }
+
+                if (GetGunInput(true))
+                {
+                    VRRig gunTarget = iiMenu.Utilities.RigUtilities.GetRigFromHit(Ray);
+                    if (gunTarget && !gunTarget.IsLocal() && gunTarget != lockTarget)
+                    {
+                        gunLocked = true;
+                        lockTarget = gunTarget;
+                    }
+                }
+            }
+            else
+            {
+                if (gunLocked)
+                {
+                    gunLocked = false;
+                    lockTarget = null;
+
+                    HalloweenGhostChaser hgc = Lucy;
+                    if (hgc != null && lucyBackshotOriginalCatch >= 0f)
+                    {
+                        hgc.catchDistance = lucyBackshotOriginalCatch;
+                        lucyBackshotOriginalCatch = -1f;
+                    }
+                }
             }
         }
 
@@ -2412,7 +2492,7 @@ namespace iiMenu.Mods
                 if (GetGunInput(true))
                 {
                     VRRig gunTarget = iiMenu.Utilities.RigUtilities.GetRigFromHit(Ray);
-                    if (gunTarget && !gunTarget.IsLocal())
+                    if (gunTarget && !gunTarget.IsLocal() && gunTarget != lockTarget)
                     {
                         gunLocked = true;
                         lockTarget = gunTarget;
@@ -2516,7 +2596,7 @@ namespace iiMenu.Mods
                 if (GetGunInput(true))
                 {
                     VRRig gunTarget = iiMenu.Utilities.RigUtilities.GetRigFromHit(Ray);
-                    if (gunTarget && !gunTarget.IsLocal())
+                    if (gunTarget && !gunTarget.IsLocal() && gunTarget != lockTarget)
                     {
                         gunLocked = true;
                         lockTarget = gunTarget;
@@ -2559,7 +2639,7 @@ namespace iiMenu.Mods
                 if (GetGunInput(true))
                 {
                     VRRig gunTarget = iiMenu.Utilities.RigUtilities.GetRigFromHit(Ray);
-                    if (gunTarget && !gunTarget.IsLocal())
+                    if (gunTarget && !gunTarget.IsLocal() && gunTarget != lockTarget)
                     {
                         gunLocked = true;
                         lockTarget = gunTarget;
@@ -2749,7 +2829,7 @@ namespace iiMenu.Mods
                 if (GetGunInput(true))
                 {
                     VRRig gunTarget = iiMenu.Utilities.RigUtilities.GetRigFromHit(Ray);
-                    if (gunTarget && !gunTarget.IsLocal())
+                    if (gunTarget && !gunTarget.IsLocal() && gunTarget != lockTarget)
                     {
                         gunLocked = true;
                         lockTarget = gunTarget;
@@ -3063,7 +3143,7 @@ namespace iiMenu.Mods
                 if (GetGunInput(true))
                 {
                     VRRig gunTarget = iiMenu.Utilities.RigUtilities.GetRigFromHit(Ray);
-                    if (gunTarget && !gunTarget.IsLocal())
+                    if (gunTarget && !gunTarget.IsLocal() && gunTarget != lockTarget)
                     {
                         gunLocked = true;
                         lockTarget = gunTarget;
@@ -3782,7 +3862,7 @@ namespace iiMenu.Mods
                 if (GetGunInput(true))
                 {
                     VRRig gunTarget = iiMenu.Utilities.RigUtilities.GetRigFromHit(Ray);
-                    if (gunTarget && !gunTarget.IsLocal())
+                    if (gunTarget && !gunTarget.IsLocal() && gunTarget != lockTarget)
                     {
                         gunLocked = true;
                         lockTarget = gunTarget;
@@ -4115,7 +4195,7 @@ namespace iiMenu.Mods
                 if (GetGunInput(true))
                 {
                     VRRig gunTarget = iiMenu.Utilities.RigUtilities.GetRigFromHit(Ray);
-                    if (gunTarget && !gunTarget.IsLocal())
+                    if (gunTarget && !gunTarget.IsLocal() && gunTarget != lockTarget)
                     {
                         gunLocked = true;
                         lockTarget = gunTarget;
@@ -4154,7 +4234,7 @@ namespace iiMenu.Mods
                 if (GetGunInput(true))
                 {
                     VRRig gunTarget = iiMenu.Utilities.RigUtilities.GetRigFromHit(Ray);
-                    if (gunTarget && !gunTarget.IsLocal())
+                    if (gunTarget && !gunTarget.IsLocal() && gunTarget != lockTarget)
                     {
                         gunLocked = true;
                         lockTarget = gunTarget;
@@ -4254,7 +4334,7 @@ namespace iiMenu.Mods
                 if (GetGunInput(true))
                 {
                     VRRig gunTarget = iiMenu.Utilities.RigUtilities.GetRigFromHit(Ray);
-                    if (gunTarget && !gunTarget.IsLocal())
+                    if (gunTarget && !gunTarget.IsLocal() && gunTarget != lockTarget)
                     {
                         gunLocked = true;
                         lockTarget = gunTarget;
@@ -4330,7 +4410,7 @@ namespace iiMenu.Mods
                 if (GetGunInput(true))
                 {
                     VRRig gunTarget = iiMenu.Utilities.RigUtilities.GetRigFromHit(Ray);
-                    if (gunTarget && !gunTarget.IsLocal())
+                    if (gunTarget && !gunTarget.IsLocal() && gunTarget != lockTarget)
                     {
                         gunLocked = true;
                         lockTarget = gunTarget;
@@ -4363,7 +4443,7 @@ namespace iiMenu.Mods
                 if (GetGunInput(true))
                 {
                     VRRig gunTarget = iiMenu.Utilities.RigUtilities.GetRigFromHit(Ray);
-                    if (gunTarget && !gunTarget.IsLocal())
+                    if (gunTarget && !gunTarget.IsLocal() && gunTarget != lockTarget)
                     {
                         gunLocked = true;
                         lockTarget = gunTarget;
@@ -4396,7 +4476,7 @@ namespace iiMenu.Mods
                 if (GetGunInput(true))
                 {
                     VRRig gunTarget = iiMenu.Utilities.RigUtilities.GetRigFromHit(Ray);
-                    if (gunTarget && !gunTarget.IsLocal())
+                    if (gunTarget && !gunTarget.IsLocal() && gunTarget != lockTarget)
                     {
                         gunLocked = true;
                         lockTarget = gunTarget;
@@ -4428,7 +4508,7 @@ namespace iiMenu.Mods
                 if (GetGunInput(true))
                 {
                     VRRig gunTarget = iiMenu.Utilities.RigUtilities.GetRigFromHit(Ray);
-                    if (gunTarget && !gunTarget.IsLocal())
+                    if (gunTarget && !gunTarget.IsLocal() && gunTarget != lockTarget)
                     {
                         gunLocked = true;
                         lockTarget = gunTarget;
@@ -4578,7 +4658,7 @@ namespace iiMenu.Mods
                 if (GetGunInput(true))
                 {
                     VRRig gunTarget = iiMenu.Utilities.RigUtilities.GetRigFromHit(Ray);
-                    if (gunTarget && !gunTarget.IsLocal())
+                    if (gunTarget && !gunTarget.IsLocal() && gunTarget != lockTarget)
                     {
                         gunLocked = true;
                         lockTarget = gunTarget;
@@ -4650,7 +4730,7 @@ namespace iiMenu.Mods
                 if (GetGunInput(true))
                 {
                     VRRig gunTarget = iiMenu.Utilities.RigUtilities.GetRigFromHit(Ray);
-                    if (gunTarget && !gunTarget.IsLocal())
+                    if (gunTarget && !gunTarget.IsLocal() && gunTarget != lockTarget)
                     {
                         gunLocked = true;
                         lockTarget = gunTarget;
@@ -4696,7 +4776,7 @@ namespace iiMenu.Mods
                 if (GetGunInput(true))
                 {
                     VRRig gunTarget = iiMenu.Utilities.RigUtilities.GetRigFromHit(Ray);
-                    if (gunTarget && !gunTarget.IsLocal())
+                    if (gunTarget && !gunTarget.IsLocal() && gunTarget != lockTarget)
                     {
                         gunLocked = true;
                         lockTarget = gunTarget;
@@ -4767,7 +4847,7 @@ namespace iiMenu.Mods
                 if (GetGunInput(true))
                 {
                     VRRig gunTarget = iiMenu.Utilities.RigUtilities.GetRigFromHit(Ray);
-                    if (gunTarget && !gunTarget.IsLocal())
+                    if (gunTarget && !gunTarget.IsLocal() && gunTarget != lockTarget)
                     {
                         gunLocked = true;
                         lockTarget = gunTarget;
@@ -4954,33 +5034,6 @@ namespace iiMenu.Mods
             }
         }
 
-        private static float freezeAllDelay;
-        public static bool muteOnFreeze;
-        public static void FreezeServer(float delay = 0.1f, int eventCount = 11, RaiseEventOptions options = null)
-        {
-            if (!PhotonNetwork.InRoom) return;
-
-            options ??= new RaiseEventOptions
-            {
-                Flags = new WebFlags(byte.MaxValue),
-                TargetActors = new[] { -1 }
-            };
-
-            if (muteOnFreeze)
-            {
-                for (int i = 0; i < 10; i++)
-                    MuteTarget(options);
-            }
-
-            if (Time.time > freezeAllDelay)
-            {
-                for (int i = 0; i < eventCount; i++)
-                    PhotonNetwork.RaiseEvent(51, new object[] { serverLink }, options, SendOptions.SendUnreliable);
-
-                RPCProtection();
-                freezeAllDelay = Time.time + delay;
-            }
-        }
 
         private static float closeRoomDelay;
         public static void CloseRoom()
@@ -5297,7 +5350,7 @@ namespace iiMenu.Mods
                 if (GetGunInput(true))
                 {
                     VRRig gunTarget = iiMenu.Utilities.RigUtilities.GetRigFromHit(Ray);
-                    if (gunTarget && !gunTarget.IsLocal())
+                    if (gunTarget && !gunTarget.IsLocal() && gunTarget != lockTarget)
                     {
                         gunLocked = true;
                         lockTarget = gunTarget;
@@ -5418,7 +5471,7 @@ namespace iiMenu.Mods
                 if (GetGunInput(true))
                 {
                     VRRig gunTarget = iiMenu.Utilities.RigUtilities.GetRigFromHit(Ray);
-                    if (gunTarget && !gunTarget.IsLocal())
+                    if (gunTarget && !gunTarget.IsLocal() && gunTarget != lockTarget)
                     {
                         gunLocked = true;
                         lockTarget = gunTarget;
@@ -5454,7 +5507,7 @@ namespace iiMenu.Mods
                 if (GetGunInput(true))
                 {
                     VRRig gunTarget = iiMenu.Utilities.RigUtilities.GetRigFromHit(Ray);
-                    if (gunTarget && !gunTarget.IsLocal())
+                    if (gunTarget && !gunTarget.IsLocal() && gunTarget != lockTarget)
                     {
                         gunLocked = true;
                         lockTarget = gunTarget;
@@ -5516,7 +5569,7 @@ namespace iiMenu.Mods
                 if (GetGunInput(true))
                 {
                     VRRig gunTarget = iiMenu.Utilities.RigUtilities.GetRigFromHit(Ray);
-                    if (gunTarget && !gunTarget.IsLocal())
+                    if (gunTarget && !gunTarget.IsLocal() && gunTarget != lockTarget)
                     {
                         gunLocked = true;
                         lockTarget = gunTarget;
@@ -5625,7 +5678,7 @@ namespace iiMenu.Mods
                 if (GetGunInput(true))
                 {
                     VRRig gunTarget = iiMenu.Utilities.RigUtilities.GetRigFromHit(Ray);
-                    if (gunTarget && !gunTarget.IsLocal())
+                    if (gunTarget && !gunTarget.IsLocal() && gunTarget != lockTarget)
                     {
                         gunLocked = true;
                         lockTarget = gunTarget;
@@ -5675,7 +5728,7 @@ namespace iiMenu.Mods
                 if (GetGunInput(true))
                 {
                     VRRig gunTarget = iiMenu.Utilities.RigUtilities.GetRigFromHit(Ray);
-                    if (gunTarget && !gunTarget.IsLocal())
+                    if (gunTarget && !gunTarget.IsLocal() && gunTarget != lockTarget)
                     {
                         gunLocked = true;
                         lockTarget = gunTarget;
@@ -5745,7 +5798,7 @@ namespace iiMenu.Mods
                 if (GetGunInput(true))
                 {
                     VRRig gunTarget = iiMenu.Utilities.RigUtilities.GetRigFromHit(Ray);
-                    if (gunTarget && !gunTarget.IsLocal())
+                    if (gunTarget && !gunTarget.IsLocal() && gunTarget != lockTarget)
                     {
                         gunLocked = true;
                         lockTarget = gunTarget;
@@ -5812,6 +5865,51 @@ namespace iiMenu.Mods
             }
 
             Important.CreateRoom(specificRoom ?? RandomString(), kickToPublic, JoinType.JoinWithNearby);
+        }
+
+        public static void CreateRoom(string name, string Mode,
+                                      bool isPub = false,
+                                      byte size = 0,
+                                      JoinType type = JoinType.Solo)
+        {
+            // The original only prefixes "@" when the caller did not
+            // already do so; the exact predicate is size <= 10 || !name
+            // .StartsWith("@").
+            if (size <= 10 || !name.StartsWith("@"))
+                name = "@" + name;
+
+            var trigger = PhotonNetworkController.Instance.currentJoinTrigger;
+
+            var cfg = new RoomConfig
+            {
+                createIfMissing = true,
+                isJoinable      = true,
+                isPublic        = isPub,
+                MaxPlayers      = size == 0
+                                    ? trigger.GetRoomSize(
+                                          SubscriptionManager.IsLocalSubscribed())
+                                    : size,
+                CustomProps     = new Hashtable()
+            };
+
+            cfg.CustomProps.Add("platform", "OTHER");
+            cfg.CustomProps.Add("gameMode",
+                $"MODDED_private;" +
+                $"{GorillaComputer.instance.currentQueue.ToUpper()};" +
+                $"{Mode};;");
+            cfg.CustomProps.Add("language",
+                System.Globalization.CultureInfo.CurrentCulture.TwoLetterISOLanguageName
+                      .ToUpperInvariant());
+            cfg.CustomProps.Add("fan_club",  "false");
+            cfg.CustomProps.Add("queueName", GorillaComputer.instance.currentQueue);
+
+            // Only Party joins get the friend ID list in this game version.
+            if (type == JoinType.JoinWithParty || type == JoinType.ForceJoinWithParty)
+                cfg.SetFriendIDs(PhotonNetworkController.Instance.FriendIDList);
+
+            PhotonNetworkController.Instance.currentJoinType = type;
+
+            NetworkSystem.Instance.ConnectToRoom(name, cfg);
         }
 
         private static float kickDelay;
@@ -6000,7 +6098,7 @@ namespace iiMenu.Mods
                 if (GetGunInput(true))
                 {
                     VRRig gunTarget = iiMenu.Utilities.RigUtilities.GetRigFromHit(Ray);
-                    if (gunTarget && !gunTarget.IsLocal())
+                    if (gunTarget && !gunTarget.IsLocal() && gunTarget != lockTarget)
                     {
                         gunLocked = true;
                         lockTarget = gunTarget;
@@ -6901,7 +6999,7 @@ namespace iiMenu.Mods
                 if (GetGunInput(true))
                 {
                     VRRig gunTarget = iiMenu.Utilities.RigUtilities.GetRigFromHit(Ray);
-                    if (gunTarget && !gunTarget.IsLocal())
+                    if (gunTarget && !gunTarget.IsLocal() && gunTarget != lockTarget)
                     {
                         gunLocked = true;
                         lockTarget = gunTarget;
@@ -6965,7 +7063,7 @@ namespace iiMenu.Mods
                 if (GetGunInput(true))
                 {
                     VRRig gunTarget = iiMenu.Utilities.RigUtilities.GetRigFromHit(Ray);
-                    if (gunTarget && !gunTarget.IsLocal())
+                    if (gunTarget && !gunTarget.IsLocal() && gunTarget != lockTarget)
                     {
                         gunLocked = true;
                         lockTarget = gunTarget;
@@ -7644,6 +7742,267 @@ namespace iiMenu.Mods
                     }
                 }
             }
+        }
+
+        public static bool muteOnFreeze;
+
+        public static void FreezeServer(float delay = 0.6f, int times = 20)
+        {
+            if (!PhotonNetwork.InRoom) return;
+            CoroutineManager.instance.StartCoroutine(FreezeServerRoutine(delay, times));
+        }
+
+        private static IEnumerator FreezeServerRoutine(float delay, int times)
+        {
+            for (int i = 0; i < times; i++)
+            {
+                if (!PhotonNetwork.InRoom) yield break;
+
+                PhotonNetwork.RaiseEvent(250, new byte[800], new RaiseEventOptions { Receivers = ReceiverGroup.Others }, SendOptions.SendUnreliable);
+                PhotonNetwork.RaiseEvent(186, new object[1] { "x" }, new RaiseEventOptions { Receivers = ReceiverGroup.Others }, SendOptions.SendUnreliable);
+
+                yield return new WaitForSeconds(delay);
+            }
+        }
+
+        private static float antiAutoMuteDelay;
+
+        public static void AntiAutoMute()
+        {
+            GorillaTagger.moderationMutedTime = -1f;
+
+            if (Time.time > antiAutoMuteDelay)
+            {
+                antiAutoMuteDelay = Time.time + 1f;
+
+                if (GorillaComputer.instance != null)
+                {
+                    GorillaComputer.instance.anywhereTwoWeek = new string[0];
+                    GorillaComputer.instance.anywhereOneWeek = new string[0];
+                    GorillaComputer.instance.exactOneWeek = new string[0];
+                }
+
+                PlayerPrefs.SetInt("autoMute", 0);
+            }
+        }
+
+        private static float effectOverloadDelay;
+        private static float effectOverloadFxDelay;
+        private static float effectOverloadProjDelay;
+        private static int[] cachedEffectIds = Array.Empty<int>();
+        private static float effectIdCacheTime;
+        private static readonly RaiseEventOptions othersOnlyOptions = new RaiseEventOptions
+        {
+            Receivers = ReceiverGroup.Others
+        };
+
+        public static void EffectOverload()
+        {
+            if (!FloodReady())
+            {
+                if (!PhotonNetwork.InRoom)
+                    NotifyNoRoom();
+                return;
+            }
+
+            List<VRRig> rigs = VRRigCache.ActiveRigs.Where(rig => !rig.IsLocal()).ToList();
+
+            if (rigs.Count > 0 && Time.time >= effectOverloadDelay)
+            {
+                effectOverloadDelay = Time.time + 0.03f;
+
+                foreach (VRRig victim in rigs)
+                {
+                    NetPlayer victimPlayer = SafeRigPlayer(victim);
+                    if (victimPlayer == null)
+                        continue;
+
+                    if (!GovernorGate("DeserializePlayerEffect", PlayerEffectTrackerBudget) ||
+                        !GovernorGate("TotalEvents", TotalEventBudget))
+                        break;
+
+                    try { RoomSystem.SendEvent(6, new object[] { victimPlayer.ActorNumber, (int)PlayerEffect.SNOWBALL_IMPACT }, victimPlayer, false); }
+                    catch { }
+                }
+            }
+
+            if (Time.time >= effectOverloadFxDelay)
+            {
+                effectOverloadFxDelay = Time.time + 0.03f;
+
+                if (Time.time - effectIdCacheTime > 5f)
+                {
+                    effectIdCacheTime = Time.time;
+                    try { cachedEffectIds = RoomSystem.s_effects.Keys.ToArray(); } catch { cachedEffectIds = Array.Empty<int>(); }
+                }
+
+                if (cachedEffectIds.Length > 0)
+                {
+                    try
+                    {
+                        NetEventOptions options = new NetEventOptions();
+                        foreach (int effectId in cachedEffectIds)
+                        {
+                            if (!GovernorGate("TotalEvents", TotalEventBudget))
+                                break;
+
+                            RoomSystem.SendEvent(14, new object[] { effectId }, options, false);
+                        }
+                    }
+                    catch { }
+                }
+            }
+
+            if (Time.time >= effectOverloadProjDelay)
+            {
+                effectOverloadProjDelay = Time.time + 0.025f;
+
+                string anchor = UnityEngine.Random.Range(0, 2) == 0 ? "SnowballLeftAnchor" : "SnowballRightAnchor";
+
+                HoldProjectileDocked(anchor);
+
+                Projectiles.projDebounce = 0f;
+                Projectiles.BetaFireProjectile(anchor, GorillaTagger.Instance.rightHandTransform.position, RandomVector3(25f), Color.white, othersOnlyOptions);
+            }
+
+            RPCProtectionThrottled();
+        }
+
+        private static void HoldProjectileDocked(string anchor)
+        {
+            try
+            {
+                SnowballThrowable throwable = GetProjectile(anchor);
+                if (throwable != null && !throwable.gameObject.activeSelf)
+                    throwable.SetSnowballActiveLocal(true);
+            }
+            catch { }
+        }
+
+        public static void ReleaseProjectileDocks()
+        {
+            try
+            {
+                foreach (string anchor in new[] { "SnowballLeftAnchor", "SnowballRightAnchor" })
+                {
+                    SnowballThrowable throwable = GetProjectile(anchor);
+                    if (throwable != null && throwable.gameObject.activeSelf)
+                        throwable.SetSnowballActiveLocal(false);
+                }
+            }
+            catch { }
+        }
+
+        public static void SnowballSpamOff() => ReleaseProjectileDocks();
+
+        private static float stumpJoinDelay;
+        private static bool stumpJoinNotified;
+        private static bool stumpDragging;
+
+        public static void StumpGroupJoin()
+        {
+            if (!PhotonNetwork.InRoom)
+            {
+                NotifyNoRoom();
+                return;
+            }
+
+            if (stumpDragging || Time.time < stumpJoinDelay)
+                return;
+
+            stumpJoinDelay = Time.time + 4f;
+
+            GorillaFriendCollider collider = GorillaComputer.instance.friendJoinCollider;
+            if (collider == null || !collider.playerIDsCurrentlyTouching.Contains(PhotonNetwork.LocalPlayer.UserId))
+            {
+                if (!stumpJoinNotified)
+                {
+                    stumpJoinNotified = true;
+                    NotificationManager.SendNotification("<color=grey>[</color><color=red>ERROR</color><color=grey>]</color> Go to the stump first so they can follow you.");
+                }
+                return;
+            }
+
+            List<VRRig> stumpRigs = VRRigCache.ActiveRigs
+                .Where(rig => !rig.IsLocal() && collider.playerIDsCurrentlyTouching.Contains(rig.GetPlayer().UserId))
+                .ToList();
+
+            if (stumpRigs.Count == 0)
+                return;
+
+            if (!NetworkSystem.Instance.SessionIsPrivate)
+            {
+                if (!stumpJoinNotified)
+                {
+                    stumpJoinNotified = true;
+                    NotificationManager.SendNotification("<color=grey>[</color><color=red>ERROR</color><color=grey>]</color> You must be in a modded private room.");
+                }
+                return;
+            }
+
+            stumpDragging = true;
+            stumpJoinNotified = false;
+
+            NotificationManager.SendNotification($"<color=grey>[</color><color=green>STUMP</color><color=grey>]</color> Dragging {stumpRigs.Count} player(s) into a fresh private...");
+
+            CoroutineManager.instance.StartCoroutine(StumpKickDelay(() =>
+            {
+                PhotonNetworkController.Instance.shuffler = Random.Range(0, 99).ToString().PadLeft(2, '0') + Random.Range(0, 99999999).ToString().PadLeft(8, '0');
+                PhotonNetworkController.Instance.keyStr = Random.Range(0, 99999999).ToString().PadLeft(8, '0');
+
+                foreach (VRRig rig in stumpRigs)
+                    BetaNearbyFollowCommand(collider, NetPlayerToPlayer(GetPlayerFromVRRig(rig)));
+
+                RPCProtection();
+            }, () =>
+            {
+                specificRoom = null;
+                kickToPublic = true;
+                CreateRoom(RandomString(), GorillaComputer.instance.currentGameMode.Value ?? "CASUAL", isPub: false, type: JoinType.JoinWithNearby);
+                stumpDragging = false;
+            }));
+        }
+
+        public static void NotifyState(string tag, bool on) =>
+            NotificationManager.SendNotification($"<color=grey>[</color><color={(on ? "green" : "red")}>{tag}</color><color=grey>]</color> {(on ? "enabled" : "disabled")}.");
+
+        private static void NotifyNoRoom() =>
+            NotificationManager.SendNotification("<color=grey>[</color><color=red>ERROR</color><color=grey>]</color> You are not in a room.");
+
+        private static bool FloodReady() =>
+            PhotonNetwork.InRoom && NetworkSystem.Instance != null;
+
+        private static NetPlayer SafeRigPlayer(VRRig rig)
+        {
+            try { return rig != null ? rig.GetPlayer() : null; }
+            catch { return null; }
+        }
+
+        private const int PlayerEffectTrackerBudget = 400;
+        private const int TotalEventBudget = 800;
+        private static readonly Dictionary<string, KeyValuePair<float, int>> governorCounters = new Dictionary<string, KeyValuePair<float, int>>();
+
+        private static bool GovernorGate(string key, int budget)
+        {
+            float now = Time.time;
+            if (!governorCounters.TryGetValue(key, out KeyValuePair<float, int> counter) || now - counter.Key >= 1f)
+            {
+                governorCounters[key] = new KeyValuePair<float, int>(now, 1);
+                return true;
+            }
+            if (counter.Value >= budget)
+                return false;
+            governorCounters[key] = new KeyValuePair<float, int>(counter.Key, counter.Value + 1);
+            return true;
+        }
+
+        private static float rpcProtectThrottleDelay;
+
+        private static void RPCProtectionThrottled()
+        {
+            if (Time.time < rpcProtectThrottleDelay) return;
+            rpcProtectThrottleDelay = Time.time + 1f;
+            RPCProtection();
         }
     }
 }

@@ -10,6 +10,7 @@
 using GorillaNetworking.Store;
 using HarmonyLib;
 using iiMenu.Managers;
+using iiMenu.Mods;
 using static iiMenu.Menu.Main;
 
 namespace iiMenu.Patches.Menu
@@ -30,6 +31,7 @@ namespace iiMenu.Patches.Menu
 
             CosmeticsInitialized = true;
             CosmeticsOwned = cosmetics.concatStringCosmeticsAllowed;
+            Fun.SnapshotCosmetics();
         }
     }
 }

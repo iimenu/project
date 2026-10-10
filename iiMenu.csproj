@@ -36,6 +36,9 @@
     <None Remove="LICENSE" />
     <None Remove="Resources\Client\*" />
     <Compile Remove="IiServersShim.cs" />
+    <Compile Remove="gtag-steamgen\**" />
+    <None Remove="gtag-steamgen\**" />
+    <EmbeddedResource Remove="gtag-steamgen\**" />
   </ItemGroup>
   <ItemGroup>
     

@@ -64,6 +64,10 @@ namespace iiMenu
             instance = this;
             Application.quitting += OnApplicationQuitting;
 
+            UnityEngine.AudioConfiguration audioConfig = UnityEngine.AudioSettings.GetConfiguration();
+            audioConfig.dspBufferSize = 1024;
+            UnityEngine.AudioSettings.Reset(audioConfig);
+
             string logoLines = PluginInfo.Logo.Split(@"
 ")
                 .Aggregate("", (current, line) => current + (System.Environment.NewLine + "     " + line));

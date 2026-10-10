@@ -396,8 +396,14 @@ namespace iiMenu.Mods
 
         public static void TagAura()
         {
-            foreach (var vrrig in VRRigCache.ActiveRigs.Where(vrrig => VRRig.LocalRig.IsTagged() && !vrrig.IsTagged() && !GTPlayer.Instance.disableMovement && Vector3.Distance(vrrig.headMesh.transform.position, GorillaTagger.Instance.bodyCollider.transform.position) < tagAuraDistance))
-                ReportTag(vrrig);
+            if (!VRRig.LocalRig.IsTagged() || GTPlayer.Instance.disableMovement) return;
+
+            foreach (var vrrig in VRRigCache.ActiveRigs)
+            {
+                if (vrrig == null || vrrig.IsLocal() || vrrig.IsTagged()) continue;
+                if (Vector3.Distance(vrrig.headMesh.transform.position, GorillaTagger.Instance.bodyCollider.transform.position) < tagAuraDistance)
+                    ReportTag(vrrig);
+            }
         }
 
         public static void GripTagAura()
@@ -408,8 +414,14 @@ namespace iiMenu.Mods
 
         public static void TagAuraPlayer(VRRig giving)
         {
-            foreach (var vrrig in from vrrig in VRRigCache.ActiveRigs let distance = Vector3.Distance(vrrig.headMesh.transform.position, giving.transform.position) where giving.IsTagged() && !vrrig.IsTagged() && !GTPlayer.Instance.disableMovement && distance < tagAuraDistance && !VRRig.LocalRig.IsLocal() && VRRig.LocalRig.IsTagged() select vrrig)
-                TagPlayer(GetPlayerFromVRRig(vrrig));
+            if (giving == null || !giving.IsTagged() || GTPlayer.Instance.disableMovement) return;
+
+            foreach (var vrrig in VRRigCache.ActiveRigs)
+            {
+                if (vrrig == null || vrrig.IsLocal() || vrrig.IsTagged()) continue;
+                if (Vector3.Distance(vrrig.headMesh.transform.position, giving.transform.position) < tagAuraDistance)
+                    TagPlayer(GetPlayerFromVRRig(vrrig));
+            }
         }
 
         public static void TagAuraGun()

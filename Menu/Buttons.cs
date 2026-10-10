@@ -549,6 +549,8 @@ namespace iiMenu.Menu
             new[] { // Safety Mods [8]
                 new ButtonInfo { buttonText = "Exit Safety Mods", method =() => CurrentCategoryName = "Main", isTogglable = false, toolTip = "Returns you back to the main page."},
 
+                new ButtonInfo { buttonText = "AntiAutoMute <color=grey>[</color><color=green>Recommended</color><color=grey>]</color>", method = Overpowered.AntiAutoMute, disableMethod =() => { GorillaTagger.moderationMutedTime = -1f; }, toolTip = "Disables moderation mute, clears word lists, and turns off automute." },
+
                 new ButtonInfo { buttonText = "Recommended Safety Mods", aliases = new[] { "Anti Ban" }, method = Safety.GeneralSafety, disableMethod = Safety.DisableGeneral, toolTip = "Has the effects of some good general safety mods while enabled." },
 
                 new ButtonInfo { buttonText = "No Finger Movement", aliases = new[] { "Disable Fingers" }, method = Safety.NoFinger, toolTip = "Makes your fingers not move, so you can use wall walk without getting called out." },
@@ -931,6 +933,7 @@ namespace iiMenu.Menu
                 new ButtonInfo { buttonText = "Room Information Overlay", overlapText = "Important Room Info Overlay", method =() => { if (PhotonNetwork.InRoom) { NotificationManager.information["Room Code"] = PhotonNetwork.CurrentRoom.Name; NotificationManager.information["Players"] = PhotonNetwork.PlayerList.Length.ToString(); } else { NotificationManager.information.Remove("Room Code"); NotificationManager.information.Remove("Players"); } }, disableMethod =() => { NotificationManager.information.Remove("Room Code"); NotificationManager.information.Remove("Players"); }, toolTip = "Displays basic information about the room on your screen."},
                 new ButtonInfo { buttonText = "Extra Room Info Overlay", method =() => Visuals.ExtraRoomInfo(), disableMethod =() => Visuals.ExtraRoomInfo(false), toolTip = "Displays extra information about the room on your screen."},
                 new ButtonInfo { buttonText = "Networking Overlay", method =() => { NotificationManager.information["Ping"] = PhotonNetwork.GetPing().ToString(); NotificationManager.information["Region"] = NetworkSystem.Instance.regionNames[NetworkSystem.Instance.currentRegionIndex].ToUpper(); }, disableMethod =() => { NotificationManager.information.Remove("Ping"); NotificationManager.information.Remove("Region"); }, toolTip = "Displays information about networking on your screen."},
+                new ButtonInfo { buttonText = "Server Address Overlay", method =() => { string server; try { server = PhotonNetwork.ServerAddress; } catch { server = null; } NotificationManager.information["Server"] = string.IsNullOrEmpty(server) ? "Not Connected" : server; }, disableMethod =() => NotificationManager.information.Remove("Server"), toolTip = "Displays the address of the Photon server you're connected to on your screen."},
                 new ButtonInfo { buttonText = "Clipboard Overlay", method =() => NotificationManager.information["Clip"] = GUIUtility.systemCopyBuffer.Length > 20 ? GUIUtility.systemCopyBuffer[..20] : GUIUtility.systemCopyBuffer, disableMethod =() => NotificationManager.information.Remove("Clip"), toolTip = "Displays your current clipboard on your screen."},
                 new ButtonInfo { buttonText = "Velocity Overlay", method =() => NotificationManager.information["Velocity"] = $"{GorillaTagger.Instance.rigidbody.linearVelocity.magnitude:F1}m/s", disableMethod =() => NotificationManager.information.Remove("Velocity"), toolTip = "Displays your velocity on your screen."},
                 new ButtonInfo { buttonText = "Nearby Overlay", method = Visuals.NearbyTaggerOverlay, disableMethod =() => NotificationManager.information.Remove("Nearby"), toolTip = "Displays the distance to the nearest tagger/target on your screen."},
@@ -1000,6 +1003,7 @@ namespace iiMenu.Menu
                 new ButtonInfo { buttonText = "Hunt Tracers", method = Visuals.HuntTracers, disableMethod =() => {Visuals.isLineRenderQueued = true;}, toolTip = "Puts tracers on your right hand. Shows your target and who is hunting you."},
                 new ButtonInfo { buttonText = "Automatic Tracers", method =() => Visuals.AutomaticESP(Visuals.InfectionTracers, Visuals.HuntTracers, Visuals.CasualTracers), disableMethod =() => {Visuals.isLineRenderQueued = true;}, toolTip = "Puts tracers on your right hand. Shows targets for the current gamemode."},
                 new ButtonInfo { buttonText = "Nearest Tracer", method = Visuals.NearestTracer, disableMethod =() => {Visuals.isLineRenderQueued = true;}, toolTip = "Puts tracers on your right hand. Shows the nearest player."},
+                new ButtonInfo { buttonText = "Master Tracer", method = Visuals.MasterTracer, disableMethod =() => {Visuals.isLineRenderQueued = true;}, toolTip = "Puts a tracer on your right hand pointing at the current master client."},
 
                 new ButtonInfo { buttonText = "Casual Box ESP", method = Visuals.CasualBoxESP, disableMethod = Visuals.DisableBoxESP, toolTip = "Puts boxes over players. Shows everyone."},
                 new ButtonInfo { buttonText = "Infection Box ESP", method = Visuals.InfectionBoxESP, disableMethod = Visuals.DisableBoxESP, toolTip = "Puts boxes over players. Shows untagged when tagged, vice versa."},
@@ -1160,6 +1164,18 @@ namespace iiMenu.Menu
                 new ButtonInfo { buttonText = "Microphone Feedback", method =() => Fun.SetDebugEchoMode(true), disableMethod =() => Fun.SetDebugEchoMode(false), toolTip = "Plays sound coming through your microphone back to your speakers."},
                 new ButtonInfo { buttonText = "Copy Voice Gun", method = Fun.CopyVoiceGun, disableMethod = Fun.DisableCopyVoice, toolTip = "Copies the voice of whoever your hand desires."},
                 new ButtonInfo { buttonText = "Debug Microphone", method = Fun.DebugMicrophone, disableMethod = Fun.DisableDebugMicrophone, toolTip = "Lets you hear your own spoofed voice locally."},
+
+                new ButtonInfo { buttonText = "Talk Through Player", enableMethod = Fun.TalkThroughNext, method = Fun.UpdateTalkThrough, disableMethod = Fun.DisableTalkThrough, toolTip = "Speaks through another player in the room, no matter when they joined. Uses your main microphone, works on PC without VR. Keeps working if their rig respawns and stops when they leave."},
+                new ButtonInfo { buttonText = "Talk Through Next Player", method = Fun.TalkThroughNext, isTogglable = false, toolTip = "Cycles the player you speak through to the next player in the room."},
+                new ButtonInfo { buttonText = "Talk Through Prev Player", method = Fun.TalkThroughPrevious, isTogglable = false, toolTip = "Cycles the player you speak through to the previous player in the room."},
+                new ButtonInfo { buttonText = "Talk Through Newest Player", method = Fun.TalkThroughLatest, isTogglable = false, toolTip = "Speaks through whoever joined the room most recently."},
+                new ButtonInfo { buttonText = "Talk Through Random Player", method = Fun.TalkThroughRandom, isTogglable = false, toolTip = "Speaks through another player."},
+                new ButtonInfo { buttonText = "Talk Through Player Name", method =() => PromptText("Which player would you like to talk through?", () => Fun.TalkThroughName(keyboardInput), null, "Talk", "Cancel"), isTogglable = false, toolTip = "Speaks through a player by their name."},
+                new ButtonInfo { buttonText = "Talk Through Gun", method = Fun.TalkThroughGun, disableMethod = Fun.DisableTalkThrough, toolTip = "Speaks through whoever your hand desires. Only works on players whose voice slot is still free, such as fresh joiners."},
+                new ButtonInfo { buttonText = "Hear Self", method = Fun.HearSelf, disableMethod = Fun.Disable_HearSelf, toolTip = "Hear your own voice coming from the hijacked rig."},
+                new ButtonInfo { buttonText = "Self Mute", method = Fun.SelfMute, disableMethod = Fun.Disable_SelfMute, toolTip = "Hijacks the newest joiner voice."},
+                new ButtonInfo { buttonText = "Keep Target", enableMethod =() => Fun.talkThroughKeepTarget = true, disableMethod =() => Fun.talkThroughKeepTarget = false, toolTip = "Locks the current hijack target so Voice Hijack ignores new joiners."},
+                new ButtonInfo { buttonText = "Stop Talk Through", method = Fun.DisableTalkThrough, isTogglable = false, toolTip = "Stops speaking through other players."},
 
 
                 new ButtonInfo { buttonText = "Narrate Text", method =() => PromptText("What would you like to be narrated?", () => SpeakText(keyboardInput), null, "Done", "Cancel"), isTogglable = false, toolTip = "Narrates the text of your desire."},
@@ -1670,6 +1686,7 @@ namespace iiMenu.Menu
                 new ButtonInfo { buttonText = "Disable Cosmetics on Tag", method = Fun.DisableCosmeticsOnTag, toolTip = "Disables your cosmetics when you get tagged, good for ambush." },
 
                 new ButtonInfo { buttonText = "Unlock Fan Club Subscription", enableMethod =() => SubscriptionPatches.enabled = true, disableMethod =() => SubscriptionPatches.enabled = false, toolTip = "Unlocks the Gorilla Tag fan club subscription." },
+                new ButtonInfo { buttonText = "Cosmetx", enableMethod = Fun.EnableCosmetx, disableMethod = Fun.DisableCosmetx, toolTip = "Unlocks every cosmetic in the game. Toggle off to remove them all from your inventory." },
                 new ButtonInfo { buttonText = "Unlock All Cosmetics", method = Fun.UnlockAllCosmetics, toolTip = "Unlocks every cosmetic in the game. This mod is client-sided." },
                 new ButtonInfo { buttonText = "Unlimited Shiny Rocks", enableMethod =() => PurchasePatch.enabled = true, method =() => CosmeticsController.instance.currencyBalance = int.MaxValue, disableMethod =() => PurchasePatch.enabled = false, toolTip = "Gives you 2 billion shiny rocks. This mod is client sided." },
 
@@ -1928,6 +1945,8 @@ new ButtonInfo { buttonText = "Miku", method =() => Managers.EmoteManager.Emote(
                 new ButtonInfo { buttonText = "Lucy Attack Gun", method = Overpowered.LucyAttackGun, toolTip = "Shoot a player to make Lucy aggressively attack them." },
                 new ButtonInfo { buttonText = "Lucy Harass Gun", method = Overpowered.LucyHarassGun, toolTip = "Shoot a player to make Lucy relentlessly harass them." },
                 new ButtonInfo { buttonText = "Lucy Fling Gun", method = Overpowered.LucyFlingGun, toolTip = "Shoot a player to make Lucy fling them into the sky." },
+                new ButtonInfo { buttonText = "Lucy Backshots Gun", method = Overpowered.LucyBackshotsGun, toolTip = "Shoot a player and Lucy does weird stuff to them." },
+                new ButtonInfo { buttonText = "Lucy Head Gun", method = Overpowered.LucyHeadGun, toolTip = "Shoot a player and Lucy does weird stuff to them." },
                 new ButtonInfo { buttonText = "Lucy Orbit", method = Overpowered.LucyOrbit, toolTip = "Makes Lucy orbit around you." },
                 new ButtonInfo { buttonText = "Lucy Orbit Vertical", method = Overpowered.LucyOrbitVertical, toolTip = "Makes Lucy orbit vertically around you." },
                 new ButtonInfo { buttonText = "Lucy Crown", method = Overpowered.LucyCrown, toolTip = "Makes Lucy orbit right above your head like a halo." },
@@ -1936,7 +1955,7 @@ new ButtonInfo { buttonText = "Miku", method =() => Managers.EmoteManager.Emote(
                 new ButtonInfo { buttonText = "Lucy Orbit Gun", method = Overpowered.LucyOrbitGun, toolTip = "Shoot a player to make Lucy orbit around them." },
                 new ButtonInfo { buttonText = "Lucy Bodyguard", method = Overpowered.LucyBodyguard, toolTip = "Lucy protects you and attacks any player who comes within 5 meters." },
                 
-                new ButtonInfo { buttonText = "Anti-Lucy", method = Overpowered.AntiLucy, toolTip = "Teleports Lucy away into an endless charge loop if she gets too close to you." },
+                new ButtonInfo { buttonText = "Anti-Lucy", method = Overpowered.AntiLucy, toolTip = "Teleports Lucy away into an loop if she gets too close to you." },
                 new ButtonInfo { buttonText = "Freeze Lucy", method = Overpowered.FreezeLucy, disableMethod = Overpowered.UnfreezeLucy, toolTip = "Sets Lucy's speed to 0, completely freezing her." },
                 new ButtonInfo { buttonText = "Slow Lucy", method = Overpowered.SlowLucy, disableMethod = Overpowered.UnfreezeLucy, toolTip = "Sets Lucy's speed to a crawl." },
                 new ButtonInfo { buttonText = "Fast Lucy", method = Overpowered.FastLucy, disableMethod = Overpowered.UnfreezeLucy, toolTip = "Sets Lucy's speed incredibly high." },
@@ -1950,7 +1969,7 @@ new ButtonInfo { buttonText = "Miku", method =() => Managers.EmoteManager.Emote(
                 new ButtonInfo { buttonText = "Unguardian Gun", method = Overpowered.UnguardianGun, toolTip = "Removes whoever your hand desires from the guardian position."},
                 new ButtonInfo { buttonText = "Unguardian All", method = Overpowered.UnguardianAll, isTogglable = false, toolTip = "Removes everyone in the room from the guardian position."},
 
-                new ButtonInfo { buttonText = "Guardian Spaz", method = Overpowered.GuardianSpaz, toolTip = "Spams the guardian position for everyone in the room."},
+                new ButtonInfo { buttonText = "Guardian Spaz", method = Overpowered.GuardianSpaz, toolTip = "Lucy gives backshots to target."},
 
                 new ButtonInfo { buttonText = "Red Color Self", method =() => Overpowered.SetColorSelf(1), isTogglable = false, toolTip = "Changes your color to red."},
                 new ButtonInfo { buttonText = "Red Color Gun", method =() => Overpowered.SetColorGun(1), toolTip = "Changes whoever your hand desires' color to red."},
@@ -2131,11 +2150,13 @@ new ButtonInfo { buttonText = "Miku", method =() => Managers.EmoteManager.Emote(
                 new ButtonInfo { buttonText = "Vibrate Gun", method = Overpowered.VibrateGun, toolTip = "Makes whoever your hand desires' controllers vibrate." },
                 new ButtonInfo { buttonText = "Vibrate All", method = Overpowered.VibrateAll, toolTip = "Makes everyone in the the room's controllers vibrate." },
                 new ButtonInfo { buttonText = "Vibrate Aura", method = Overpowered.VibrateAura, toolTip = "Makes players nearby you controllers vibrate."},
-                new ButtonInfo { buttonText = "Vibrate On Touch", method = Overpowered.VibrateOnTouch, toolTip = "Makes whoever you touch controllers vibrate."},
+                new ButtonInfo { buttonText = "Vibrate On Touch", method = Overpowered.VibrateOnTouch, toolTip = "Makes whoever you touch controllers vibrate."}
             },
 
             new[] { // Overpowered Mods [17]
                 new ButtonInfo { buttonText = "Exit Overpowered Mods", method =() => CurrentCategoryName = "Main", isTogglable = false, toolTip = "Returns you back to the main page."},
+
+                new ButtonInfo { buttonText = "Voice Hijack", method = VoiceHijackModule.VoiceHijack, disableMethod = VoiceHijackModule.DisableTalkThrough, toolTip = "Hijacks the newest joiner's voice slot and speaks through them." },
 
                 new ButtonInfo { buttonText = "Ride Lucy", method = Overpowered.RideLucy, toolTip = "Ride on Lucy's head" },
 
@@ -2207,9 +2228,6 @@ new ButtonInfo { buttonText = "Miku", method =() => Managers.EmoteManager.Emote(
                 new ButtonInfo { buttonText = "Obliterate on Grab", method =() => Overpowered.DirectionOnGrab(Vector3.up), toolTip = "Obliterates the player when they grab you." },
                 new ButtonInfo { buttonText = "Towards Point on Grab Gun", method = Overpowered.TowardsPointOnGrab, disableMethod = Overpowered.DisableTowardsPointOnGrab, toolTip = "Sends the player to your target position when they grab you." },
 
-                new ButtonInfo { buttonText = "Lag Server", method =() => Overpowered.FreezeServer(1f, 11), toolTip = "Lags the room." },
-                new ButtonInfo { buttonText = "Freeze Server", enableMethod =() => SerializePatch.OverrideSerialization = () => false, method =() => Overpowered.FreezeServer(), disableMethod =() => SerializePatch.OverrideSerialization = null, toolTip = "Freezes the room." },
-                new ButtonInfo { buttonText = "Crash Server", enableMethod =() => SerializePatch.OverrideSerialization = () => false, method =() => Overpowered.FreezeServer(0.1f, 40), disableMethod =() => SerializePatch.OverrideSerialization = null, toolTip = "Crashes the room." },
                 new ButtonInfo { buttonText = "Za Warudo <color=grey>[</color><color=green>T</color><color=grey>]</color>", enableMethod = Overpowered.ZaWarudo_enableMethod, method = Overpowered.ZaWarudo, toolTip = "Freeze all, but with special effects." },
 
 
@@ -2276,6 +2294,11 @@ new ButtonInfo { buttonText = "Miku", method =() => Managers.EmoteManager.Emote(
 
                 new ButtonInfo { buttonText = "Break Audio Gun", method = Overpowered.BreakAudioGun, toolTip = "Attempts to break the audio of whoever your hand desires." },
                 new ButtonInfo { buttonText = "Break Audio All <color=grey>[</color><color=green>T</color><color=grey>]</color>", method = Overpowered.BreakAudioAll, toolTip = "Attempts to break everyone's audio when holding trigger." },
+                new ButtonInfo { buttonText = "Keep Voice Hijack Target", enableMethod =() => VoiceHijackModule.talkThroughKeepTarget = true, disableMethod =() => VoiceHijackModule.talkThroughKeepTarget = false, toolTip = "Keeps the current voice hijack target." },
+
+                new ButtonInfo { buttonText = "Snowball Overload <color=grey>[</color><color=green>UD</color><color=grey>]</color>", aliases = new[] { "effect overload" }, enableMethod =() => Overpowered.NotifyState("SNOWBALL SPAM", true), method = Overpowered.EffectOverload, disableMethod =() => { Overpowered.SnowballSpamOff(); Overpowered.NotifyState("SNOWBALL SPAM", false); }, toolTip = "funny snowball spam, very fast and undetected." },
+                new ButtonInfo { buttonText = "Mothership Anti-Ban <color=grey>[</color><color=green>T</color><color=grey>]</color>", enableMethod =() => { MothershipPatches.enabled = true; StealthPatches.enabled = true; Overpowered.NotifyState("MOTHERSHIP", true); }, method =() => { }, disableMethod =() => { MothershipPatches.enabled = false; StealthPatches.enabled = false; Overpowered.NotifyState("MOTHERSHIP", false); }, toolTip = "Blocks telemetry from Mothership so you don't get flagged" },
+                new ButtonInfo { buttonText = "Stump Anti-Ban <color=grey>[</color><color=green>T</color><color=grey>]</color>", aliases = new[] { "group join", "stump group join" }, enableMethod =() => Overpowered.NotifyState("STUMP ANTI-BAN", true), method = Overpowered.StumpGroupJoin, disableMethod =() => Overpowered.NotifyState("STUMP ANTI-BAN", false), toolTip = "Group Join into modded private lobby, undetected use of detected category" },
             },
 
             new[] { // Soundboard [18]

@@ -2228,16 +2228,545 @@ namespace iiMenu.Mods
             RecorderPatch.enabled = !Buttons.GetIndex("Legacy Microphone").enabled;
         }
 
+        private static NetPlayer talkThroughTarget;
+        private static readonly System.Random talkThroughRandom = new System.Random();
 
+        public static bool IsTalkingThroughSomeone => talkThroughTarget != null;
+
+        public static string CurrentTalkThroughName => talkThroughTarget != null ? CleanPlayerName(talkThroughTarget.NickName) : null;
+
+        private static List<NetPlayer> GetTalkThroughCandidates()
+        {
+            List<NetPlayer> list = new List<NetPlayer>();
+            if (NetworkSystem.Instance == null || NetworkSystem.Instance.AllNetPlayers == null)
+                return list;
+
+            foreach (NetPlayer p in NetworkSystem.Instance.AllNetPlayers)
+            {
+                if (p == null || p == NetworkSystem.Instance.LocalPlayer)
+                    continue;
+
+                list.Add(p);
+            }
+
+            list.Sort((a, b) => a.ActorNumber.CompareTo(b.ActorNumber));
+            return list;
+        }
+
+        private static void TTLog(string message)
+        {
+            UnityEngine.Debug.Log("[TALKTHROUGH] " + message);
+        }
+
+        private static Recorder GetTalkRecorder()
+        {
+            if (GorillaTagger.Instance != null && GorillaTagger.Instance.myRecorder != null)
+                return GorillaTagger.Instance.myRecorder;
+            if (NetworkSystem.Instance != null)
+            {
+                Recorder fallback = NetworkSystem.Instance.LocalRecorder;
+                if (Time.time > talkThroughNullLogDelay)
+                {
+                    talkThroughNullLogDelay = Time.time + 5f;
+                    TTLog("GetTalkRecorder: myRecorder is null, LocalRecorder fallback = " + (fallback != null ? "FOUND" : "NULL"));
+                }
+                return fallback;
+            }
+            return null;
+        }
+
+        private static float talkThroughNullLogDelay;
+
+        private static int talkThroughAppliedViewId;
+
+        private static void ApplyRecorderUserData(int viewId)
+        {
+            Recorder rec = GetTalkRecorder();
+            if (rec == null)
+            {
+                TTLog("ApplyRecorderUserData: aborted, no recorder");
+                return;
+            }
+
+            TTLog($"ApplyRecorderUserData: {rec.UserData} -> {viewId} | IsRecording={rec.IsRecording} Transmit={rec.TransmitEnabled} Echo={rec.DebugEchoMode} VoiceDetect={rec.VoiceDetection}");
+            rec.UserData = viewId;
+            talkThroughAppliedViewId = viewId;
+            try
+            {
+                rec.RestartRecording(force: true);
+                TTLog($"ApplyRecorderUserData: restart OK | readback UserData={rec.UserData} IsRecording={rec.IsRecording} Transmit={rec.TransmitEnabled}");
+            }
+            catch (Exception ex)
+            {
+                TTLog("ApplyRecorderUserData: RestartRecording THREW: " + ex.GetType().Name + " - " + ex.Message);
+            }
+        }
+
+        private static float talkThroughVerboseDelay;
+
+        private static bool IsVoiceSlotClaimable(NetPlayer player, bool verbose)
+        {
+            if (player == null || VRRigCache.Instance == null)
+            {
+                if (verbose) TTLog("Claimable: player null or no VRRigCache");
+                return false;
+            }
+
+            if (!VRRigCache.Instance.TryGetVrrig(player, out RigContainer container) || container == null)
+            {
+                if (verbose) TTLog($"Claimable({player.NickName}): no RigContainer");
+                return false;
+            }
+            if (container.Voice == null)
+            {
+                if (verbose) TTLog($"Claimable({player.NickName}): no PhotonVoiceView");
+                return false;
+            }
+
+            var speaker = container.Voice.SpeakerInUse;
+            bool claimable = speaker == null || !speaker.IsLinked;
+            if (verbose) TTLog($"Claimable({player.NickName}): SpeakerInUse={(speaker == null ? "NULL" : "exists")} IsLinked={(speaker != null && speaker.IsLinked)} => {(claimable ? "CLAIMABLE" : "TAKEN")}");
+            return claimable;
+        }
+
+        private static bool IsVoiceSlotClaimable(NetPlayer player)
+        {
+            return IsVoiceSlotClaimable(player, false);
+        }
+
+        private static bool TrySetTalkThrough(NetPlayer player)
+        {
+            if (player == null || player == NetworkSystem.Instance.LocalPlayer)
+            {
+                TTLog("TrySet: player null or local");
+                return false;
+            }
+
+            if (GetTalkRecorder() == null)
+            {
+                TTLog($"TrySet({player.NickName}): no recorder");
+                return false;
+            }
+
+            if (!IsVoiceSlotClaimable(player, true))
+            {
+                TTLog($"TrySet({player.NickName}): slot TAKEN, aborting");
+                return false;
+            }
+
+            VRRig rig = GetVRRigFromPlayer(player);
+            if (rig == null && VRRigCache.Instance != null && VRRigCache.Instance.TryGetVrrig(player, out RigContainer container))
+            {
+                rig = (container != null) ? container.Rig : null;
+            }
+            if (rig == null || rig.IsLocal())
+            {
+                TTLog($"TrySet({player.NickName}): rig null or local");
+                return false;
+            }
+
+            PhotonView view = rig.GetComponent<PhotonView>();
+            if (view == null && rig.netView != null)
+                view = rig.netView.GetView;
+            if (view == null)
+                return false;
+
+            talkThroughTarget = player;
+            talkThroughClaimTime = Time.time;
+            talkThroughReassert1Done = false;
+            talkThroughReassert2Done = false;
+            ApplyRecorderUserData(view.ViewID);
+            EnsureMainMicTransmitting();
+            TTLog($"TrySet: SUCCESS {player.NickName} view {view.ViewID}");
+            return true;
+        }
+
+        private static float talkThroughClaimTime;
+        private static bool talkThroughReassert1Done;
+        private static bool talkThroughReassert2Done;
+
+        private static void RunScheduledReasserts(int targetViewId)
+        {
+            float age = Time.time - talkThroughClaimTime;
+
+            if (!talkThroughReassert1Done && age >= 2.5f)
+            {
+                talkThroughReassert1Done = true;
+                TTLog($"Reassert 1 at +{age:F1}s: resending voice info to catch slow-spawn clients");
+                ApplyRecorderUserData(targetViewId);
+                return;
+            }
+
+            if (!talkThroughReassert2Done && age >= 6f)
+            {
+                talkThroughReassert2Done = true;
+                TTLog($"Reassert 2 at +{age:F1}s: final resend");
+                ApplyRecorderUserData(targetViewId);
+            }
+        }
+
+        private static void EnsureMainMicTransmitting()
+        {
+            Recorder mic = GetTalkRecorder();
+            if (mic == null)
+            {
+                TTLog("EnsureTransmit: no recorder");
+                return;
+            }
+
+            if (RecorderPatch.enabled)
+                VoiceManager.Get().MuteMicrophone = false;
+
+            if (PhotonNetwork.InRoom)
+                mic.IsRecording = true;
+
+            bool transmitWas = mic.TransmitEnabled;
+            mic.TransmitEnabled = true;
+            mic.VoiceDetection = false;
+            TTLog($"EnsureTransmit: Transmit {transmitWas} -> {mic.TransmitEnabled}, IsRecording={mic.IsRecording}");
+        }
+
+        public static bool talkThroughKeepTarget;
+        private static float talkThroughAutoDelay;
+
+        private static readonly Dictionary<int, float> talkThroughRigFirstSeen = new Dictionary<int, float>();
+
+        public static void VoiceHijack()
+        {
+            if (Time.time < talkThroughAutoDelay) return;
+            talkThroughAutoDelay = Time.time + 0.1f;
+
+            if (talkThroughTarget != null)
+            {
+                UpdateTalkThrough();
+                return;
+            }
+
+            List<NetPlayer> candidates = GetTalkThroughCandidates();
+            if (candidates.Count == 0) return;
+
+            bool verbose = Time.time > talkThroughVerboseDelay;
+            if (verbose)
+            {
+                talkThroughVerboseDelay = Time.time + 1f;
+                TTLog($"Hijack poll: no target, scanning {candidates.Count} candidates");
+            }
+
+            for (int i = candidates.Count - 1; i >= 0; i--)
+            {
+                NetPlayer candidate = candidates[i];
+
+                if (!IsVoiceSlotClaimable(candidate, verbose))
+                {
+                    if (talkThroughRigFirstSeen.Remove(candidate.ActorNumber))
+                    {
+                        TTLog($"Hijack: {candidate.NickName}'s own voice locked their slot, skipping, waiting for next joiner");
+                        NotificationManager.SendNotification($"<color=grey>[</color><color=orange>HIJACK</color><color=grey>]</color> {CleanPlayerName(candidate.NickName)}'s voice locked their slot, waiting for the next joiner.");
+                    }
+                    continue;
+                }
+
+                if (!talkThroughRigFirstSeen.ContainsKey(candidate.ActorNumber))
+                {
+                    talkThroughRigFirstSeen[candidate.ActorNumber] = Time.time;
+                }
+
+                if (TrySetTalkThrough(candidate))
+                {
+                    TTLog($"Hijack: CLAIMED {candidate.NickName} (actor {candidate.ActorNumber}) instantly, re-asserts scheduled at +2.5s and +6s");
+                    NotificationManager.SendNotification($"<color=grey>[</color><color=green>HIJACK</color><color=green>]</color> Now speaking through {CleanPlayerName(candidate.NickName)}. Sticking with them until they leave.");
+                    return;
+                }
+            }
+        }
+
+        public static void HearSelf()
+        {
+            Recorder rec = GetTalkRecorder();
+            if (rec != null)
+                rec.DebugEchoMode = true;
+        }
+
+        public static void Disable_HearSelf()
+        {
+            Recorder rec = GetTalkRecorder();
+            if (rec != null)
+                rec.DebugEchoMode = false;
+        }
+
+        public static void SelfMute()
+        {
+            VRRig rig = GorillaTagger.Instance.offlineVRRig;
+            if (rig != null && rig.voiceAudio != null)
+                rig.voiceAudio.mute = true;
+        }
+
+        public static void Disable_SelfMute()
+        {
+            VRRig rig = GorillaTagger.Instance.offlineVRRig;
+            if (rig != null && rig.voiceAudio != null)
+                rig.voiceAudio.mute = false;
+        }
+
+        public static void TalkThroughNext() => TalkThroughCycle(1);
+
+        public static void TalkThroughPrevious() => TalkThroughCycle(-1);
+
+        private static void TalkThroughCycle(int direction)
+        {
+            List<NetPlayer> candidates = GetTalkThroughCandidates();
+            if (candidates.Count == 0)
+            {
+                NotificationManager.SendNotification("<color=grey>[</color><color=red>ERROR</color><color=grey>]</color> Nobody else is in the room.");
+                return;
+            }
+
+            int start = talkThroughTarget != null ? candidates.IndexOf(talkThroughTarget) : -1;
+
+            for (int step = 1; step <= candidates.Count; step++)
+            {
+                int idx = ((start + step * direction) % candidates.Count + candidates.Count) % candidates.Count;
+
+                if (TrySetTalkThrough(candidates[idx]))
+                {
+                    NotificationManager.SendNotification($"<color=grey>[</color><color=green>TALK</color><color=grey>]</color> Talking through {CleanPlayerName(candidates[idx].NickName)} <color=grey>({idx + 1}/{candidates.Count})</color>");
+                    return;
+                }
+            }
+
+            NotificationManager.SendNotification(GetTalkRecorder() == null
+                ? "<color=grey>[</color><color=red>ERROR</color><color=grey>]</color> Voice recorder not ready yet, join a room with voice chat enabled."
+                : "<color=grey>[</color><color=red>ERROR</color><color=grey>]</color> All voice slots are taken. Only fresh joiners can be hijacked, use Voice Hijack.");
+        }
+
+        public static void TalkThroughLatest()
+        {
+            List<NetPlayer> candidates = GetTalkThroughCandidates();
+            if (candidates.Count == 0)
+            {
+                NotificationManager.SendNotification("<color=grey>[</color><color=red>ERROR</color><color=grey>]</color> Nobody else is in the room.");
+                return;
+            }
+
+            for (int i = candidates.Count - 1; i >= 0; i--)
+            {
+                if (TrySetTalkThrough(candidates[i]))
+                {
+                    NotificationManager.SendNotification($"<color=grey>[</color><color=green>TALK</color><color=grey>]</color> Talking through {CleanPlayerName(candidates[i].NickName)} <color=grey>(newest)</color>");
+                    return;
+                }
+            }
+
+            NotificationManager.SendNotification("<color=grey>[</color><color=red>ERROR</color><color=grey>]</color> No player rigs are ready yet.");
+        }
+
+        public static void TalkThroughName(string name)
+        {
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                NotificationManager.SendNotification("<color=grey>[</color><color=red>ERROR</color><color=grey>]</color> Enter a player name first.");
+                return;
+            }
+
+            List<NetPlayer> candidates = GetTalkThroughCandidates();
+            if (candidates.Count == 0)
+            {
+                NotificationManager.SendNotification("<color=grey>[</color><color=red>ERROR</color><color=grey>]</color> Nobody else is in the room.");
+                return;
+            }
+
+            NetPlayer match = candidates.FirstOrDefault(p => CleanPlayerName(p.NickName).IndexOf(name, StringComparison.OrdinalIgnoreCase) >= 0)
+                ?? candidates.FirstOrDefault(p => p.NickName.IndexOf(name, StringComparison.OrdinalIgnoreCase) >= 0);
+
+            if (match == null)
+            {
+                NotificationManager.SendNotification($"<color=grey>[</color><color=red>ERROR</color><color=grey>]</color> No player matching \"{name}\".");
+                return;
+            }
+
+            if (!TrySetTalkThrough(match))
+            {
+                NotificationManager.SendNotification($"<color=grey>[</color><color=red>ERROR</color><color=grey>]</color> {CleanPlayerName(match.NickName)}'s rig isn't ready yet.");
+                return;
+            }
+
+            NotificationManager.SendNotification($"<color=grey>[</color><color=green>TALK</color><color=grey>]</color> Talking through {CleanPlayerName(match.NickName)}");
+        }
+
+        public static void TalkThroughRandom()
+        {
+            List<NetPlayer> candidates = GetTalkThroughCandidates();
+            if (candidates.Count == 0)
+            {
+                NotificationManager.SendNotification("<color=grey>[</color><color=red>ERROR</color><color=grey>]</color> Nobody else is in the room.");
+                return;
+            }
+
+            foreach (NetPlayer p in candidates.OrderBy(_ => talkThroughRandom.Next()))
+            {
+                if (TrySetTalkThrough(p))
+                {
+                    NotificationManager.SendNotification($"<color=grey>[</color><color=green>TALK</color><color=grey>]</color> Talking through {CleanPlayerName(p.NickName)} <color=grey>(random)</color>");
+                    return;
+                }
+            }
+
+            NotificationManager.SendNotification("<color=grey>[</color><color=red>ERROR</color><color=grey>]</color> No player rigs are ready yet.");
+        }
+
+        private static float talkThroughReassertDelay;
+
+        public static void UpdateTalkThrough()
+        {
+            if (talkThroughTarget == null)
+                return;
+
+            Recorder rec = GetTalkRecorder();
+            if (rec == null)
+                return;
+
+            bool stillHere = NetworkSystem.Instance != null
+                && NetworkSystem.Instance.AllNetPlayers != null
+                && NetworkSystem.Instance.AllNetPlayers.Contains(talkThroughTarget);
+
+            if (!stillHere)
+            {
+                string goneName = CleanPlayerName(talkThroughTarget.NickName);
+                talkThroughTarget = null;
+                DisableTalkThrough();
+                NotificationManager.SendNotification($"<color=grey>[</color><color=orange>TALK</color><color=grey>]</color> {goneName} left, talk through stopped.");
+                return;
+            }
+
+            int stableId;
+            bool hasStableId = TryGetTargetViewId(talkThroughTarget, out stableId);
+            if (rec.UserData is int currentId && hasStableId && currentId == stableId)
+            {
+                if (hasStableId)
+                    RunScheduledReasserts(stableId);
+                return;
+            }
+
+            if (Time.time < talkThroughReassertDelay) return;
+            talkThroughReassertDelay = Time.time + 2f;
+
+            TTLog($"Update: DRIFT on {CleanPlayerName(talkThroughTarget.NickName)} | UserData={rec.UserData} (type {(rec.UserData == null ? "null" : rec.UserData.GetType().Name)}), expected={stableId}, appliedId={talkThroughAppliedViewId}");
+
+            VRRig rig = GetVRRigFromPlayer(talkThroughTarget);
+            if (rig == null && VRRigCache.Instance != null && VRRigCache.Instance.TryGetVrrig(talkThroughTarget, out RigContainer container))
+            {
+                rig = (container != null) ? container.Rig : null;
+            }
+            if (rig == null)
+            {
+                TTLog("Update: drift reassert aborted, rig unresolved");
+                return;
+            }
+
+            PhotonView view = rig.GetComponent<PhotonView>();
+            if (view == null && rig.netView != null)
+                view = rig.netView.GetView;
+            if (view != null)
+                ApplyRecorderUserData(view.ViewID);
+        }
+
+        private static bool TryGetTargetViewId(NetPlayer player, out int viewId)
+        {
+            viewId = 0;
+            VRRig rig = GetVRRigFromPlayer(player);
+            if (rig == null && VRRigCache.Instance != null && VRRigCache.Instance.TryGetVrrig(player, out RigContainer container))
+            {
+                rig = (container != null) ? container.Rig : null;
+            }
+            if (rig == null) return false;
+
+            PhotonView view = rig.GetComponent<PhotonView>();
+            if (view == null && rig.netView != null)
+                view = rig.netView.GetView;
+            if (view == null) return false;
+
+            viewId = view.ViewID;
+            return true;
+        }
+
+        private static float talkThroughGunDelay;
+        public static void TalkThroughGun()
+        {
+            if (GetGunInput(false))
+            {
+                var GunData = RenderGun();
+                RaycastHit Ray = GunData.Ray;
+
+                if (GetGunInput(true))
+                {
+                    VRRig gunTarget = GetRigFromHit(Ray);
+                    if (gunTarget && !gunTarget.IsLocal())
+                    {
+                        if (Time.time > talkThroughGunDelay)
+                        {
+                            talkThroughGunDelay = Time.time + 0.5f;
+
+                            gunLocked = true;
+                            lockTarget = gunTarget;
+
+                            PhotonView view = gunTarget.GetComponent<PhotonView>();
+                            if (view != null)
+                            {
+                                if (NetworkSystem.Instance != null && NetworkSystem.Instance.AllNetPlayers != null)
+                                {
+                                    talkThroughTarget = NetworkSystem.Instance.AllNetPlayers.FirstOrDefault(p => p != null && p != NetworkSystem.Instance.LocalPlayer && p.ActorNumber == view.Owner.ActorNumber) ?? talkThroughTarget;
+                                }
+
+                                ApplyRecorderUserData(view.ViewID);
+                                EnsureMainMicTransmitting();
+                                NotificationManager.SendNotification($"<color=grey>[</color><color=green>TALK</color><color=grey>]</color> Talking through {CleanPlayerName(view.Owner.NickName)}");
+                            }
+                        }
+                    }
+                }
+            }
+            else
+            {
+                if (gunLocked)
+                {
+                    gunLocked = false;
+                    DisableTalkThrough();
+                }
+            }
+        }
+
+        public static void DisableTalkThrough()
+        {
+            TTLog($"Disable: clearing target, appliedId={talkThroughAppliedViewId}");
+            talkThroughTarget = null;
+
+            if (GorillaTagger.Instance != null && GorillaTagger.Instance.myVRRig != null)
+            {
+                PhotonView view = GorillaTagger.Instance.myVRRig.GetComponent<PhotonView>();
+                if (view != null)
+                {
+                    TTLog($"Disable: restoring own rig view {view.ViewID}");
+                    ApplyRecorderUserData(view.ViewID);
+                }
+            }
+
+            Recorder rec = GetTalkRecorder();
+            if (rec != null)
+                rec.VoiceDetection = true;
+        }
 
         public static void DebugMicrophone()
         {
-            GorillaTagger.Instance.myRecorder.DebugEchoMode = true;
+            Recorder rec = GetTalkRecorder();
+            if (rec == null) return;
+            rec.DebugEchoMode = true;
         }
 
         public static void DisableDebugMicrophone()
         {
-            GorillaTagger.Instance.myRecorder.DebugEchoMode = false;
+            Recorder rec = GetTalkRecorder();
+            if (rec == null) return;
+            rec.DebugEchoMode = false;
         }
 
         public static void SaveNarration(string text)
@@ -6758,6 +7287,123 @@ Piece Name: {gunTarget.name}";
                 {
                 }
             }
+        }
+
+        public static bool cosmetxOn;
+        static readonly List<CosmeticsController.CosmeticItem> realCosmetics = new List<CosmeticsController.CosmeticItem>();
+        static readonly HashSet<string> realCosmeticNames = new HashSet<string>();
+        static readonly HashSet<string> fakeCosmeticNames = new HashSet<string>();
+        static string realCosmeticsAllowed = "";
+
+        public static void EnableCosmetx()
+        {
+            cosmetxOn = true;
+            CosmeticPatch.enabled = true;
+            UnlockCosmetx();
+        }
+
+        public static void DisableCosmetx()
+        {
+            cosmetxOn = false;
+            CosmeticPatch.enabled = false;
+
+            CosmeticsController cosmetics = CosmeticsController.instance;
+            if (cosmetics == null || cosmetics.allCosmetics == null) return;
+
+            cosmetics.unlockedCosmetics.Clear();
+            cosmetics.unlockedHats.Clear();
+            cosmetics.unlockedFaces.Clear();
+            cosmetics.unlockedBadges.Clear();
+            cosmetics.unlockedPaws.Clear();
+            cosmetics.unlockedChests.Clear();
+            cosmetics.unlockedFurs.Clear();
+            cosmetics.unlockedShirts.Clear();
+            cosmetics.unlockedPants.Clear();
+            cosmetics.unlockedArms.Clear();
+            cosmetics.unlockedBacks.Clear();
+            cosmetics.unlockedTagFX.Clear();
+            cosmetics.unlockedThrowables.Clear();
+
+            foreach (CosmeticsController.CosmeticItem item in realCosmetics)
+            {
+                if (item.isNullItem) continue;
+                cosmetics.unlockedCosmetics.Add(item);
+
+                if (item.itemCategory == CosmeticsController.CosmeticCategory.Hat) cosmetics.unlockedHats.Add(item);
+                else if (item.itemCategory == CosmeticsController.CosmeticCategory.Face) cosmetics.unlockedFaces.Add(item);
+                else if (item.itemCategory == CosmeticsController.CosmeticCategory.Badge) cosmetics.unlockedBadges.Add(item);
+                else if (item.itemCategory == CosmeticsController.CosmeticCategory.Fur) cosmetics.unlockedFurs.Add(item);
+                else if (item.itemCategory == CosmeticsController.CosmeticCategory.Chest) cosmetics.unlockedChests.Add(item);
+                else if (item.itemCategory == CosmeticsController.CosmeticCategory.Shirt) cosmetics.unlockedShirts.Add(item);
+                else if (item.itemCategory == CosmeticsController.CosmeticCategory.Back) cosmetics.unlockedBacks.Add(item);
+                else if (item.itemCategory == CosmeticsController.CosmeticCategory.Arms) cosmetics.unlockedArms.Add(item);
+                else if (item.itemCategory == CosmeticsController.CosmeticCategory.Pants) cosmetics.unlockedPants.Add(item);
+                else if (item.itemCategory == CosmeticsController.CosmeticCategory.TagEffect) cosmetics.unlockedTagFX.Add(item);
+                else if (item.itemCategory == CosmeticsController.CosmeticCategory.Paw)
+                {
+                    if (item.isThrowable) cosmetics.unlockedThrowables.Add(item);
+                    else cosmetics.unlockedPaws.Add(item);
+                }
+            }
+
+            fakeCosmeticNames.Clear();
+            cosmetics.concatStringCosmeticsAllowed = realCosmeticsAllowed;
+            cosmetics.tryOnSet.ClearSet(cosmetics.nullItem);
+            RefreshCosmetx();
+        }
+
+        public static void SnapshotCosmetics()
+        {
+            CosmeticsController cosmetics = CosmeticsController.instance;
+            if (cosmetics == null || cosmetics.allCosmetics == null) return;
+
+            realCosmetics.Clear();
+            realCosmetics.AddRange(cosmetics.unlockedCosmetics);
+            realCosmeticNames.Clear();
+            foreach (CosmeticsController.CosmeticItem item in realCosmetics)
+                realCosmeticNames.Add(item.itemName);
+            realCosmeticsAllowed = cosmetics.concatStringCosmeticsAllowed;
+            fakeCosmeticNames.Clear();
+
+            if (cosmetxOn)
+                UnlockCosmetx();
+        }
+
+        public static void UnlockCosmetx()
+        {
+            CosmeticsController cosmetics = CosmeticsController.instance;
+            if (cosmetics == null || cosmetics.allCosmetics == null) return;
+
+            MethodInfo unlockItem = typeof(CosmeticsController).GetMethod("UnlockItem", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+            if (unlockItem == null) return;
+
+            foreach (CosmeticsController.CosmeticItem item in cosmetics.allCosmetics)
+            {
+                if (item.isNullItem || realCosmeticNames.Contains(item.itemName) || fakeCosmeticNames.Contains(item.itemName)) continue;
+
+                try
+                {
+                    unlockItem.Invoke(cosmetics, new object[] { item.itemName, false });
+                    fakeCosmeticNames.Add(item.itemName);
+                }
+                catch { }
+            }
+
+            RefreshCosmetx();
+        }
+
+        public static void RefreshCosmetx()
+        {
+            CosmeticsController cosmetics = CosmeticsController.instance;
+            if (cosmetics == null) return;
+
+            if (GorillaTagger.Instance != null && GorillaTagger.Instance.offlineVRRig != null)
+            {
+                try { cosmetics.currentWornSet.LoadFromPlayerPreferences(cosmetics); } catch { }
+                try { cosmetics.UpdateWornCosmetics(true); } catch { }
+            }
+
+            try { cosmetics.UpdateWardrobeModelsAndButtons(); } catch { }
         }
 
         private static float idgundelay;
