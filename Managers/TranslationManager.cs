@@ -159,9 +159,9 @@ namespace iiMenu.Managers
             if (translateCache.Count >= MaxCachedTranslations)
             {
                 string evicted = null;
-                foreach (string cached in translateCache.Keys)
+                foreach (string oldest in translateCache.Keys)
                 {
-                    evicted = cached;
+                    evicted = oldest;
                     break;
                 }
                 translateCache.Remove(evicted);

@@ -429,7 +429,7 @@ namespace iiMenu.Managers.DiscordRPC.RPC
 					{
 						//We have disconnected for some reason, either a failed pipe or a bad reading,
 						// so we are going to wait a bit before doing it again
-						long sleep = delay.NextDelay();
+						int sleep = delay.NextDelay();
 
 						Logger.Trace("Waiting {0}ms before attempting to connect again", sleep);
 						Thread.Sleep(sleep);
