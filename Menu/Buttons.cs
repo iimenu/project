@@ -1173,7 +1173,7 @@ namespace iiMenu.Menu
                 new ButtonInfo { buttonText = "Talk Through Player Name", method =() => PromptText("Which player would you like to talk through?", () => Fun.TalkThroughName(keyboardInput), null, "Talk", "Cancel"), isTogglable = false, toolTip = "Speaks through a player by their name."},
                 new ButtonInfo { buttonText = "Talk Through Gun", method = Fun.TalkThroughGun, disableMethod = Fun.DisableTalkThrough, toolTip = "Speaks through whoever your hand desires. Only works on players whose voice slot is still free, such as fresh joiners."},
                 new ButtonInfo { buttonText = "Hear Self", method = Fun.HearSelf, disableMethod = Fun.Disable_HearSelf, toolTip = "Hear your own voice coming from the hijacked rig."},
-                new ButtonInfo { buttonText = "Self Mute", method = Fun.SelfMute, disableMethod = Fun.Disable_SelfMute, toolTip = "Hijacks the newest joiner voice."},
+                new ButtonInfo { buttonText = "Self Mute", method = Fun.SelfMute, disableMethod = Fun.Disable_SelfMute, toolTip = "Mutes own rig's mic"},
                 new ButtonInfo { buttonText = "Keep Target", enableMethod =() => Fun.talkThroughKeepTarget = true, disableMethod =() => Fun.talkThroughKeepTarget = false, toolTip = "Locks the current hijack target so Voice Hijack ignores new joiners."},
                 new ButtonInfo { buttonText = "Stop Talk Through", method = Fun.DisableTalkThrough, isTogglable = false, toolTip = "Stops speaking through other players."},
 
