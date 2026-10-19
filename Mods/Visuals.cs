@@ -31,6 +31,7 @@ using TMPro;
 using Unity.Profiling;
 using UnityEngine;
 using UnityEngine.Rendering;
+using UnityEngine.Rendering.Universal;
 using UnityEngine.TextCore;
 using UnityEngine.UI;
 using WebSocketSharp;
@@ -6784,6 +6785,385 @@ namespace iiMenu.Mods
             HalloweenGhostChaser lucy = Overpowered.Lucy;
             if (lucy != null && lucy.skullTransform != null)
                 lucy.skullTransform.Rotate(Vector3.up * (Time.deltaTime * 720f));
+        }
+
+        private static GameObject minimapObj;
+        private static GameObject minimapCamObj;
+        private static Camera minimapCam;
+        private static RenderTexture minimapRT;
+        private static Material minimapMat;
+        private static RawImage minimapRawImg;
+        private static GameObject minimapDangerAlert;
+        private static TextMeshProUGUI minimapDangerText;
+        public static void Minimap()
+        {
+            if (Camera.main == null) return;
+            if (minimapObj == null || minimapCam == null || minimapRT == null) InitMinimap();
+
+            Camera cam = Camera.main;
+            float playerScale = scaleWithPlayer && GTPlayer.Instance != null ? GTPlayer.Instance.scale : 1f;
+            minimapObj.transform.position = cam.transform.TransformPoint(new Vector3(0.42f, 0.30f, 1.25f) * playerScale);
+            minimapObj.transform.rotation = cam.transform.rotation;
+            minimapObj.transform.localScale = Vector3.one * (0.0012f * playerScale);
+            minimapObj.layer = Buttons.GetIndex("Hidden on Camera").enabled ? 19 : 0;
+
+            Vector3 headPos = GorillaTagger.Instance.headCollider != null ? GorillaTagger.Instance.headCollider.transform.position : cam.transform.position;
+            float maxHeight = 4.8f * playerScale;
+            float targetHeight = maxHeight;
+            Vector3 rayOrigin = headPos + Vector3.up * 0.35f;
+            int ceilingMask = GTPlayer.Instance != null ? GTPlayer.Instance.locomotionEnabledLayers.value : -1;
+            if (Physics.Raycast(rayOrigin, Vector3.up, out RaycastHit ceilingHit, maxHeight - 0.35f, ceilingMask))
+                targetHeight = Mathf.Max(ceilingHit.distance + 0.35f - 0.25f, 1.2f * playerScale);
+
+            Vector3 forwardHorizontal = Vector3.ProjectOnPlane(cam.transform.forward, Vector3.up).normalized;
+            if (forwardHorizontal.sqrMagnitude < 0.001f) forwardHorizontal = Vector3.ProjectOnPlane(cam.transform.up, Vector3.up).normalized;
+            if (forwardHorizontal.sqrMagnitude < 0.001f) forwardHorizontal = Vector3.forward;
+
+            Vector3 lookDir = Vector3.Lerp(Vector3.down, forwardHorizontal, 0.12f).normalized;
+            minimapCamObj.transform.position = headPos + Vector3.up * targetHeight;
+            minimapCamObj.transform.rotation = Quaternion.LookRotation(lookDir, forwardHorizontal);
+
+            bool localInfected = VRRig.LocalRig != null && (VRRig.LocalRig.IsTagged() || VRRig.LocalRig.setMatIndex == 1 || VRRig.LocalRig.setMatIndex == 2 || (VRRig.LocalRig.mainSkin != null && VRRig.LocalRig.mainSkin.material != null && (VRRig.LocalRig.mainSkin.material.name.Contains("fected") || VRRig.LocalRig.mainSkin.material.name.Contains("lava"))));
+
+            bool dangerBehind = false;
+            float closestDangerDist = 999f;
+            string closestDangerName = string.Empty;
+
+            if (!localInfected)
+            {
+                foreach (VRRig rig in VRRigCache.ActiveRigs)
+                {
+                    if (rig == null || rig.isLocal) continue;
+                    bool isTagged = rig.IsTagged() || rig.setMatIndex == 1 || rig.setMatIndex == 2 || (rig.mainSkin != null && rig.mainSkin.material != null && (rig.mainSkin.material.name.Contains("fected") || rig.mainSkin.material.name.Contains("lava")));
+                    if (!isTagged) continue;
+
+                    Vector3 toRig = rig.transform.position - headPos;
+                    float dist = toRig.magnitude;
+                    if (dist < 14f)
+                    {
+                        float angle = Vector3.Angle(cam.transform.forward, toRig);
+                        if (angle > 75f && dist < closestDangerDist)
+                        {
+                            dangerBehind = true;
+                            closestDangerDist = dist;
+                            closestDangerName = !string.IsNullOrEmpty(rig.playerNameVisible) ? rig.playerNameVisible : (rig.creator != null && !string.IsNullOrEmpty(rig.creator.NickName) ? rig.creator.NickName : "MONKE");
+                        }
+                    }
+                }
+            }
+
+            if (minimapDangerAlert != null)
+            {
+                minimapDangerAlert.SetActive(dangerBehind);
+                if (dangerBehind && minimapDangerText != null)
+                    minimapDangerText.text = $"<b><color=red>{closestDangerName.ToUpper()} BEHIND!</color> <color=white>- {closestDangerDist:0.0}m</color></b>";
+            }
+        }
+
+        public static void DisableMinimap()
+        {
+            if (minimapObj != null)
+            {
+                Object.Destroy(minimapObj);
+                minimapObj = null;
+            }
+            if (minimapCamObj != null)
+            {
+                Object.Destroy(minimapCamObj);
+                minimapCamObj = null;
+                minimapCam = null;
+            }
+            if (minimapRT != null)
+            {
+                minimapRT.Release();
+                Object.Destroy(minimapRT);
+                minimapRT = null;
+            }
+            if (minimapMat != null)
+            {
+                Object.Destroy(minimapMat);
+                minimapMat = null;
+            }
+            minimapRawImg = null;
+            minimapDangerAlert = null;
+            minimapDangerText = null;
+        }
+
+        private static void InitMinimap()
+        {
+            if (minimapRT == null)
+            {
+                minimapRT = new RenderTexture(256, 256, 24, RenderTextureFormat.ARGB32)
+                {
+                    filterMode = FilterMode.Bilinear,
+                    wrapMode = TextureWrapMode.Clamp
+                };
+                minimapRT.Create();
+            }
+
+            if (minimapCamObj == null)
+            {
+                minimapCamObj = new GameObject("iiMenu_OverheadCam");
+                minimapCam = minimapCamObj.AddComponent<Camera>();
+                Camera main = Camera.main ?? (GorillaTagger.Instance != null && GorillaTagger.Instance.mainCamera != null ? GorillaTagger.Instance.mainCamera.GetComponent<Camera>() : null);
+                if (main != null)
+                    minimapCam.CopyFrom(main);
+                minimapCam.targetTexture = minimapRT;
+                minimapCam.stereoTargetEye = StereoTargetEyeMask.None;
+                minimapCam.depth = (main != null ? main.depth : 0f) - 10f;
+                int mask = main != null && main.cullingMask != 0 ? main.cullingMask : -1;
+                minimapCam.cullingMask = mask & ~(1 << 19) & ~(1 << 5);
+                minimapCam.clearFlags = CameraClearFlags.Color;
+                minimapCam.backgroundColor = new Color(0.08f, 0.10f, 0.14f, 1f);
+                minimapCam.nearClipPlane = 0.15f;
+                minimapCam.farClipPlane = 60f;
+                minimapCam.fieldOfView = 80f;
+
+                UniversalAdditionalCameraData camData = minimapCamObj.GetComponent<UniversalAdditionalCameraData>() ?? minimapCamObj.AddComponent<UniversalAdditionalCameraData>();
+                if (camData != null)
+                {
+                    camData.renderType = CameraRenderType.Base;
+                    camData.allowXRRendering = false;
+                    camData.renderShadows = false;
+                    camData.renderPostProcessing = false;
+                }
+            }
+
+            minimapObj = new GameObject("iiMenu_Minimap");
+            Canvas canvas = minimapObj.AddComponent<Canvas>();
+            canvas.renderMode = RenderMode.WorldSpace;
+            CanvasScaler scaler = minimapObj.AddComponent<CanvasScaler>();
+            scaler.dynamicPixelsPerUnit = 2f;
+            RectTransform rootRect = minimapObj.GetComponent<RectTransform>();
+            rootRect.sizeDelta = new Vector2(226f, 226f);
+
+            GameObject frame = new GameObject("Frame");
+            frame.transform.SetParent(minimapObj.transform, false);
+            RectTransform frameRect = frame.AddComponent<RectTransform>();
+            frameRect.sizeDelta = new Vector2(222f, 222f);
+            Image frameImg = frame.AddComponent<Image>();
+            frameImg.color = new Color32(14, 18, 24, 240);
+
+            CreateMinimapColorBar(frame.transform, new Vector2(0f, 110f), new Vector2(222f, 2f), new Color32(70, 160, 255, 200));
+            CreateMinimapColorBar(frame.transform, new Vector2(0f, -110f), new Vector2(222f, 2f), new Color32(50, 60, 75, 255));
+            CreateMinimapColorBar(frame.transform, new Vector2(-110f, 0f), new Vector2(2f, 222f), new Color32(50, 60, 75, 255));
+            CreateMinimapColorBar(frame.transform, new Vector2(110f, 0f), new Vector2(2f, 222f), new Color32(50, 60, 75, 255));
+
+            GameObject mapBox = new GameObject("MapBox");
+            mapBox.transform.SetParent(minimapObj.transform, false);
+            RectTransform mapBoxRect = mapBox.AddComponent<RectTransform>();
+            mapBoxRect.anchoredPosition = Vector2.zero;
+            mapBoxRect.sizeDelta = new Vector2(216f, 216f);
+
+            minimapRawImg = mapBox.AddComponent<RawImage>();
+            minimapMat = new Material(Shader.Find("UI/Default") ?? Shader.Find("Sprites/Default"))
+            {
+                mainTexture = minimapRT,
+                color = Color.white
+            };
+            minimapRawImg.material = minimapMat;
+            minimapRawImg.texture = minimapRT;
+
+            minimapDangerAlert = new GameObject("DangerAlert");
+            minimapDangerAlert.transform.SetParent(mapBox.transform, false);
+            RectTransform alertRect = minimapDangerAlert.AddComponent<RectTransform>();
+            alertRect.anchoredPosition = new Vector2(0f, -92f);
+            alertRect.sizeDelta = new Vector2(204f, 22f);
+            Image alertBg = minimapDangerAlert.AddComponent<Image>();
+            alertBg.color = new Color(0.6f, 0f, 0f, 0.75f);
+
+            GameObject alertTextObj = new GameObject("Text");
+            alertTextObj.transform.SetParent(minimapDangerAlert.transform, false);
+            RectTransform textRect = alertTextObj.AddComponent<RectTransform>();
+            textRect.sizeDelta = new Vector2(204f, 22f);
+            minimapDangerText = alertTextObj.AddComponent<TextMeshProUGUI>();
+            minimapDangerText.fontSize = 12;
+            minimapDangerText.enableAutoSizing = true;
+            minimapDangerText.fontSizeMin = 8;
+            minimapDangerText.fontSizeMax = 12;
+            minimapDangerText.alignment = TextAlignmentOptions.Center;
+            minimapDangerText.SafeSetFont(AgencyFB);
+            minimapDangerAlert.SetActive(false);
+        }
+
+        private static GameObject CreateMinimapColorBar(Transform parent, Vector2 pos, Vector2 size, Color color)
+        {
+            GameObject bar = new GameObject("Bar");
+            bar.transform.SetParent(parent, false);
+            RectTransform rt = bar.AddComponent<RectTransform>();
+            rt.anchoredPosition = pos;
+            rt.sizeDelta = size;
+            Image img = bar.AddComponent<Image>();
+            img.color = color;
+            return bar;
+        }
+
+        private static readonly Dictionary<VRRig, GameObject> fovCones = new Dictionary<VRRig, GameObject>();
+        private static Mesh fovConeMesh;
+        private static Material fovConeMaterial;
+
+        public static void FOVConeESP()
+        {
+            if (DoPerformanceCheck()) return;
+
+            Vector3 localPos = GorillaTagger.Instance.headCollider != null ? GorillaTagger.Instance.headCollider.transform.position : Camera.main.transform.position;
+            bool hoc = Buttons.GetIndex("Hidden on Camera").enabled;
+
+            List<VRRig> activeRigList = VRRigCache.ActiveRigs.Where(r => r != null && !r.isLocal).ToList();
+            List<VRRig> toRemove = fovCones.Keys.Where(k => !activeRigList.Contains(k) || k == null).ToList();
+            foreach (VRRig deadRig in toRemove)
+            {
+                if (fovCones.TryGetValue(deadRig, out GameObject go) && go != null)
+                    Object.Destroy(go);
+                fovCones.Remove(deadRig);
+            }
+
+            foreach (VRRig rig in activeRigList)
+            {
+                Transform head = rig.headMesh != null ? rig.headMesh.transform : rig.transform;
+                Vector3 origin = head.position;
+                Vector3 forward = head.forward;
+
+                if (!fovCones.TryGetValue(rig, out GameObject coneObj) || coneObj == null)
+                {
+                    coneObj = CreateFOVConeObject();
+                    fovCones[rig] = coneObj;
+                }
+
+                Vector3 toLocal = localPos - origin;
+                float dist = toLocal.magnitude;
+                float angle = Vector3.Angle(forward, toLocal.normalized);
+                bool inAngle = dist <= 1.1f && angle <= 25f;
+                bool inLoS = false;
+                if (inAngle)
+                    inLoS = !Physics.Raycast(origin, toLocal.normalized, dist, GTPlayer.Instance.locomotionEnabledLayers);
+                bool detected = inAngle && inLoS;
+
+                coneObj.transform.position = origin;
+                coneObj.transform.rotation = Quaternion.LookRotation(forward);
+                coneObj.layer = hoc ? 19 : 0;
+
+                Renderer r = coneObj.GetComponent<MeshRenderer>();
+                LineRenderer lr = coneObj.GetComponent<LineRenderer>();
+
+                if (detected)
+                {
+                    float pulse = 0.55f + 0.25f * Mathf.Sin(Time.time * 12f);
+                    Color alertColor = new Color(1f, 0.05f, 0.05f, pulse);
+                    r.material.color = alertColor;
+                    if (lr != null)
+                    {
+                        lr.startColor = Color.red;
+                        lr.endColor = Color.red;
+                    }
+                    LineRenderer tracer = GetLineRender();
+                    tracer.startColor = Color.red;
+                    tracer.endColor = Color.red;
+                    tracer.startWidth = 0.02f;
+                    tracer.endWidth = 0.02f;
+                    tracer.SetPosition(0, origin);
+                    tracer.SetPosition(1, localPos);
+                }
+                else
+                {
+                    Color normalColor = new Color(1f, 0.12f, 0.12f, 0.16f);
+                    r.material.color = normalColor;
+                    if (lr != null)
+                    {
+                        lr.startColor = new Color(1f, 0.2f, 0.2f, 0.35f);
+                        lr.endColor = new Color(1f, 0.2f, 0.2f, 0.35f);
+                    }
+                }
+            }
+        }
+
+        public static void DisableFOVConeESP()
+        {
+            foreach (KeyValuePair<VRRig, GameObject> kvp in fovCones)
+            {
+                if (kvp.Value != null)
+                    Object.Destroy(kvp.Value);
+            }
+            fovCones.Clear();
+            fovConeMesh = null;
+        }
+
+        private static GameObject CreateFOVConeObject()
+        {
+            GameObject coneObj = new GameObject("FOVCone");
+            MeshFilter mf = coneObj.AddComponent<MeshFilter>();
+            mf.mesh = GetOrCreateFOVConeMesh();
+
+            if (fovConeMaterial == null)
+            {
+                Shader shader = Shader.Find("Universal Render Pipeline/Unlit");
+                if (shader == null) shader = Shader.Find("GUI/Text Shader");
+                fovConeMaterial = new Material(shader);
+                fovConeMaterial.SetFloat("_Surface", 1);
+                fovConeMaterial.SetFloat("_Blend", 0);
+                fovConeMaterial.SetFloat("_SrcBlend", (float)BlendMode.SrcAlpha);
+                fovConeMaterial.SetFloat("_DstBlend", (float)BlendMode.OneMinusSrcAlpha);
+                fovConeMaterial.SetFloat("_ZWrite", 0);
+                fovConeMaterial.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+                fovConeMaterial.renderQueue = (int)RenderQueue.Transparent;
+            }
+
+            MeshRenderer mr = coneObj.AddComponent<MeshRenderer>();
+            mr.material = new Material(fovConeMaterial);
+
+            LineRenderer lr = coneObj.AddComponent<LineRenderer>();
+            lr.useWorldSpace = false;
+            lr.material = new Material(fovConeMaterial);
+            lr.startWidth = 0.004f;
+            lr.endWidth = 0.004f;
+
+            float length = 1.0f;
+            float radius = length * Mathf.Tan(24f * Mathf.Deg2Rad);
+            int segments = 16;
+            List<Vector3> pts = new List<Vector3>();
+            pts.Add(Vector3.zero);
+            for (int i = 0; i <= segments; i++)
+            {
+                float rad = ((i % segments) / (float)segments) * Mathf.PI * 2f;
+                pts.Add(new Vector3(Mathf.Cos(rad) * radius, Mathf.Sin(rad) * radius, length));
+            }
+            pts.Add(Vector3.zero);
+            lr.positionCount = pts.Count;
+            lr.SetPositions(pts.ToArray());
+
+            return coneObj;
+        }
+
+        private static Mesh GetOrCreateFOVConeMesh()
+        {
+            if (fovConeMesh != null) return fovConeMesh;
+            fovConeMesh = new Mesh();
+            float length = 1.0f;
+            float radius = length * Mathf.Tan(24f * Mathf.Deg2Rad);
+            int segments = 16;
+            Vector3[] vertices = new Vector3[segments + 1];
+            vertices[0] = Vector3.zero;
+            for (int i = 0; i < segments; i++)
+            {
+                float rad = (i / (float)segments) * Mathf.PI * 2f;
+                vertices[i + 1] = new Vector3(Mathf.Cos(rad) * radius, Mathf.Sin(rad) * radius, length);
+            }
+            int[] triangles = new int[segments * 6];
+            for (int i = 0; i < segments; i++)
+            {
+                int next = (i + 1) % segments;
+                triangles[i * 6] = 0;
+                triangles[i * 6 + 1] = i + 1;
+                triangles[i * 6 + 2] = next + 1;
+
+                triangles[i * 6 + 3] = 0;
+                triangles[i * 6 + 4] = next + 1;
+                triangles[i * 6 + 5] = i + 1;
+            }
+            fovConeMesh.vertices = vertices;
+            fovConeMesh.triangles = triangles;
+            fovConeMesh.RecalculateNormals();
+            return fovConeMesh;
         }
     }
 }

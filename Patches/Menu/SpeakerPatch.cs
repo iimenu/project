@@ -6,10 +6,11 @@
  * and modification history. Do not remove this notice.
  */
 
-﻿using HarmonyLib;
+using HarmonyLib;
 using iiMenu.Mods;
 using Photon.Voice;
 using Photon.Voice.Unity;
+using System.Collections.Generic;
 
 namespace iiMenu.Patches.Menu
 {
@@ -19,14 +20,33 @@ namespace iiMenu.Patches.Menu
         public static bool enabled;
         public static Speaker targetSpeaker;
         public static FrameOut<float> frameOut;
+        public static readonly List<float> SampleQueue = new List<float>();
+        public static readonly object locked = new object();
 
         static void Postfix(Speaker __instance, FrameOut<float> frame)
         {
             if (!enabled || targetSpeaker == null || __instance != targetSpeaker)
                 return;
 
+            var src = frame?.Buf;
+            if (src == null || src.Length == 0)
+                return;
+
             frameOut = frame;
-            Fun.ProcessFrameBuffer(frame.Buf);
+            lock (locked)
+            {
+                SampleQueue.AddRange(src);
+                int maxSamples = 48000;
+                try
+                {
+                    if (targetSpeaker.RemoteVoiceLink?.Info != null && targetSpeaker.RemoteVoiceLink.Info.SamplingRate > 0)
+                        maxSamples = targetSpeaker.RemoteVoiceLink.Info.SamplingRate;
+                }
+                catch { }
+
+                if (SampleQueue.Count > maxSamples)
+                    SampleQueue.RemoveRange(0, SampleQueue.Count - maxSamples);
+            }
         }
     }
 }

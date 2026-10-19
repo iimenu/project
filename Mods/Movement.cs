@@ -238,7 +238,7 @@ namespace iiMenu.Mods
                             leftplat = null;
                         else
                             rightplat = null;
-                        if (platformMode == 4 && rightplat == null)
+                        if (platformMode == 4 && leftplat == null && rightplat == null)
                             UpdateClipColliders(true);
 
                         break;
@@ -344,7 +344,6 @@ namespace iiMenu.Mods
                 platform.transform.position = GorillaTagger.Instance.rightHandTransform.position;
                 platform.transform.rotation = GorillaTagger.Instance.rightHandTransform.rotation;
                 Object.Destroy(platform, 1f);
-                PhotonNetwork.RaiseEvent(69, new object[] { platform.transform.position, platform.transform.rotation }, new RaiseEventOptions { Receivers = ReceiverGroup.Others }, SendOptions.SendReliable);
             }
         }
 
@@ -365,7 +364,6 @@ namespace iiMenu.Mods
                     platform.transform.position = NewPointer.transform.position;
                     platform.transform.rotation = Quaternion.Euler(Random.Range(0, 360), Random.Range(0, 360), Random.Range(0, 360));
                     Object.Destroy(platform, 1f);
-                    PhotonNetwork.RaiseEvent(69, new object[] { platform.transform.position, platform.transform.rotation }, new RaiseEventOptions { Receivers = ReceiverGroup.Others }, SendOptions.SendReliable);
                 }
             }
         }
@@ -3409,8 +3407,38 @@ namespace iiMenu.Mods
             }
         }
 
-        public static void TorsoPatch_VRRigLateUpdate() =>
-            VRRig.LocalRig.transform.rotation *= Quaternion.Euler(0f, Time.time * 180f % 360f, 0f);
+        private static float spinBotAngle;
+        public static void TorsoPatch_VRRigLateUpdate()
+        {
+            spinBotAngle += 2800f * Time.deltaTime;
+            if (spinBotAngle >= 360f)
+                spinBotAngle -= 360f;
+
+            VRRig.LocalRig.transform.position = GorillaTagger.Instance.bodyCollider.transform.position + new Vector3(0f, 0.15f, 0f);
+            VRRig.LocalRig.transform.rotation = Quaternion.Euler(0f, spinBotAngle, 0f);
+
+            VRRig.LocalRig.head.rigTarget.transform.rotation = GorillaTagger.Instance.headCollider.transform.rotation;
+
+            bool W = UnityInput.Current.GetKey(KeyCode.W);
+            bool A = UnityInput.Current.GetKey(KeyCode.A);
+            bool S = UnityInput.Current.GetKey(KeyCode.S);
+            bool D = UnityInput.Current.GetKey(KeyCode.D);
+
+            float speed = FlySpeed;
+            Transform head = GorillaTagger.Instance.headCollider.transform;
+
+            if (W) GorillaTagger.Instance.rigidbody.transform.position += head.forward * (Time.deltaTime * speed);
+            if (S) GorillaTagger.Instance.rigidbody.transform.position -= head.forward * (Time.deltaTime * speed);
+            if (A) GorillaTagger.Instance.rigidbody.transform.position -= head.right * (Time.deltaTime * speed);
+            if (D) GorillaTagger.Instance.rigidbody.transform.position += head.right * (Time.deltaTime * speed);
+
+            Vector2 joy = leftJoystick;
+            if (Mathf.Abs(joy.x) > 0.1f || Mathf.Abs(joy.y) > 0.1f)
+            {
+                GorillaTagger.Instance.rigidbody.transform.position +=
+                    (head.forward * joy.y + head.right * joy.x) * (Time.deltaTime * speed);
+            }
+        }
 
         public static void Fan()
         {
@@ -3643,6 +3671,195 @@ namespace iiMenu.Mods
 
         public static void DisableFloatingRig() =>
             VRRig.LocalRig.head.trackingPositionOffset = offsetH;
+
+        public static bool weepingRigActive;
+        public static int weepingRigTimeIndex = 2;
+        public static readonly float[] weepingRigTimes = new[] { 0f, 1f, 3f, 5f };
+        public static readonly string[] weepingRigTimeNames = new[] { "Instant", "1s", "3s", "5s" };
+        private static float weepingObservedTime;
+        private static float weepingUnobservedTime;
+        private static Vector3 weepingFrozenRigPos;
+        private static Quaternion weepingFrozenRigRot;
+        private static Vector3 weepingFrozenHeadPos;
+        private static Quaternion weepingFrozenHeadRot;
+        private static Vector3 weepingFrozenLeftHandPos;
+        private static Quaternion weepingFrozenLeftHandRot;
+        private static Vector3 weepingFrozenRightHandPos;
+        private static Quaternion weepingFrozenRightHandRot;
+
+        public static void ChangeWeepingRigTime(bool positive = true)
+        {
+            if (positive)
+                weepingRigTimeIndex++;
+            else
+                weepingRigTimeIndex--;
+
+            weepingRigTimeIndex %= weepingRigTimes.Length;
+            if (weepingRigTimeIndex < 0)
+                weepingRigTimeIndex = weepingRigTimes.Length - 1;
+
+            Buttons.GetIndex("Change Weeping Rig Time").overlapText = "Change Weeping Rig Time <color=grey>[</color><color=green>" + weepingRigTimeNames[weepingRigTimeIndex] + "</color><color=grey>]</color>";
+        }
+
+        public static void WeepingRig()
+        {
+            if (VRRig.LocalRig == null)
+                return;
+
+            Vector3 checkTargetPos = weepingRigActive ? weepingFrozenHeadPos : (VRRig.LocalRig.headMesh != null ? VRRig.LocalRig.headMesh.transform.position : (VRRig.LocalRig.head != null && VRRig.LocalRig.head.rigTarget != null ? VRRig.LocalRig.head.rigTarget.transform.position : VRRig.LocalRig.transform.position));
+
+            bool someoneLooking = false;
+            if (VRRigCache.ActiveRigs != null)
+            {
+                foreach (VRRig rig in VRRigCache.ActiveRigs)
+                {
+                    if (rig == null || rig.isLocal || rig.isOfflineVRRig || !rig.enabled)
+                        continue;
+
+                    Vector3 observerHead = rig.headMesh != null ? rig.headMesh.transform.position : rig.transform.position;
+                    Vector3 toTarget = checkTargetPos - observerHead;
+                    float distance = toTarget.magnitude;
+                    if (distance > 45f || distance < 0.1f)
+                        continue;
+
+                    Vector3 observerForward = rig.headMesh != null ? rig.headMesh.transform.forward : rig.transform.forward;
+                    if (Vector3.Angle(observerForward, toTarget) < 55f)
+                    {
+                        Vector3 dir = toTarget.normalized;
+                        float startOffset = 0.35f;
+                        float stopOffset = 0.35f;
+                        if (distance <= startOffset + stopOffset)
+                        {
+                            someoneLooking = true;
+                            break;
+                        }
+
+                        int layerMask = GTPlayer.Instance != null ? (int)GTPlayer.Instance.locomotionEnabledLayers : NoInvisLayerMask();
+                        if (!Physics.Raycast(observerHead + dir * startOffset, dir, distance - (startOffset + stopOffset), layerMask))
+                        {
+                            someoneLooking = true;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            float requiredTime = weepingRigTimes[weepingRigTimeIndex];
+
+            if (!weepingRigActive)
+            {
+                if (someoneLooking)
+                {
+                    weepingObservedTime += Time.deltaTime;
+                    if (weepingObservedTime >= requiredTime)
+                    {
+                        weepingRigActive = true;
+                        weepingUnobservedTime = 0f;
+                        weepingFrozenRigPos = VRRig.LocalRig.transform.position;
+                        weepingFrozenRigRot = VRRig.LocalRig.transform.rotation;
+
+                        Vector3 fwd = weepingFrozenRigRot * Vector3.forward;
+                        Vector3 up = weepingFrozenRigRot * Vector3.up;
+                        Vector3 right = weepingFrozenRigRot * Vector3.right;
+
+                        weepingFrozenHeadPos = VRRig.LocalRig.headMesh != null ? VRRig.LocalRig.headMesh.transform.position : (weepingFrozenRigPos + up * 0.38f + fwd * 0.12f);
+                        weepingFrozenHeadRot = weepingFrozenRigRot * Quaternion.Euler(20f, 0f, 0f);
+
+                        Vector3 faceCenter = weepingFrozenHeadPos + fwd * 0.15f - up * 0.02f;
+                        weepingFrozenLeftHandPos = faceCenter - right * 0.07f + fwd * 0.02f;
+                        weepingFrozenRightHandPos = faceCenter + right * 0.07f + fwd * 0.02f;
+
+                        weepingFrozenLeftHandRot = weepingFrozenRigRot * Quaternion.Euler(-75f, 160f, 180f);
+                        weepingFrozenRightHandRot = weepingFrozenRigRot * Quaternion.Euler(-75f, 200f, 180f);
+
+                        VRRig.LocalRig.enabled = false;
+                    }
+                }
+                else
+                    weepingObservedTime = 0f;
+            }
+            else
+            {
+                if (someoneLooking)
+                {
+                    weepingUnobservedTime = 0f;
+                    ApplyWeepingRigPose();
+                }
+                else
+                {
+                    weepingUnobservedTime += Time.deltaTime;
+                    if (weepingUnobservedTime >= 0.35f)
+                    {
+                        TeleportPlayer(weepingFrozenRigPos);
+                        if (GorillaTagger.Instance != null && GorillaTagger.Instance.rigidbody != null)
+                            GorillaTagger.Instance.rigidbody.linearVelocity = Vector3.zero;
+
+                        VRRig.LocalRig.enabled = true;
+                        weepingRigActive = false;
+                        weepingObservedTime = 0f;
+                        weepingUnobservedTime = 0f;
+                    }
+                    else
+                        ApplyWeepingRigPose();
+                }
+            }
+        }
+
+        private static void ApplyWeepingRigPose()
+        {
+            VRRig.LocalRig.transform.position = weepingFrozenRigPos;
+            VRRig.LocalRig.transform.rotation = weepingFrozenRigRot;
+
+            if (VRRig.LocalRig.head != null && VRRig.LocalRig.head.rigTarget != null)
+            {
+                VRRig.LocalRig.head.rigTarget.transform.position = weepingFrozenHeadPos;
+                VRRig.LocalRig.head.rigTarget.transform.rotation = weepingFrozenHeadRot;
+            }
+            if (VRRig.LocalRig.leftHand != null && VRRig.LocalRig.leftHand.rigTarget != null)
+            {
+                VRRig.LocalRig.leftHand.rigTarget.transform.position = weepingFrozenLeftHandPos;
+                VRRig.LocalRig.leftHand.rigTarget.transform.rotation = weepingFrozenLeftHandRot;
+            }
+            if (VRRig.LocalRig.rightHand != null && VRRig.LocalRig.rightHand.rigTarget != null)
+            {
+                VRRig.LocalRig.rightHand.rigTarget.transform.position = weepingFrozenRightHandPos;
+                VRRig.LocalRig.rightHand.rigTarget.transform.rotation = weepingFrozenRightHandRot;
+            }
+
+            if (VRRig.LocalRig.leftHandTransform != null)
+            {
+                VRRig.LocalRig.leftHandTransform.position = weepingFrozenLeftHandPos;
+                VRRig.LocalRig.leftHandTransform.rotation = weepingFrozenLeftHandRot;
+            }
+            if (VRRig.LocalRig.rightHandTransform != null)
+            {
+                VRRig.LocalRig.rightHandTransform.position = weepingFrozenRightHandPos;
+                VRRig.LocalRig.rightHandTransform.rotation = weepingFrozenRightHandRot;
+            }
+
+            if (VRRig.LocalRig.leftIndex != null) { VRRig.LocalRig.leftIndex.calcT = 0.85f; VRRig.LocalRig.leftIndex.LerpFinger(1f, false); }
+            if (VRRig.LocalRig.rightIndex != null) { VRRig.LocalRig.rightIndex.calcT = 0.85f; VRRig.LocalRig.rightIndex.LerpFinger(1f, false); }
+            if (VRRig.LocalRig.leftMiddle != null) { VRRig.LocalRig.leftMiddle.calcT = 0.85f; VRRig.LocalRig.leftMiddle.LerpFinger(1f, false); }
+            if (VRRig.LocalRig.rightMiddle != null) { VRRig.LocalRig.rightMiddle.calcT = 0.85f; VRRig.LocalRig.rightMiddle.LerpFinger(1f, false); }
+            if (VRRig.LocalRig.leftThumb != null) { VRRig.LocalRig.leftThumb.calcT = 0.85f; VRRig.LocalRig.leftThumb.LerpFinger(1f, false); }
+            if (VRRig.LocalRig.rightThumb != null) { VRRig.LocalRig.rightThumb.calcT = 0.85f; VRRig.LocalRig.rightThumb.LerpFinger(1f, false); }
+        }
+
+        public static void DisableWeepingRig()
+        {
+            if (weepingRigActive)
+            {
+                TeleportPlayer(weepingFrozenRigPos);
+                if (GorillaTagger.Instance != null && GorillaTagger.Instance.rigidbody != null)
+                    GorillaTagger.Instance.rigidbody.linearVelocity = Vector3.zero;
+            }
+            if (VRRig.LocalRig != null)
+                VRRig.LocalRig.enabled = true;
+
+            weepingRigActive = false;
+            weepingObservedTime = 0f;
+            weepingUnobservedTime = 0f;
+        }
 
         public static float beesDelay;
         public static void Bees()
@@ -4204,6 +4421,168 @@ namespace iiMenu.Mods
 
         public static bool passWorldScaleCheck;
         public static Vector3? lastFramePosition;
+
+        public static float worldScale = 1f;
+
+        private static int worldScaleCycle;
+        private static readonly float[] worldScaleAmounts = { 0.1f, 0.25f, 0.5f, 0.75f, 1f, 1.25f, 1.5f, 2f, 2.5f, 3f };
+        private static readonly string[] worldScaleNames = { "0.1x", "0.25x", "0.5x", "0.75x", "1.0x", "1.25x", "1.5x", "2.0x", "2.5x", "3.0x" };
+
+        public static void WorldScale()
+        {
+            if (GTPlayer.Instance == null || VRRig.LocalRig == null)
+                return;
+
+            GTPlayer.Instance.transform.localScale = Vector3.one * (VRRig.LocalRig.NativeScale * worldScale);
+        }
+
+        public static void DisableWorldScale()
+        {
+            if (GTPlayer.Instance != null && VRRig.LocalRig != null)
+                GTPlayer.Instance.transform.localScale = Vector3.one * VRRig.LocalRig.NativeScale;
+        }
+
+        public static void ChangeWorldScale(bool positive = true)
+        {
+            if (positive)
+                worldScaleCycle++;
+            else
+                worldScaleCycle--;
+
+            worldScaleCycle %= worldScaleAmounts.Length;
+            if (worldScaleCycle < 0)
+                worldScaleCycle += worldScaleAmounts.Length;
+
+            worldScale = worldScaleAmounts[worldScaleCycle];
+
+            ButtonInfo amountButton = Buttons.GetIndex("Change World Scale");
+            if (amountButton != null)
+                amountButton.overlapText = $"Change World Scale <color=grey>[</color><color=green>{worldScaleNames[worldScaleCycle]}</color><color=grey>]</color>";
+        }
+
+        private const float FlipDuration = 0.85f;
+        private const float FlipCooldown = 0.2f;
+
+        private sealed class FlipState
+        {
+            public bool active;
+            public float start;
+            public Quaternion baseRot;
+            public Vector3 axis;
+            public float dir;
+        }
+
+        private static readonly FlipState backflipState = new FlipState();
+        private static readonly FlipState frontflipState = new FlipState();
+        private static bool backflipWasPressed;
+        private static bool frontflipWasPressed;
+        private static float lastFlipTime = -1f;
+
+        public static void Backflip()
+        {
+            TryFlip(ref backflipWasPressed, leftTrigger > 0.5f, -1f, backflipState, frontflipState);
+            UpdateFlip(backflipState);
+        }
+
+        public static void Frontflip()
+        {
+            TryFlip(ref frontflipWasPressed, rightTrigger > 0.5f, 1f, frontflipState, backflipState);
+            UpdateFlip(frontflipState);
+        }
+
+        public static void DisableBackflip()
+        {
+            CancelFlip(backflipState);
+            backflipWasPressed = false;
+        }
+
+        public static void DisableFrontflip()
+        {
+            CancelFlip(frontflipState);
+            frontflipWasPressed = false;
+        }
+
+        private static void TryFlip(ref bool wasPressed, bool pressed, float dir, FlipState state, FlipState other)
+        {
+            GTPlayer gtPlayer = GTPlayer.Instance;
+            if (gtPlayer == null || gtPlayer.playerRigidBody == null)
+            {
+                wasPressed = pressed;
+                return;
+            }
+
+            if (Time.time - lastFlipTime < FlipCooldown)
+            {
+                wasPressed = pressed;
+                return;
+            }
+
+            if (pressed && !wasPressed && !state.active)
+            {
+                CancelFlip(other);
+                StartFlip(state, dir, gtPlayer);
+            }
+
+            wasPressed = pressed;
+        }
+
+        private static void StartFlip(FlipState state, float dir, GTPlayer gtPlayer)
+        {
+            lastFlipTime = Time.time;
+
+            Vector3 forward = gtPlayer.headCollider.transform.forward;
+            forward.y = 0f;
+            if (forward.sqrMagnitude < 0.01f)
+            {
+                forward = gtPlayer.playerRigidBody.rotation * Vector3.forward;
+                forward.y = 0f;
+            }
+            forward.Normalize();
+
+            state.active = true;
+            state.start = Time.time;
+            state.baseRot = gtPlayer.playerRigidBody.rotation;
+            state.axis = Vector3.Cross(forward, Vector3.up).normalized;
+            state.dir = dir;
+        }
+
+        private static void UpdateFlip(FlipState state)
+        {
+            if (!state.active)
+                return;
+
+            GTPlayer gtPlayer = GTPlayer.Instance;
+            if (gtPlayer == null || gtPlayer.playerRigidBody == null)
+            {
+                state.active = false;
+                return;
+            }
+
+            float t = (Time.time - state.start) / FlipDuration;
+            if (t >= 1f)
+            {
+                state.active = false;
+                Quaternion finalRotation = state.baseRot;
+                GTPlayerTransform.ApplyRotationOverride(in finalRotation, Time.frameCount);
+                return;
+            }
+
+            float smooth = t * t * (3f - 2f * t);
+            float eased = Mathf.Lerp(t, smooth, 0.5f);
+            Quaternion rotation = Quaternion.AngleAxis(state.dir * 360f * eased, state.axis) * state.baseRot;
+            GTPlayerTransform.ApplyRotationOverride(in rotation, Time.frameCount);
+        }
+
+        private static void CancelFlip(FlipState state)
+        {
+            if (!state.active)
+                return;
+
+            state.active = false;
+            Quaternion rotation = state.baseRot;
+            GTPlayerTransform.ApplyRotationOverride(in rotation, Time.frameCount);
+        }
+
         public static void EnableSteamLongArms()
         {
             if (GTPlayer.Instance == null || VRRig.LocalRig == null)
@@ -4562,67 +4941,77 @@ namespace iiMenu.Mods
         private static GameObject airSwimTemplate;
         private static float nextAirSwimLookup;
         private static bool airSwimLookupFailed;
+        private static bool airSwimMoved;
+        private static Vector3 airSwimOriginalPosition;
+        private static Vector3 airSwimOriginalScale;
+        private static readonly List<Renderer> airSwimRenderers = new List<Renderer>();
 
         public static void AirSwim()
         {
             if (GorillaTagger.Instance == null || GorillaTagger.Instance.headCollider == null || GTPlayer.Instance == null)
                 return;
 
-            if (airSwimPart == null)
+            if (airSwimTemplate == null && Time.time >= nextAirSwimLookup)
             {
-                if (airSwimTemplate == null && Time.time >= nextAirSwimLookup)
-                {
-                    nextAirSwimLookup = Time.time + 2f;
-                    airSwimTemplate = GetObject("Environment Objects/LocalObjects_Prefab/ForestToBeach/ForestToBeach_Prefab_V4/CaveWaterVolume");
-
-                    if (airSwimTemplate == null)
-                    {
-                        WaterVolume waterVolume = GetAllType<WaterVolume>().FirstOrDefault();
-                        airSwimTemplate = waterVolume != null ? waterVolume.gameObject : null;
-                    }
-
-                    if (airSwimTemplate == null && !airSwimLookupFailed)
-                    {
-                        airSwimLookupFailed = true;
-                        NotificationManager.SendNotification("<color=grey>[</color><color=red>ERROR</color><color=grey>]</color> Air Swim could not find a water volume in this game scene.", 5000);
-                    }
-                }
+                nextAirSwimLookup = Time.time + 2f;
+                airSwimTemplate = GetObject("Environment Objects/LocalObjects_Prefab/ForestToBeach/ForestToBeach_Prefab_V4/CaveWaterVolume");
 
                 if (airSwimTemplate == null)
-                    return;
+                {
+                    WaterVolume waterVolume = GetAllType<WaterVolume>().FirstOrDefault();
+                    airSwimTemplate = waterVolume != null ? waterVolume.gameObject : null;
+                }
 
-                try
+                if (airSwimTemplate == null && !airSwimLookupFailed)
                 {
-                    airSwimPart = Object.Instantiate(airSwimTemplate);
-                    airSwimPart.name = "iiMenu Air Swim Volume";
-                    airSwimPart.transform.localScale = new Vector3(5f, 5f, 5f);
-                    foreach (Renderer renderer in airSwimPart.GetComponentsInChildren<Renderer>(true))
-                        renderer.enabled = false;
+                    airSwimLookupFailed = true;
+                    NotificationManager.SendNotification("<color=grey>[</color><color=red>ERROR</color><color=grey>]</color> Air Swim could not find a water volume in this game scene.", 5000);
                 }
-                catch (Exception exception)
+            }
+
+            if (airSwimTemplate == null)
+                return;
+
+            if (!airSwimMoved)
+            {
+                airSwimMoved = true;
+                airSwimOriginalPosition = airSwimTemplate.transform.position;
+                airSwimOriginalScale = airSwimTemplate.transform.localScale;
+                airSwimTemplate.SetActive(true);
+
+                airSwimRenderers.Clear();
+                foreach (Renderer renderer in airSwimTemplate.GetComponentsInChildren<Renderer>(true))
                 {
-                    airSwimPart = null;
-                    if (!airSwimLookupFailed)
-                    {
-                        airSwimLookupFailed = true;
-                        LogManager.LogError("Air Swim could not create its water volume: " + exception.Message);
-                    }
-                    return;
+                    if (renderer == null) continue;
+                    renderer.enabled = false;
+                    airSwimRenderers.Add(renderer);
                 }
+
+                airSwimTemplate.transform.localScale = new Vector3(5f, 5f, 5f);
             }
 
             if (GTPlayer.Instance.audioManager != null)
                 GTPlayer.Instance.audioManager.UnsetMixerSnapshot();
 
-            airSwimPart.transform.position = GorillaTagger.Instance.headCollider.transform.position + new Vector3(0f, 2.5f, 0f);
+            airSwimTemplate.transform.position = GorillaTagger.Instance.headCollider.transform.position + new Vector3(0f, 2.5f, 0f);
         }
 
         public static void DisableAirSwim()
         {
-            if (airSwimPart != null)
-                Object.Destroy(airSwimPart);
+            if (airSwimTemplate != null && airSwimMoved)
+            {
+                airSwimTemplate.transform.position = airSwimOriginalPosition;
+                airSwimTemplate.transform.localScale = airSwimOriginalScale;
 
-            airSwimPart = null;
+                foreach (Renderer renderer in airSwimRenderers)
+                {
+                    if (renderer != null)
+                        renderer.enabled = true;
+                }
+                airSwimRenderers.Clear();
+            }
+
+            airSwimMoved = false;
             airSwimTemplate = null;
             airSwimLookupFailed = false;
             nextAirSwimLookup = 0f;

@@ -698,24 +698,55 @@ namespace iiMenu.Mods
             NotificationManager.ClearAllNotifications();
         }
 
-        public static void ClearAllKeybinds()
+        private static readonly (string name, string bind)[] KeybindOptions = new[]
         {
-            foreach (KeyValuePair<string, List<string>> bind in ModBindings)
-            {
-                foreach (string modName in bind.Value)
-                    Buttons.GetIndex(modName).customBind = null;
+            ("Keybind A", "A"),
+            ("Keybind B", "B"),
+            ("Keybind X", "X"),
+            ("Keybind Y", "Y"),
+            ("Keybind Left Grip", "LG"),
+            ("Keybind Right Grip", "RG"),
+            ("Keybind Left Trigger", "LT"),
+            ("Keybind Right Trigger", "RT"),
+            ("Keybind Left Joystick", "LJ"),
+            ("Keybind Right Joystick", "RJ")
+        };
 
-                bind.Value.Clear();
+        public static void UpdateKeybindButtons()
+        {
+            string current = string.IsNullOrEmpty(BindInput) ? "A" : BindInput;
+            foreach ((string name, string bind) in KeybindOptions)
+            {
+                ButtonInfo btn = Buttons.GetIndex(name);
+                if (btn != null)
+                    btn.overlapText = bind == current ? $"{name} <color=grey>[</color><color=green>ACTIVE</color><color=grey>]</color>" : null;
             }
         }
 
-        public static void StartBind(string bind)
+        public static void SelectBind(string bind)
         {
-            if (IsRebinding)
-                return;
-            IsBinding = true;
             BindInput = bind;
+            IsBinding = true;
+            UpdateKeybindButtons();
+            VRRig.LocalRig.PlayHandTapLocal(50, rightHand, 0.4f);
+            NotificationManager.SendNotification($"<color=grey>[</color><color=purple>BINDS</color><color=grey>]</color> Selected <color=green>{bind}</color>. Hold thumbstick (VR) or B (PC) on any mod to bind.");
         }
+
+        public static void ClearAllKeybinds()
+        {
+            foreach (ButtonInfo[] list in Buttons.buttons)
+            {
+                foreach (ButtonInfo btn in list)
+                    btn.customBind = null;
+            }
+            foreach (List<string> bindList in ModBindings.Values)
+                bindList.Clear();
+            VRRig.LocalRig.PlayHandTapLocal(48, rightHand, 0.4f);
+            NotificationManager.SendNotification("<color=grey>[</color><color=purple>BINDS</color><color=grey>]</color> Cleared all keybinds.");
+        }
+
+        public static void StartBind(string bind) => SelectBind(bind);
+
         public static void StartRebind(string bind)
         {
             if (IsBinding)
@@ -7074,9 +7105,12 @@ exit 0";
         public static void Panic()
         {
             AnnoyingModeOff();
-            foreach (ButtonInfo[] buttonlist in Buttons.buttons)
+            for (int categoryIndex = 0; categoryIndex < Buttons.buttons.Length; categoryIndex++)
             {
-                foreach (ButtonInfo v in buttonlist)
+                if (categoryIndex < Buttons.categoryNames.Length && Buttons.categoryNames[categoryIndex].Contains("Settings"))
+                    continue;
+
+                foreach (ButtonInfo v in Buttons.buttons[categoryIndex])
                 {
                     if (v.enabled)
                         Toggle(v.buttonText);

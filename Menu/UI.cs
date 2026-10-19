@@ -858,7 +858,9 @@ namespace iiMenu.Menu
                         {
                             if (!button.enabled || button.hideFromArraylist || (hideSettings && (!hideSettings ||
                                                                      Buttons.categoryNames[categoryIndex]
-                                                                         .Contains("Settings")))) continue;
+                                                                         .Contains("Settings"))) ||
+                                (onlyModsArraylist && categoryIndex < Buttons.categoryNames.Length &&
+                                 Buttons.categoryNames[categoryIndex].Contains("Settings"))) continue;
                             string buttonText = button.overlapText ?? button.buttonText;
 
                             if (inputTextColor != "green")

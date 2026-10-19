@@ -1708,9 +1708,15 @@ namespace iiMenu.Mods
             GRPlayer GRPlayer = GRPlayer.Get(Target.ActorNumber);
             VRRig Rig = GetVRRigFromPlayer(Target);
 
+            if (!NetworkSystem.Instance.IsMasterClient)
+            {
+                NotificationManager.SendNotification("<color=grey>[</color><color=red>ERROR</color><color=grey>]</color> Requires Ghost Reactor authority.");
+                yield break;
+            }
+
             int netId = ManagerRegistry.GhostReactor.GameEntityManager.CreateTypeNetId(Overpowered.ObjectByName["GhostReactorEnemyChaserArmored"]);
 
-            ManagerRegistry.GhostReactor.GameEntityManager.photonView.RPC("CreateItemRPC", Target, new[] { netId }, new[] { (int)ManagerRegistry.GhostReactor.GameEntityManager.zone }, new[] { Overpowered.ObjectByName["GhostReactorEnemyChaserArmored"] }, new[] { BitPackUtils.PackWorldPosForNetwork(Rig.transform.position) }, new[] { BitPackUtils.PackQuaternionForNetwork(Rig.transform.rotation) }, new[] { 0L }, new[] { 0 });
+            ManagerRegistry.GhostReactor.GameEntityManager.photonView.RPC("CreateItemRPC", Target, new[] { netId }, new[] { Overpowered.ObjectByName["GhostReactorEnemyChaserArmored"] }, new[] { BitPackUtils.PackWorldPosForNetwork(Rig.transform.position) }, new[] { BitPackUtils.PackQuaternionForNetwork(Rig.transform.rotation) }, new[] { 0L }, new[] { 0 });
 
             ManagerRegistry.GhostReactor.GhostReactorManager.gameAgentManager.photonView.RPC("ApplyBehaviorRPC", Target, new[] { netId }, new byte[] { 6 });
 
@@ -1857,31 +1863,39 @@ namespace iiMenu.Mods
 
         public class LoopbackFactory : IAudioReader<float>
         {
-            private readonly Queue<float> buffer = new Queue<float>();
-
             public void Feed(float[] data)
             {
-                foreach (var sample in data)
-                    buffer.Enqueue(sample);
+                lock (SpeakerPatch.locked)
+                {
+                    foreach (var sample in data)
+                        SpeakerPatch.SampleQueue.Add(sample);
+                }
             }
 
             public bool Read(float[] bufferOut)
             {
-                if (buffer.Count < bufferOut.Length)
-                    return false;
+                lock (SpeakerPatch.locked)
+                {
+                    if (SpeakerPatch.SampleQueue.Count < bufferOut.Length)
+                        return false;
 
-                for (int i = 0; i < bufferOut.Length; i++)
-                    bufferOut[i] = buffer.Dequeue();
+                    for (int i = 0; i < bufferOut.Length; i++)
+                        bufferOut[i] = SpeakerPatch.SampleQueue[i];
 
-                return true;
+                    SpeakerPatch.SampleQueue.RemoveRange(0, bufferOut.Length);
+                    return true;
+                }
             }
 
             public int SamplingRate => 16000;
             public int Channels => 1;
             public string Error => null;
 
-            public void Dispose() =>
-                buffer.Clear();
+            public void Dispose()
+            {
+                lock (SpeakerPatch.locked)
+                    SpeakerPatch.SampleQueue.Clear();
+            }
         }
 
         public static void SetMicrophoneQuality(int bitrate, int samplingRate)
@@ -2142,6 +2156,7 @@ namespace iiMenu.Mods
 
         private static LoopbackFactory factory;
         private static float copyVoiceGunDelay;
+        private static float copyVoiceReadPos;
         public static void CopyVoiceGun()
         {
             if (GetGunInput(false))
@@ -2154,21 +2169,105 @@ namespace iiMenu.Mods
                     VRRig gunTarget = GetRigFromHit(Ray);
                     if (gunTarget && !gunTarget.IsLocal())
                     {
+                        gunLocked = true;
+                        lockTarget = gunTarget;
+                    }
+                }
+
+                if (gunLocked && lockTarget != null)
+                {
+                    if (!RigUtilities.IsUsableRig(lockTarget))
+                    {
+                        gunLocked = false;
+                        lockTarget = null;
+                        DisableCopyVoice();
+                        return;
+                    }
+
+                    Speaker speaker = lockTarget.GetComponent<GorillaSpeakerLoudness>()?.speaker
+                        ?? lockTarget.GetComponentInChildren<GorillaSpeakerLoudness>()?.speaker
+                        ?? lockTarget.GetComponentInChildren<Speaker>();
+
+                    if (speaker == null && VRRigCache.Instance != null && lockTarget.creator != null && VRRigCache.Instance.TryGetVrrig(lockTarget.creator, out RigContainer container))
+                        speaker = container?.Voice?.SpeakerInUse;
+
+                    if (speaker != null)
+                    {
+                        if (SpeakerPatch.targetSpeaker != speaker)
+                        {
+                            SpeakerPatch.targetSpeaker = speaker;
+                            lock (SpeakerPatch.locked)
+                                SpeakerPatch.SampleQueue.Clear();
+                            copyVoiceReadPos = 0f;
+                        }
+
+                        SpeakerPatch.enabled = true;
+
                         if (RecorderPatch.enabled)
                         {
-                            SpeakerPatch.enabled = true;
-                            SpeakerPatch.targetSpeaker = lockTarget.gameObject.GetComponent<GorillaSpeakerLoudness>().speaker;
                             if (!VoiceManager.Get().PostProcessors.ContainsKey("CopyVoice"))
                             {
+                                copyVoiceReadPos = 0f;
                                 VoiceManager.Get().PostProcessors["CopyVoice"] = buffer =>
                                 {
-                                    for (int i = 0; i < buffer.Length && i < SpeakerPatch.frameOut.Buf.Length; i++)
+                                    var vm = VoiceManager.Get();
+                                    int channels = vm.Channels;
+                                    float sourceRate = 24000f;
+                                    try
                                     {
-                                        buffer[i] = SpeakerPatch.frameOut.Buf[i];
+                                        if (SpeakerPatch.targetSpeaker?.RemoteVoiceLink?.Info != null && SpeakerPatch.targetSpeaker.RemoteVoiceLink.Info.SamplingRate > 0)
+                                            sourceRate = SpeakerPatch.targetSpeaker.RemoteVoiceLink.Info.SamplingRate;
+                                    }
+                                    catch { }
+
+                                    int outRate = vm.OutputRate > 0 ? vm.OutputRate : 48000;
+                                    float ratio = sourceRate / outRate;
+
+                                    lock (SpeakerPatch.locked)
+                                    {
+                                        if (SpeakerPatch.SampleQueue.Count < (sourceRate * 0.04f))
+                                        {
+                                            Array.Clear(buffer, 0, buffer.Length);
+                                            copyVoiceReadPos = 0f;
+                                            return;
+                                        }
+
+                                        for (int i = 0; i < buffer.Length; i += channels)
+                                        {
+                                            int idxA = (int)copyVoiceReadPos;
+                                            int idxB = idxA + 1;
+
+                                            if (idxB < SpeakerPatch.SampleQueue.Count)
+                                            {
+                                                float t = copyVoiceReadPos - idxA;
+                                                float sample = Mathf.Lerp(SpeakerPatch.SampleQueue[idxA], SpeakerPatch.SampleQueue[idxB], t);
+                                                for (int c = 0; c < channels; c++)
+                                                {
+                                                    int targetIndex = i + c;
+                                                    if (targetIndex < buffer.Length)
+                                                        buffer[targetIndex] = sample;
+                                                }
+                                                copyVoiceReadPos += ratio;
+                                            }
+                                            else
+                                            {
+                                                for (int c = 0; c < channels; c++)
+                                                {
+                                                    if (i + c < buffer.Length)
+                                                        buffer[i + c] = 0f;
+                                                }
+                                            }
+                                        }
+
+                                        int consumed = (int)copyVoiceReadPos;
+                                        if (consumed > 0)
+                                        {
+                                            SpeakerPatch.SampleQueue.RemoveRange(0, Math.Min(consumed, SpeakerPatch.SampleQueue.Count));
+                                            copyVoiceReadPos -= consumed;
+                                        }
                                     }
                                 };
                             }
-
                         }
                         else
                         {
@@ -2176,40 +2275,30 @@ namespace iiMenu.Mods
                             {
                                 copyVoiceGunDelay = Time.time + 0.5f;
 
-                                gunLocked = true;
-                                lockTarget = gunTarget;
-
-                                SpeakerPatch.enabled = true;
-
-                                SpeakerPatch.targetSpeaker = lockTarget.gameObject.GetComponent<GorillaSpeakerLoudness>().speaker;
-
-                                RecorderPatch.enabled = !Buttons.GetIndex("Legacy Microphone").enabled;
-
-                                VoiceManager.Get().PostProcessors["CopyVoice"] = null;
-
+                                VoiceManager.Get().PostProcessors.Remove("CopyVoice");
                                 factory?.Dispose();
-
                                 factory = new LoopbackFactory();
 
-                                GorillaTagger.Instance.myRecorder.SourceType = Recorder.InputSourceType.Factory;
-                                GorillaTagger.Instance.myRecorder.InputFactory = () =>
+                                if (GorillaTagger.Instance?.myRecorder != null)
                                 {
-                                    return factory;
-                                };
+                                    GorillaTagger.Instance.myRecorder.SourceType = Recorder.InputSourceType.Factory;
+                                    GorillaTagger.Instance.myRecorder.InputFactory = () => factory;
+                                }
                                 CoroutineManager.instance.StartCoroutine(DelayReloadMicrophone());
                             }
                         }
-                            
-                        GorillaTagger.Instance.myRecorder.DebugEchoMode = true;
+
+                        if (GorillaTagger.Instance?.myRecorder != null)
+                            GorillaTagger.Instance.myRecorder.DebugEchoMode = true;
                     }
                 }
             }
             else
             {
-                if (gunLocked)
+                if (gunLocked || SpeakerPatch.enabled || VoiceManager.Get().PostProcessors.ContainsKey("CopyVoice"))
                 {
                     gunLocked = false;
-
+                    lockTarget = null;
                     DisableCopyVoice();
                 }
             }
@@ -2218,14 +2307,22 @@ namespace iiMenu.Mods
         public static void DisableCopyVoice()
         {
             factory?.Dispose();
+            factory = null;
 
             VoiceManager.Get().PostProcessors.Remove("CopyVoice");
 
             SpeakerPatch.enabled = false;
+            SpeakerPatch.targetSpeaker = null;
+
+            lock (SpeakerPatch.locked)
+                SpeakerPatch.SampleQueue.Clear();
+
+            if (GorillaTagger.Instance?.myRecorder != null)
+                GorillaTagger.Instance.myRecorder.DebugEchoMode = false;
 
             Sound.FixMicrophone();
 
-            RecorderPatch.enabled = !Buttons.GetIndex("Legacy Microphone").enabled;
+            RecorderPatch.enabled = !(Buttons.GetIndex("Legacy Microphone")?.enabled ?? false);
         }
 
         private static NetPlayer talkThroughTarget;
@@ -2829,7 +2926,7 @@ namespace iiMenu.Mods
         }
 
         public static void ProcessFrameBuffer(float[] data) =>
-            factory.Feed(data);
+            factory?.Feed(data);
 
         public static void ReloadMicrophone() =>
             GorillaTagger.Instance.myRecorder?.RestartRecording(true);
@@ -7183,11 +7280,15 @@ Piece Name: {gunTarget.name}";
         {
             rememberdirectory = pageNumber;
 
-            List<ButtonInfo> cosmeticbuttons = new List<ButtonInfo> { new ButtonInfo { buttonText = "Exit Cosmetic Browser", method = RemoveCosmeticBrowser, isTogglable = false, toolTip = "Returns you back to the fun mods." } };
+            List<ButtonInfo> cosmeticbuttons = new List<ButtonInfo>
+            {
+                new ButtonInfo { buttonText = "Exit Cosmetic Browser", method = RemoveCosmeticBrowser, isTogglable = false, toolTip = "Returns you back to the fun mods." },
+                new ButtonInfo { buttonText = "SPOOF (CS)", enableMethod = EnableSpoofCs, disableMethod = DisableSpoofCs, toolTip = "When enabled, selecting a cosmetic in the browser adds that single cosmetic to your wardrobe via CosmetX. Disable to restore your real wardrobe." }
+            };
             foreach (CosmeticsController.CosmeticItem hat in CosmeticsController.instance.allCosmetics)
             {
                 if (hat.canTryOn)
-                    cosmeticbuttons.Add(new ButtonInfo { buttonText = ToTitleCase(hat.overrideDisplayName), method = () => AddCosmeticToCart(hat.itemName), isTogglable = false, toolTip = "Adds the " + hat.overrideDisplayName.ToLower() + "to your cart." });
+                    cosmeticbuttons.Add(new ButtonInfo { buttonText = ToTitleCase(hat.overrideDisplayName), method =() => { AddCosmeticToCart(hat.itemName); if (spoofCs) SpoofSingleCosmetic(hat.itemName); }, isTogglable = false, toolTip = "Adds the " + hat.overrideDisplayName.ToLower() + "to your cart." + (spoofCs ? " SPOOF (CS) will also add it to your wardrobe." : "") });
             }
             Buttons.buttons[Buttons.GetCategory("Temporary Category")] = cosmeticbuttons.ToArray();
 
@@ -7276,7 +7377,7 @@ Piece Name: {gunTarget.name}";
             CosmeticPatch.enabled = true;
             if (!PostGetData.CosmeticsInitialized || hasGivenCosmetics) return;
             hasGivenCosmetics = true;
-            MethodInfo unlockItem = typeof(CosmeticsController).GetMethod("UnlockItem", BindingFlags.Instance | BindingFlags.NonPublic);
+            MethodInfo unlockItem = typeof(CosmeticsController).GetMethod("UnlockItem", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
             foreach (var item in CosmeticsController.instance.allCosmetics.Where(item => !CosmeticsController.instance.concatStringCosmeticsAllowed.Contains(item.itemName)))
             {
                 try
@@ -7404,6 +7505,134 @@ Piece Name: {gunTarget.name}";
             }
 
             try { cosmetics.UpdateWardrobeModelsAndButtons(); } catch { }
+        }
+
+        public static bool spoofCs;
+
+        public static void EnableSpoofCs()
+        {
+            spoofCs = true;
+            if (realCosmetics.Count == 0)
+                SnapshotCosmetics();
+
+            CosmeticPatch.enabled = true;
+            NotificationManager.SendNotification("<color=grey>[</color><color=purple>SPOOF (CS)</color><color=grey>]</color> Selecting cosmetics in the browser will now add them to your wardrobe.");
+        }
+
+        public static void DisableSpoofCs()
+        {
+            spoofCs = false;
+
+            if (cosmetxOn)
+                return;
+
+            DisableCosmetx();
+        }
+
+        public static void SpoofSingleCosmetic(string itemName)
+        {
+            try
+            {
+                if (realCosmetics.Count == 0)
+                    SnapshotCosmetics();
+
+                CosmeticPatch.enabled = true;
+
+                CosmeticsController cosmetics = CosmeticsController.instance;
+                if (cosmetics == null || cosmetics.allCosmetics == null) return;
+
+                MethodInfo unlockItem = typeof(CosmeticsController).GetMethod("UnlockItem", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+                if (unlockItem == null) return;
+
+                foreach (CosmeticsController.CosmeticItem candidate in cosmetics.allCosmetics)
+                {
+                    if (candidate.itemName != itemName || candidate.isNullItem ||
+                        realCosmeticNames.Contains(itemName) || fakeCosmeticNames.Contains(itemName))
+                        continue;
+
+                    unlockItem.Invoke(cosmetics, new object[] { itemName, false });
+                    fakeCosmeticNames.Add(itemName);
+                    RefreshCosmetx();
+                    NotificationManager.SendNotification($"<color=grey>[</color><color=purple>SPOOF (CS)</color><color=grey>]</color> {candidate.overrideDisplayName} was added to your wardrobe.");
+                    return;
+                }
+            }
+            catch { }
+        }
+
+        public static Transform talkThroughSpeakerOriginalParent;
+        public static GorillaSpeakerLoudness talkThroughSpeakerTarget;
+        public static GorillaSpeakerLoudness talkThroughSpeakerLocal;
+        public static bool talkThroughSpeakerMoved;
+        public static bool talkThroughSpeakerOn;
+        private static float talkThroughSpeakerScan;
+
+        public static void EnableTalkThroughSpeaker()
+        {
+            talkThroughSpeakerOn = true;
+            talkThroughSpeakerScan = 0f;
+        }
+
+        public static void DisableTalkThroughSpeaker() => RestoreTalkThroughSpeaker();
+
+        public static void UpdateTalkThroughSpeaker()
+        {
+            if (!talkThroughSpeakerOn) return;
+
+            try
+            {
+                if (talkThroughSpeakerLocal == null)
+                    talkThroughSpeakerLocal = VRRig.LocalRig != null ? VRRig.LocalRig.GetComponent<GorillaSpeakerLoudness>() : null;
+
+                if (talkThroughSpeakerLocal == null || talkThroughSpeakerLocal.speaker == null)
+                    return;
+
+                if (talkThroughSpeakerTarget == null)
+                {
+                    if (Time.time < talkThroughSpeakerScan) return;
+                    talkThroughSpeakerScan = Time.time + 2f;
+
+                    talkThroughSpeakerTarget = Object.FindObjectsOfType<GorillaSpeakerLoudness>()
+                        .FirstOrDefault(speaker => speaker != null && speaker.GetComponent<VRRig>() == null && speaker.speaker != null);
+
+                    if (talkThroughSpeakerTarget == null)
+                        return;
+                }
+
+                if (!talkThroughSpeakerMoved || talkThroughSpeakerOriginalParent == null)
+                {
+                    talkThroughSpeakerOriginalParent = talkThroughSpeakerLocal.speaker.transform.parent;
+                    talkThroughSpeakerMoved = true;
+                }
+
+                if (talkThroughSpeakerLocal.speaker.transform.parent != talkThroughSpeakerTarget.speaker.transform)
+                {
+                    talkThroughSpeakerLocal.speaker.transform.SetParent(talkThroughSpeakerTarget.speaker.transform, true);
+                    talkThroughSpeakerLocal.speaker.transform.localPosition = Vector3.zero;
+                    talkThroughSpeakerLocal.speaker.transform.localRotation = Quaternion.identity;
+                }
+            }
+            catch { }
+        }
+
+        public static void RestoreTalkThroughSpeaker()
+        {
+            talkThroughSpeakerOn = false;
+
+            if (!talkThroughSpeakerMoved) return;
+
+            try
+            {
+                if (talkThroughSpeakerLocal != null && talkThroughSpeakerLocal.speaker != null && talkThroughSpeakerOriginalParent != null)
+                {
+                    talkThroughSpeakerLocal.speaker.transform.SetParent(talkThroughSpeakerOriginalParent, true);
+                    talkThroughSpeakerLocal.speaker.transform.localPosition = Vector3.zero;
+                }
+            }
+            catch { }
+
+            talkThroughSpeakerMoved = false;
+            talkThroughSpeakerTarget = null;
         }
 
         private static float idgundelay;

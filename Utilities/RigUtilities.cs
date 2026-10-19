@@ -54,7 +54,23 @@ namespace iiMenu.Utilities
             try
             {
                 VRRig rig = hit.collider.GetComponentInParent<VRRig>();
-                return TryGetPlayerFromVRRig(rig, out _) ? rig : null;
+                if (rig != null && TryGetPlayerFromVRRig(rig, out _))
+                    return rig;
+
+                VRRig closest = null;
+                float closestDistance = 0.75f;
+                foreach (VRRig activeRig in VRRigCache.ActiveRigs)
+                {
+                    if (activeRig == null || activeRig.isLocal) continue;
+                    float distance = Vector3.Distance(activeRig.transform.position, hit.point);
+                    if (distance < closestDistance)
+                    {
+                        closestDistance = distance;
+                        closest = activeRig;
+                    }
+                }
+
+                return closest != null && TryGetPlayerFromVRRig(closest, out _) ? closest : null;
             }
             catch
             {

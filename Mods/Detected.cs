@@ -1430,7 +1430,9 @@ namespace iiMenu.Mods
             string mapPrefix = string.Empty;
 
             FieldInfo mapsField = typeof(GorillaComputer).GetField("allowedMapsToJoin", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-            if (mapsField?.GetValue(GorillaComputer.instance) is string[] allowedMaps)
+            PropertyInfo mapsProp = mapsField == null ? typeof(GorillaComputer).GetProperty("allowedMapsToJoin", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic) : null;
+            object mapsValue = mapsField != null ? mapsField.GetValue(GorillaComputer.instance) : mapsProp?.GetValue(GorillaComputer.instance);
+            if (mapsValue is string[] allowedMaps)
                 mapPrefix = string.Join("", allowedMaps);
 
             string gameMode = GorillaComputer.instance.currentGameMode?.Value ?? string.Empty;

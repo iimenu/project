@@ -575,11 +575,10 @@ namespace iiMenu.Mods
             if (rig == null || !TryGetPlayerFromVRRig(rig, out NetPlayer player))
                 return;
 
-            if (Time.time > reportTagDelay)
-            {
-                reportTagDelay = Time.time + 0.1f;
-                GameMode.ReportTag(player);
-            }
+            GameMode.ReportTag(player);
+
+
+
         }
 
         public static void TagPlayer(NetPlayer player)

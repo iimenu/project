@@ -200,7 +200,7 @@ namespace iiMenu.Managers
         "There are a total of <b>{1}</b> mods on this menu. " +
         "<color=red>We are not responsible for any bans using this menu.</color> " +
         "If you get banned while using this, it's your responsibility.\n\n" +
-        "Current menu status: <b>Loading...</b>\n" +
+        "Current menu status: <color=green><b>Online</b></color>\n" +
         "Made with <3 by the ii Reborn contributors\n\n" +
         "<alpha=128>{2} {0} {3} — ii Reborn is a derivative work based on ii's Stupid Menu, the original work of Goldentrophy Software. It is not affiliated with or endorsed by Goldentrophy Software or iiDk.<alpha=255>";
 
