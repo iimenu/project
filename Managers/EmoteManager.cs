@@ -191,6 +191,7 @@ namespace iiMenu.Managers
         public static Transform emoteRightHand;
         public static Transform emoteHead;
         public static float emoteTime;
+        public static bool rigWasEnabled = true;
         
         
         
@@ -259,6 +260,7 @@ namespace iiMenu.Managers
                 GorillaTagger.Instance.gameObject.AddComponent<EmoteUpdater>();
             }
 
+            rigWasEnabled = VRRig.LocalRig.enabled;
             VRRig.LocalRig.enabled = false;
             DisableCosmetics();
             
@@ -270,7 +272,12 @@ namespace iiMenu.Managers
 
             Kyle = LoadAsset("Rig");
             if (Kyle == null)
+            {
+                EnableCosmetics();
+                VRRig.LocalRig.enabled = rigWasEnabled;
+                emoteTime = -9999f;
                 return;
+            }
             HardenRig(Kyle);
             emoteSpine = Kyle.transform.Find("KyleRobot/ROOT/Hips/Spine1/Spine2");
             emoteLeftHand = Kyle.transform.Find("KyleRobot/ROOT/Hips/Spine1/Spine2/LeftShoulder/LeftUpperArm/LeftArm/LeftHand");
@@ -316,8 +323,10 @@ namespace iiMenu.Managers
             {
                 Debug.LogError("Emote animation not found: " + emoteName);
                 EnableCosmetics();
-                VRRig.LocalRig.enabled = true;
+                VRRig.LocalRig.enabled = rigWasEnabled;
+                emoteTime = -9999f;
                 Object.Destroy(Kyle);
+                Kyle = null;
                 return;
             }
 
@@ -366,7 +375,7 @@ namespace iiMenu.Managers
                 {
                     if (EmoteManager.Kyle != null)
                     {
-                        VRRig.LocalRig.enabled = true;
+                        VRRig.LocalRig.enabled = EmoteManager.rigWasEnabled;
                         EmoteManager.EnableCosmetics();
                         
                         Object.Destroy(EmoteManager.Kyle);

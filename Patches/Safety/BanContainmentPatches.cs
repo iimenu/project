@@ -75,7 +75,7 @@ namespace iiMenu.Patches.Safety
                 if (!ContainmentEnabled)
                     return true;
 
-                NotificationManager.SendNotification($"<color=grey>[</color><color=orange>CONTAINMENT</color><color=grey>]</color> Mothership auth screen suppressed ({errorCode}).");
+                NotificationManager.SendNotification($"<color=grey>[</color><color=orange>CONTAINMENT</color><color=grey>]</color> You have been banned ({errorCode}).");
                 return false;
             }
         }

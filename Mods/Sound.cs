@@ -24,6 +24,7 @@ using System.IO;
 using System.Linq;
 using UnityEngine;
 using UnityEngine.Networking;
+using UnityEngine.SceneManagement;
 using Valve.Newtonsoft.Json.Linq;
 using static iiMenu.Menu.Main;
 using static iiMenu.Utilities.AssetUtilities;
@@ -71,6 +72,127 @@ namespace iiMenu.Mods
             try { Buttons.GetIndex("Soundboard Mic Volume").overlapText = $"Soundboard Mic Volume <color=grey>[</color><color=green>{Mathf.RoundToInt(v * 100)}%</color><color=grey>]</color>"; } catch { }
         }
 
+        public static bool oldOst;
+        private static AudioSource ostSource;
+        private static string ostRoom;
+        private static float ostMusicMuteScan;
+        private static readonly List<AudioSource> mutedMusicSources = new List<AudioSource>();
+
+        public static void EnableOldOst()
+        {
+            oldOst = true;
+            ostRoom = null;
+            NotificationManager.SendNotification("<color=grey>[</color><color=purple>OLD OST</color><color=grey>]</color> Drop files named OG<map>OST.mp3 (e.g. OGForestOST.mp3, OGCanyonOST.mp3) into your iiReborn folder to use them.");
+        }
+
+        public static void DisableOldOst()
+        {
+            oldOst = false;
+            StopOldOst();
+        }
+
+        public static void UpdateOldOst()
+        {
+            if (!oldOst) return;
+
+            try
+            {
+                string room = NetworkSystem.Instance.RoomName;
+                if (room != ostRoom)
+                {
+                    ostRoom = room;
+                    StopOldOst();
+                    if (NetworkSystem.Instance.InRoom)
+                        CoroutineManager.instance.StartCoroutine(LoadOldOst());
+                }
+
+                if (Time.time > ostMusicMuteScan)
+                {
+                    ostMusicMuteScan = Time.time + 0.5f;
+                    MuteVanillaMusic();
+                }
+            }
+            catch { }
+        }
+
+        private static string GetOldOstMapName()
+        {
+            try
+            {
+                for (int i = 0; i < SceneManager.sceneCount; i++)
+                {
+                    Scene scene = SceneManager.GetSceneAt(i);
+                    if (!scene.isLoaded) continue;
+                    if (scene.name == "GTSystem" || scene.name == "Untitled" || scene.name == "Forest") continue;
+                    return scene.name;
+                }
+            }
+            catch { }
+
+            return "Forest";
+        }
+
+        private static IEnumerator LoadOldOst()
+        {
+            string mapName = GetOldOstMapName();
+            string path = Path.Combine(PluginInfo.BaseDirectory, $"OG{mapName}OST.mp3");
+            if (!File.Exists(path))
+                yield break;
+
+            using (UnityWebRequest request = UnityWebRequestMultimedia.GetAudioClip("file://" + path, AudioType.MPEG))
+            {
+                yield return request.SendWebRequest();
+                if (request.result != UnityWebRequest.Result.Success)
+                    yield break;
+
+                AudioClip clip = DownloadHandlerAudioClip.GetContent(request);
+                if (clip == null)
+                    yield break;
+
+                GameObject host = new GameObject("iiMenu OldOST");
+                UnityEngine.Object.DontDestroyOnLoad(host);
+                ostSource = host.AddComponent<AudioSource>();
+                ostSource.clip = clip;
+                ostSource.loop = true;
+                ostSource.volume = 0.5f;
+                ostSource.spatialBlend = 0f;
+                ostSource.Play();
+            }
+        }
+
+        private static void StopOldOst()
+        {
+            if (ostSource != null)
+            {
+                ostSource.Stop();
+                UnityEngine.Object.Destroy(ostSource.gameObject);
+                ostSource = null;
+            }
+
+            foreach (AudioSource source in mutedMusicSources)
+            {
+                if (source != null)
+                    source.mute = false;
+            }
+            mutedMusicSources.Clear();
+            ostMusicMuteScan = 0f;
+        }
+
+        private static void MuteVanillaMusic()
+        {
+            foreach (AudioSource source in UnityEngine.Object.FindObjectsOfType<AudioSource>())
+            {
+                if (source == null || source == ostSource || source.outputAudioMixerGroup == null) continue;
+                if (!source.outputAudioMixerGroup.name.ToLower().Contains("music")) continue;
+
+                if (!mutedMusicSources.Contains(source))
+                {
+                    mutedMusicSources.Add(source);
+                    source.mute = true;
+                }
+            }
+        }
+
         public static void LoadSoundboard(bool openCategory = true)
         {
             if (!Directory.Exists($"{PluginInfo.BaseDirectory}/Sounds" + Subdirectory))
@@ -78,16 +200,22 @@ namespace iiMenu.Mods
 
             List<string> enabledSounds = (from binfo in Buttons.buttons[Buttons.GetCategory("Soundboard")] where binfo.enabled select binfo.overlapText).ToList();
             List<ButtonInfo> soundButtons = new List<ButtonInfo>();
-            if (Subdirectory != "")
+            bool atRoot = Subdirectory == "";
+
+            if (!atRoot)
                 soundButtons.Add(new ButtonInfo { buttonText = "Exit Parent Directory", overlapText = "Exit " + Subdirectory.Split("/")[^1], method = ExitParentDirectory, isTogglable = false, toolTip = "Returns you back to the last folder." });
 
             soundButtons.Add(new ButtonInfo { buttonText = "Exit Soundboard", method = () => Buttons.CurrentCategoryName = "Sound Mods", isTogglable = false, toolTip = "Returns you back to the sound mods." });
 
-            soundButtons.Add(new ButtonInfo { buttonText = "MyInstants", method = LoadSoundLibrary, isTogglable = false, toolTip = "Browse the MyInstants library. One click downloads and plays." });
-            soundButtons.Add(new ButtonInfo { buttonText = "Search MyInstants", method = SearchMyInstantsPrompt, isTogglable = false, toolTip = "Search MyInstants by name and browse the results." });
-            soundButtons.Add(new ButtonInfo { buttonText = "Stop All Sounds", method = StopAllSounds, isTogglable = false, toolTip = "Stops all currently playing sounds." });
-            soundButtons.Add(new ButtonInfo { buttonText = "Open Sound Folder", method = OpenSoundFolder, isTogglable = false, toolTip = "Opens your Sounds folder — drop custom mp3/wav/ogg here." });
-            soundButtons.Add(new ButtonInfo { buttonText = "Reload Sounds", method = () => LoadSoundboard(), isTogglable = false, toolTip = "Reloads all of your sounds." });
+            if (atRoot)
+            {
+                soundButtons.Add(new ButtonInfo { buttonText = "MyInstants", method = LoadSoundLibrary, isTogglable = false, toolTip = "Browse the MyInstants library. One click downloads and plays." });
+                soundButtons.Add(new ButtonInfo { buttonText = "Downloaded Files", method =() => OpenFolder("MyInstants"), isTogglable = false, toolTip = "Plays back the sounds you downloaded from MyInstants." });
+            }
+            else
+            {
+                soundButtons.Add(new ButtonInfo { buttonText = "Stop All Sounds", method = StopAllSounds, isTogglable = false, toolTip = "Stops all currently playing sounds." });
+                soundButtons.Add(new ButtonInfo { buttonText = "Open Sound Folder", method = OpenSoundFolder, isTogglable = false, toolTip = "Opens your Sounds folder — drop custom mp3/wav/ogg here." });
 
             string[] folders = Directory.GetDirectories($"{PluginInfo.BaseDirectory}/Sounds" + Subdirectory);
             soundButtons.AddRange(from folder in folders
@@ -97,7 +225,7 @@ namespace iiMenu.Mods
             {
                 buttonText = "SoundboardFolder" + FolderName.Hash(),
                 overlapText = $"<sprite name=\"Folder\">  {FolderName}  ",
-                method = () => OpenFolder(folder[21..]),
+                method = () => OpenFolder(FolderName),
                 isTogglable = false,
                 toolTip = "Opens the " + FolderName + " folder."
             });
@@ -159,8 +287,10 @@ namespace iiMenu.Mods
                     }
                 }
 
-                
+
             }
+            }
+
             Buttons.buttons[Buttons.GetCategory("Soundboard")] = soundButtons.ToArray();
 
             if (openCategory)
@@ -188,7 +318,17 @@ namespace iiMenu.Mods
         public static void LoadMyInstantsRecent()
         {
             ShowMyInstantsLoading("Loading Sounds...");
-            try { CoroutineManager.instance.StartCoroutine(FetchMyInstantsCo(SoundboardManager.MyInstantsRecentUrl, "Recently Uploaded")); } catch { }
+            try
+            {
+                if (CoroutineManager.instance == null)
+                {
+                    BuildMyInstantsButtons(null, "Recently Uploaded", "Could not start the request — rejoin a map and try again");
+                    return;
+                }
+
+                CoroutineManager.instance.StartCoroutine(FetchMyInstantsCo(SoundboardManager.MyInstantsRecentUrl, "Recently Uploaded"));
+            }
+            catch { }
         }
 
         private static List<ButtonInfo> MyInstantsHeaderButtons() =>
@@ -245,14 +385,39 @@ namespace iiMenu.Mods
             LoadMyInstantsRecent();
         }
 
+        private static bool myInstantsFetchActive;
+        private static float myInstantsFetchStart;
+
         private static IEnumerator FetchMyInstantsCo(string url, string header)
         {
             List<SoundboardManager.MyInstantEntry> list = new List<SoundboardManager.MyInstantEntry>();
             string error = null;
 
+            myInstantsFetchActive = true;
+            myInstantsFetchStart = Time.unscaledTime;
+            CoroutineManager.instance.StartCoroutine(MyInstantsWatchdog(header));
+
             yield return SoundboardManager.FetchEntries(url, entries => list = entries, reason => error = reason);
 
-            BuildMyInstantsButtons(list, header, error);
+            myInstantsFetchActive = false;
+            try { BuildMyInstantsButtons(list, header, error); }
+            catch
+            {
+                BuildMyInstantsButtons(null, header, "Failed to process the MyInstants response");
+            }
+        }
+
+        private static IEnumerator MyInstantsWatchdog(string header)
+        {
+            float deadline = myInstantsFetchStart + 25f;
+            while (Time.unscaledTime < deadline && myInstantsFetchActive)
+                yield return null;
+
+            if (myInstantsFetchActive)
+            {
+                myInstantsFetchActive = false;
+                BuildMyInstantsButtons(null, header, "Request timed out — check your connection and retry");
+            }
         }
 
         private static void BuildMyInstantsButtons(List<SoundboardManager.MyInstantEntry> entries, string header, string error)
@@ -579,8 +744,17 @@ namespace iiMenu.Mods
         public static float sendEffectDelay;
         public static void BetaPlayTag(int id, float volume)
         {
-            if (!NetworkSystem.Instance.IsMasterClient)
-                NotificationManager.SendNotification("<color=grey>[</color><color=red>ERROR</color><color=grey>]</color> You are not master client.");
+            int lowest = int.MaxValue;
+            foreach (Player player in PhotonNetwork.PlayerList)
+            {
+                if (player.ActorNumber < lowest)
+                    lowest = player.ActorNumber;
+            }
+
+            bool isLowest = PhotonNetwork.LocalPlayer.ActorNumber == lowest;
+
+            if (!isLowest)
+                NotificationManager.SendNotification("<color=grey>[</color><color=red>ERROR</color><color=grey>]</color> You are not the lowest actor number.");
             else
             {
                 if (Time.time > sendEffectDelay)

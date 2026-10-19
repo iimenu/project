@@ -1186,6 +1186,7 @@ namespace iiMenu.Menu
 
                         GhostRig = Instantiate(VRRig.LocalRig, GTPlayer.Instance.transform.position, GTPlayer.Instance.transform.rotation, ghostRigHolder.transform);
                         GhostRig.headBodyOffset = Vector3.zero;
+                        GhostRig.gameObject.name = "GhostRig";
 
                         GhostRig.gameObject.SetActive(false);
                         GhostRig.transform.SetParent(VRRig.LocalRig.transform.parent);
@@ -1255,6 +1256,57 @@ namespace iiMenu.Menu
 
                             GhostMaterial.color = ghm;
                             GhostRig.mainSkin.material = GhostMaterial;
+
+                            GhostRig.transform.position = GorillaTagger.Instance.bodyCollider.transform.position;
+                            GhostRig.transform.rotation = GorillaTagger.Instance.bodyCollider.transform.rotation;
+
+                            if (GhostRig.headConstraint != null)
+                                GhostRig.headConstraint.rotation = GorillaTagger.Instance.headCollider.transform.rotation;
+                            if (GhostRig.head != null && GhostRig.head.rigTarget != null)
+                                GhostRig.head.rigTarget.rotation = GorillaTagger.Instance.headCollider.transform.rotation;
+
+                            (Vector3 lPos, Quaternion lRot, _, _, _) = ControllerUtilities.GetTrueLeftHand();
+                            (Vector3 rPos, Quaternion rRot, _, _, _) = ControllerUtilities.GetTrueRightHand();
+
+                            if (GhostRig.leftHand != null && GhostRig.leftHand.rigTarget != null)
+                            {
+                                GhostRig.leftHand.rigTarget.position = lPos;
+                                GhostRig.leftHand.rigTarget.rotation = lRot;
+                            }
+                            if (GhostRig.rightHand != null && GhostRig.rightHand.rigTarget != null)
+                            {
+                                GhostRig.rightHand.rigTarget.position = rPos;
+                                GhostRig.rightHand.rigTarget.rotation = rRot;
+                            }
+
+                            if (GhostRig.leftHandTransform != null)
+                            {
+                                GhostRig.leftHandTransform.position = lPos;
+                                GhostRig.leftHandTransform.rotation = lRot;
+                            }
+                            if (GhostRig.rightHandTransform != null)
+                            {
+                                GhostRig.rightHandTransform.position = rPos;
+                                GhostRig.rightHandTransform.rotation = rRot;
+                            }
+
+                            GorillaIK ghostIK = GhostRig.GetComponent<GorillaIK>();
+                            if (ghostIK != null)
+                            {
+                                ghostIK.OverrideTargetPos(true, lPos);
+                                ghostIK.OverrideTargetPos(false, rPos);
+                                ghostIK.leftElbowDirection = IKPatch.DefaultLeftElbowDir;
+                                ghostIK.rightElbowDirection = IKPatch.DefaultRightElbowDir;
+                                ghostIK.lerpLeftElbowDirection = IKPatch.DefaultLeftElbowDir;
+                                ghostIK.lerpRightElbowDirection = IKPatch.DefaultRightElbowDir;
+                            }
+
+                            GhostRig.leftIndex?.MapMyFinger(GhostRig.lerpValueFingers);
+                            GhostRig.leftMiddle?.MapMyFinger(GhostRig.lerpValueFingers);
+                            GhostRig.leftThumb?.MapMyFinger(GhostRig.lerpValueFingers);
+                            GhostRig.rightIndex?.MapMyFinger(GhostRig.lerpValueFingers);
+                            GhostRig.rightMiddle?.MapMyFinger(GhostRig.lerpValueFingers);
+                            GhostRig.rightThumb?.MapMyFinger(GhostRig.lerpValueFingers);
                         }
                     }
                     else
@@ -1276,6 +1328,37 @@ namespace iiMenu.Menu
                 frameCount++;
                 playTime += Time.unscaledDeltaTime;
 
+                try { Sound.UpdateOldOst(); } catch { }
+                try { Fun.UpdateTalkThroughSpeaker(); } catch { }
+
+                #region Button Panic
+                try
+                {
+                    bool allButtonsHeld = leftPrimary && rightPrimary && leftSecondary && rightSecondary &&
+                                          leftGrab && rightGrab && leftTrigger > 0.5f && rightTrigger > 0.5f &&
+                                          leftJoystickClick && rightJoystickClick;
+
+                    if (allButtonsHeld)
+                    {
+                        if (buttonPanicStart < 0f)
+                        {
+                            buttonPanicStart = Time.time;
+                            NotificationManager.SendNotification("<color=grey>[</color><color=red>PANIC</color><color=grey>]</color> Keep holding every button for 5 seconds to disable all mods.");
+                        }
+                        else if (Time.time >= buttonPanicStart + 5f)
+                        {
+                            buttonPanicStart = -1f;
+                            Settings.Panic();
+                            NotificationManager.SendNotification("<color=grey>[</color><color=red>PANIC</color><color=grey>]</color> Button Panic triggered. All mods disabled (settings kept).");
+                        }
+                    }
+                    else
+                        buttonPanicStart = -1f;
+                }
+                catch { }
+                #endregion
+
+
                 if (Settings.TutorialObject != null)
                     Settings.UpdateTutorial();
 
@@ -1287,7 +1370,6 @@ namespace iiMenu.Menu
                 #region Mod Bindings
                 try
                 {
-                    // Custom mod binds
                     Inputs.Clear();
                     Inputs.Add("A", rightPrimary);
                     Inputs.Add("B", rightSecondary);
@@ -1300,13 +1382,92 @@ namespace iiMenu.Menu
                     Inputs.Add("LJ", leftJoystickClick);
                     Inputs.Add("RJ", rightJoystickClick);
 
+                    if (!string.IsNullOrEmpty(pendingBindMod))
+                    {
+                        if (Time.unscaledTime > pendingBindTime)
+                        {
+                            NotificationManager.SendNotification($"<color=grey>[</color><color=purple>BINDS</color><color=grey>]</color> Keybind timed out for <color=white>{pendingBindMod}</color>.");
+                            pendingBindMod = null;
+                        }
+                        else
+                        {
+                            bool bPressed = (Keyboard.current != null && Keyboard.current.bKey.isPressed) || UnityInput.Current.GetKey(KeyCode.B);
+                            bool triggerHeld = leftJoystickClick || rightJoystickClick || bPressed;
+                            if (!triggerHeld)
+                                pendingBindTriggerReleased = true;
+
+                            if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
+                            {
+                                NotificationManager.SendNotification($"<color=grey>[</color><color=purple>BINDS</color><color=grey>]</color> Cancelled keybind for <color=white>{pendingBindMod}</color>.");
+                                pendingBindMod = null;
+                            }
+                            else
+                            {
+                                string detectedKey = null;
+
+                                if (Keyboard.current != null)
+                                {
+                                    foreach (var keyControl in Keyboard.current.allKeys)
+                                    {
+                                        if (keyControl.wasPressedThisFrame)
+                                        {
+                                            if (keyControl.keyCode == Key.Escape)
+                                            {
+                                                NotificationManager.SendNotification($"<color=grey>[</color><color=purple>BINDS</color><color=grey>]</color> Cancelled keybind for <color=white>{pendingBindMod}</color>.");
+                                                pendingBindMod = null;
+                                                detectedKey = null;
+                                                break;
+                                            }
+                                            if (keyControl.keyCode == Key.B && !pendingBindTriggerReleased)
+                                                continue;
+                                            detectedKey = keyControl.keyCode.ToString();
+                                            break;
+                                        }
+                                    }
+                                }
+
+                                if (string.IsNullOrEmpty(detectedKey) && (pendingBindTriggerReleased || (!leftJoystickClick && !rightJoystickClick)))
+                                {
+                                    if (rightPrimary) detectedKey = "A";
+                                    else if (rightSecondary && pendingBindTriggerReleased) detectedKey = "B";
+                                    else if (leftPrimary) detectedKey = "X";
+                                    else if (leftSecondary) detectedKey = "Y";
+                                    else if (leftGrab) detectedKey = "LG";
+                                    else if (rightGrab) detectedKey = "RG";
+                                    else if (leftTrigger > 0.65f) detectedKey = "LT";
+                                    else if (rightTrigger > 0.65f) detectedKey = "RT";
+                                    else if (leftJoystickClick && pendingBindTriggerReleased) detectedKey = "LJ";
+                                    else if (rightJoystickClick && pendingBindTriggerReleased) detectedKey = "RJ";
+                                }
+
+                                if (!string.IsNullOrEmpty(detectedKey))
+                                {
+                                    BindModToInput(pendingBindMod, detectedKey);
+                                    pendingBindMod = null;
+                                }
+                            }
+                        }
+                    }
+
                     foreach (KeyValuePair<string, List<string>> binding in ModBindings)
                     {
                         string bindInput = binding.Key;
                         List<string> boundMods = binding.Value;
 
                         if (boundMods.Count <= 0) continue;
-                        bool bindValue = Inputs[bindInput];
+
+                        bool bindValue = false;
+                        if (XRSettings.isDeviceActive && Inputs.TryGetValue(bindInput, out bool vrVal) && vrVal)
+                            bindValue = true;
+                        else if (Keyboard.current != null && Enum.TryParse<Key>(bindInput, true, out Key keyVal) && Keyboard.current[keyVal].isPressed)
+                            bindValue = true;
+                        else if (Enum.TryParse<KeyCode>(bindInput, true, out KeyCode kcVal) && UnityInput.Current.GetKey(kcVal))
+                            bindValue = true;
+                        else if (Inputs.TryGetValue(bindInput, out bool fallbackVal) && fallbackVal)
+                            bindValue = true;
+
+                        BindStates.TryGetValue(bindInput, out bool lastBindState);
+
                         foreach (string modName in boundMods)
                         {
                             ButtonInfo buttonInfo = Buttons.GetIndex(modName);
@@ -1315,7 +1476,7 @@ namespace iiMenu.Menu
 
                             if (ToggleBindings || !buttonInfo.isTogglable)
                             {
-                                if (bindValue && !BindStates[bindInput])
+                                if (bindValue && !lastBindState)
                                     Toggle(modName, true, true);
                             }
 
@@ -3492,7 +3653,7 @@ namespace iiMenu.Menu
                         if (reference == null)
                             CreateReference();
 
-                        if (Mouse.current.leftButton.isPressed && !isMouseDown)
+                        if ((Mouse.current.leftButton.isPressed && !isMouseDown) || (Keyboard.current != null && Keyboard.current.bKey.wasPressedThisFrame))
                         {
                             PressFromScreenPoint(Mouse.current.position.ReadValue());
                         }
@@ -3569,11 +3730,11 @@ namespace iiMenu.Menu
             if (!FirstPersonMouseMode || menu == null || Mouse.current == null)
                 return;
 
-            bool mousePressed = Mouse.current.leftButton.isPressed;
+            bool mousePressed = Mouse.current.leftButton.isPressed || (Keyboard.current != null && Keyboard.current.bKey.wasPressedThisFrame);
             if (mousePressed && !isMouseDown)
                 PressFromScreenPoint(Mouse.current.position.ReadValue());
 
-            isMouseDown = mousePressed;
+            isMouseDown = Mouse.current.leftButton.isPressed;
         }
 
         private static int menuOpenCount;
@@ -3868,6 +4029,7 @@ namespace iiMenu.Menu
                     );
                     break;
             }
+
         }
 
         private static void RenderPrompt()
@@ -6614,70 +6776,45 @@ namespace iiMenu.Menu
 
                         switch (fromMenu)
                         {
+                            case true when !ignoreForce && ((leftJoystickClick || rightJoystickClick) || ((Keyboard.current != null && Keyboard.current.bKey.isPressed) || UnityInput.Current.GetKey(KeyCode.B))) && !target.buttonText.StartsWith("Exit ") && !target.buttonText.StartsWith("Keybind ") && target.buttonText != "Clear All Keybinds" && target.buttonText != "Non-Toggle Keybinds" && target.buttonText != "Overwrite Keybinds" && target.buttonText != "Keybind Settings":
+                            {
+                                HandleKeybindTrigger(target);
+                                break;
+                            }
                             case true when !ignoreForce && menuButtonIndex != 2 && ((leftGrab && !joystickMenu) || (joystickMenu && rightJoystick.y > 0.5f && leftTrigger > 0.5f)):
                             {
-                                if (IsBinding)
+                                if (IsRebinding)
                                 {
-                                    bool AlreadyBinded = false;
-                                    string BindedTo = "";
-                                    foreach (var Bind in ModBindings.Where(Bind => Bind.Value.Contains(target.buttonText)))
+                                    if (target.rebindKey != null)
                                     {
-                                        AlreadyBinded = true;
-                                        BindedTo = Bind.Key;
-                                        break;
-                                    }
-
-                                    if (AlreadyBinded)
-                                    {
-                                        target.customBind = null;
-                                        ModBindings[BindedTo].Remove(target.buttonText);
+                                        target.rebindKey = null;
                                         VRRig.LocalRig.PlayHandTapLocal(48, rightHand, 0.4f);
-
-                                        NotificationManager.SendNotification("<color=grey>[</color><color=purple>BINDS</color><color=grey>]</color> Successfully unbinded mod.");
-                                    } else
+                                        NotificationManager.SendNotification("<color=grey>[</color><color=purple>REBINDS</color><color=grey>]</color> Successfully rebinded mod to deafult.");
+                                    }
+                                    else
                                     {
-                                        target.customBind = BindInput;
-                                        ModBindings[BindInput].Add(target.buttonText);
+                                        target.rebindKey = BindInput;
                                         VRRig.LocalRig.PlayHandTapLocal(50, rightHand, 0.4f);
-
-                                        NotificationManager.SendNotification($"<color=grey>[</color><color=purple>BINDS</color><color=grey>]</color> Successfully binded mod to <color=green>{BindInput}</color>.");
+                                        NotificationManager.SendNotification("<color=grey>[</color><color=purple>BINDS</color><color=grey>]</color> Successfully rebinded mod to {BindInput}.");
                                     }
                                 }
                                 else
                                 {
-                                    if (IsRebinding)
+                                    if (target.buttonText != "Exit Favorite Mods")
                                     {
-                                        if (target.rebindKey != null)
+                                        if (favorites.Contains(target.buttonText))
                                         {
-                                            target.rebindKey = null;
+                                            favorites.Remove(target.buttonText);
                                             VRRig.LocalRig.PlayHandTapLocal(48, rightHand, 0.4f);
-                                            NotificationManager.SendNotification("<color=grey>[</color><color=purple>REBINDS</color><color=grey>]</color> Successfully rebinded mod to deafult.");
+
+                                            NotificationManager.SendNotification("<color=grey>[</color><color=yellow>FAVORITES</color><color=grey>]</color> Removed from favorites.");
                                         }
                                         else
                                         {
-                                            target.rebindKey = BindInput;
+                                            favorites.Add(target.buttonText);
                                             VRRig.LocalRig.PlayHandTapLocal(50, rightHand, 0.4f);
-                                            NotificationManager.SendNotification("<color=grey>[</color><color=purple>BINDS</color><color=grey>]</color> Successfully rebinded mod to {BindInput}.");
-                                        }
-                                    }
-                                    else
-                                    {
-                                        if (target.buttonText != "Exit Favorite Mods")
-                                        {
-                                            if (favorites.Contains(target.buttonText))
-                                            {
-                                                favorites.Remove(target.buttonText);
-                                                VRRig.LocalRig.PlayHandTapLocal(48, rightHand, 0.4f);
 
-                                                NotificationManager.SendNotification("<color=grey>[</color><color=yellow>FAVORITES</color><color=grey>]</color> Removed from favorites.");
-                                            }
-                                            else
-                                            {
-                                                favorites.Add(target.buttonText);
-                                                VRRig.LocalRig.PlayHandTapLocal(50, rightHand, 0.4f);
-
-                                                NotificationManager.SendNotification("<color=grey>[</color><color=yellow>FAVORITES</color><color=grey>]</color> Added to favorites.");
-                                            }
+                                            NotificationManager.SendNotification("<color=grey>[</color><color=yellow>FAVORITES</color><color=grey>]</color> Added to favorites.");
                                         }
                                     }
                                 }
@@ -6812,77 +6949,51 @@ namespace iiMenu.Menu
 
                 switch (true)
                 {
+                    case true when ((leftJoystickClick || rightJoystickClick) || ((Keyboard.current != null && Keyboard.current.bKey.isPressed) || UnityInput.Current.GetKey(KeyCode.B))) && !target.buttonText.StartsWith("Exit ") && !target.buttonText.StartsWith("Keybind ") && target.buttonText != "Clear All Keybinds" && target.buttonText != "Non-Toggle Keybinds" && target.buttonText != "Overwrite Keybinds" && target.buttonText != "Keybind Settings":
+                    {
+                        HandleKeybindTrigger(target);
+                        break;
+                    }
                     case true when menuButtonIndex != 2 && ((leftGrab && !joystickMenu) || (joystickMenu && rightJoystick.y > 0.5f && leftTrigger > 0.5f)):
+                    {
+                        if (IsRebinding)
                         {
-                            if (IsBinding)
+                            if (target.rebindKey != null)
                             {
-                                bool AlreadyBinded = false;
-                                string BindedTo = "";
-                                foreach (var Bind in ModBindings.Where(Bind => Bind.Value.Contains(target.buttonText)))
-                                {
-                                    AlreadyBinded = true;
-                                    BindedTo = Bind.Key;
-                                    break;
-                                }
-
-                                if (AlreadyBinded)
-                                {
-                                    target.customBind = null;
-                                    ModBindings[BindedTo].Remove(target.buttonText);
-                                    VRRig.LocalRig.PlayHandTapLocal(48, rightHand, 0.4f);
-
-                                    NotificationManager.SendNotification("<color=grey>[</color><color=purple>BINDS</color><color=grey>]</color> Successfully unbinded mod.");
-                                }
-                                else
-                                {
-                                    target.customBind = BindInput;
-                                    ModBindings[BindInput].Add(target.buttonText);
-                                    VRRig.LocalRig.PlayHandTapLocal(50, rightHand, 0.4f);
-
-                                    NotificationManager.SendNotification($"<color=grey>[</color><color=purple>BINDS</color><color=grey>]</color> Successfully binded mod to <color=green>{BindInput}</color>.");
-                                }
+                                target.rebindKey = null;
+                                VRRig.LocalRig.PlayHandTapLocal(48, rightHand, 0.4f);
+                                NotificationManager.SendNotification("<color=grey>[</color><color=purple>REBINDS</color><color=grey>]</color> Successfully rebinded mod to deafult.");
                             }
                             else
                             {
-                                if (IsRebinding)
+                                target.rebindKey = BindInput;
+                                VRRig.LocalRig.PlayHandTapLocal(50, rightHand, 0.4f);
+                                NotificationManager.SendNotification("<color=grey>[</color><color=purple>BINDS</color><color=grey>]</color> Successfully rebinded mod to {BindInput}.");
+                            }
+                        }
+                        else
+                        {
+                            if (target.buttonText != "Exit Favorite Mods")
+                            {
+                                if (favorites.Contains(target.buttonText))
                                 {
-                                    if (target.rebindKey != null)
-                                    {
-                                        target.rebindKey = null;
-                                        VRRig.LocalRig.PlayHandTapLocal(48, rightHand, 0.4f);
-                                        NotificationManager.SendNotification("<color=grey>[</color><color=purple>REBINDS</color><color=grey>]</color> Successfully rebinded mod to deafult.");
-                                    }
-                                    else
-                                    {
-                                        target.rebindKey = BindInput;
-                                        VRRig.LocalRig.PlayHandTapLocal(50, rightHand, 0.4f);
-                                        NotificationManager.SendNotification("<color=grey>[</color><color=purple>BINDS</color><color=grey>]</color> Successfully rebinded mod to {BindInput}.");
-                                    }
+                                    favorites.Remove(target.buttonText);
+                                    VRRig.LocalRig.PlayHandTapLocal(48, rightHand, 0.4f);
+
+                                    NotificationManager.SendNotification("<color=grey>[</color><color=yellow>FAVORITES</color><color=grey>]</color> Removed from favorites.");
                                 }
                                 else
                                 {
-                                    if (target.buttonText != "Exit Favorite Mods")
-                                    {
-                                        if (favorites.Contains(target.buttonText))
-                                        {
-                                            favorites.Remove(target.buttonText);
-                                            VRRig.LocalRig.PlayHandTapLocal(48, rightHand, 0.4f);
+                                    favorites.Add(target.buttonText);
+                                    VRRig.LocalRig.PlayHandTapLocal(50, rightHand, 0.4f);
 
-                                            NotificationManager.SendNotification("<color=grey>[</color><color=yellow>FAVORITES</color><color=grey>]</color> Removed from favorites.");
-                                        }
-                                        else
-                                        {
-                                            favorites.Add(target.buttonText);
-                                            VRRig.LocalRig.PlayHandTapLocal(50, rightHand, 0.4f);
-
-                                            NotificationManager.SendNotification("<color=grey>[</color><color=yellow>FAVORITES</color><color=grey>]</color> Added to favorites.");
-                                        }
-                                    }
+                                    NotificationManager.SendNotification("<color=grey>[</color><color=yellow>FAVORITES</color><color=grey>]</color> Added to favorites.");
                                 }
                             }
-
-                            break;
                         }
+
+                        break;
+                    }
                     case true when menuButtonIndex != 3 && leftTrigger > 0.5f && !joystickMenu:
                         {
                             if (!quickActions.Contains(target.buttonText))
@@ -7441,6 +7552,8 @@ jgs \_   _/ |Oo\
         public static bool advancedArraylist;
         public static bool flipArraylist;
         public static bool hideSettings;
+        public static bool onlyModsArraylist;
+        public static float buttonPanicStart = -1f;
         public static bool hideMacros;
         public static bool hideTextOnCamera;
         public static bool hidePointer;
@@ -7547,8 +7660,65 @@ jgs \_   _/ |Oo\
         public static bool ToggleBindings = true;
         public static bool OverwriteKeybinds;
         public static bool IsBinding;
-        public static string BindInput = "";
+        public static string BindInput = "A";
         public static bool IsRebinding;
+        public static string pendingBindMod;
+        public static float pendingBindTime;
+        public static bool pendingBindTriggerReleased;
+
+        public static void HandleKeybindTrigger(ButtonInfo target)
+        {
+            if (target == null) return;
+            bool alreadyBound = target.customBind != null || ModBindings.Any(bind => bind.Value.Contains(target.buttonText));
+            if (alreadyBound)
+            {
+                target.customBind = null;
+                foreach (var bind in ModBindings.Values)
+                    bind.Remove(target.buttonText);
+                if (pendingBindMod == target.buttonText)
+                    pendingBindMod = null;
+                VRRig.LocalRig.PlayHandTapLocal(48, rightHand, 0.4f);
+                NotificationManager.SendNotification($"<color=grey>[</color><color=purple>BINDS</color><color=grey>]</color> Removed keybind from <color=white>{target.buttonText}</color>.");
+                ReloadMenu();
+            }
+            else
+            {
+                pendingBindMod = target.buttonText;
+                pendingBindTime = Time.unscaledTime + 6f;
+                pendingBindTriggerReleased = false;
+                VRRig.LocalRig.PlayHandTapLocal(50, rightHand, 0.4f);
+                NotificationManager.SendNotification($"<color=grey>[</color><color=purple>BINDS</color><color=grey>]</color> Press any key (PC) or controller button (VR) for <color=white>{target.buttonText}</color>...");
+            }
+        }
+
+        public static void BindModToInput(string modName, string inputKey)
+        {
+            ButtonInfo target = Buttons.GetIndex(modName);
+            if (target == null) return;
+            if (!OverwriteKeybinds)
+            {
+                target.customBind = inputKey;
+                if (!ModBindings.ContainsKey(inputKey))
+                    ModBindings[inputKey] = new List<string>();
+                if (!ModBindings[inputKey].Contains(modName))
+                    ModBindings[inputKey].Add(modName);
+            }
+            else
+            {
+                foreach (var bind in ModBindings.Values)
+                    bind.Remove(modName);
+                target.customBind = inputKey;
+                if (!ModBindings.ContainsKey(inputKey))
+                    ModBindings[inputKey] = new List<string>();
+                ModBindings[inputKey].Clear();
+                ModBindings[inputKey].Add(modName);
+            }
+            if (!BindStates.ContainsKey(inputKey))
+                BindStates[inputKey] = false;
+            VRRig.LocalRig.PlayHandTapLocal(50, rightHand, 0.4f);
+            NotificationManager.SendNotification($"<color=grey>[</color><color=purple>BINDS</color><color=grey>]</color> Bound <color=white>{modName}</color> to <color=green>[{inputKey}]</color>.");
+            ReloadMenu();
+        }
 
         public static readonly Dictionary<string, List<string>> ModBindings = new Dictionary<string, List<string>> {
             { "A", new List<string>() },

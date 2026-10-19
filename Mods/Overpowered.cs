@@ -923,7 +923,7 @@ namespace iiMenu.Mods
         public static void CreateItems(object target, int[] hashes, Vector3[] positions, Quaternion[] rotations, long[] sendData = null, GameEntityManager manager = null)
         {
             GameEntityManager gameEntityManager = manager ?? ManagerRegistry.GhostReactor.GameEntityManager;
-            if (NetworkSystem.Instance.IsMasterClient)
+            if (gameEntityManager.IsAuthorityPlayer(PhotonNetwork.LocalPlayer))
             {
                 if (Time.time < ghostReactorDelay)
                     return;
@@ -973,7 +973,7 @@ namespace iiMenu.Mods
                 CreateItem(target, hashes[0], positions[0], rotations[0], Vector3.zero, Vector3.zero, sendData.Length > 0 ? sendData[1] : 0L, manager);
         }
 
-        public static Dictionary<string, int> ObjectByName { get => ManagerRegistry.GhostReactor.GameEntityManager.itemPrefabFactory.ToDictionary(prefab => prefab.Value.name, prefab => prefab.Key); }
+        public static Dictionary<string, int> ObjectByName { get => GameEntityManager.itemPrefabFactory.ToDictionary(prefab => prefab.Value.name, prefab => prefab.Key); }
 
         public static void SpamObjectGrip(int objectId)
         {
@@ -1991,7 +1991,7 @@ namespace iiMenu.Mods
         public static Dictionary<string, int> GadgetByName 
         { 
             get => 
-                ManagerRegistry.SuperInfection.GameEntityManager.itemPrefabFactory
+                GameEntityManager.itemPrefabFactory
                 .ToDictionary(prefab => prefab.Value.name, prefab => prefab.Key); 
         }
 
@@ -2122,13 +2122,16 @@ namespace iiMenu.Mods
                 if (_lucy == null || UnityEngine.Time.time > lastLucyTime + 1f)
                 {
                     lastLucyTime = UnityEngine.Time.time;
-                    HalloweenGhostChaser best = null;
-                    foreach (var lucy in UnityEngine.Resources.FindObjectsOfTypeAll<HalloweenGhostChaser>())
+                    HalloweenGhostChaser best = GameObject.Find("Environment Objects/05Maze_PersistentObjects/Ghosts/Halloween Ghost/FloatingChaseSkeleton")?.GetComponent<HalloweenGhostChaser>();
+                    if (best == null || !best.gameObject.scene.isLoaded)
                     {
-                        if (lucy.gameObject.scene.isLoaded)
+                        foreach (var lucy in UnityEngine.Resources.FindObjectsOfTypeAll<HalloweenGhostChaser>())
                         {
-                            best = lucy;
-                            if (lucy.gameObject.activeInHierarchy) break;
+                            if (lucy.gameObject.scene.isLoaded)
+                            {
+                                best = lucy;
+                                if (lucy.gameObject.activeInHierarchy) break;
+                            }
                         }
                     }
                     _lucy = best;
@@ -2178,35 +2181,43 @@ namespace iiMenu.Mods
             }
         }
 
+        public static void EnsureLucySummoned()
+        {
+            HalloweenGhostChaser hgc = Lucy;
+            if (hgc == null) return;
+            if (hgc.GetView != null && !hgc.GetView.IsMine)
+                hgc.GetView.RequestOwnership();
+            if (hgc.currentState == HalloweenGhostChaser.ChaseState.Dormant || !hgc.isSummoned)
+            {
+                hgc.timeGongStarted = Time.time;
+                hgc.currentState = HalloweenGhostChaser.ChaseState.Gong;
+                hgc.isSummoned = true;
+            }
+        }
+
         public static void SpawnLucy()
         {
-            foreach (var lucy in UnityEngine.Resources.FindObjectsOfTypeAll<HalloweenGhostChaser>())
+            HalloweenGhostChaser lucy = Lucy;
+            if (lucy != null)
             {
-                if (lucy.gameObject.scene.isLoaded && lucy.gameObject.name.ToLower().Contains("cave"))
-                {
-                    if (OwnsGhost(lucy.GetView))
-                    {
-                        lucy.currentState = HalloweenGhostChaser.ChaseState.Gong;
-                        lucy.isSummoned = true;
-                    }
-                    return;
-                }
+                if (lucy.GetView != null && !lucy.GetView.IsMine)
+                    lucy.GetView.RequestOwnership();
+                lucy.timeGongStarted = Time.time;
+                lucy.currentState = HalloweenGhostChaser.ChaseState.Gong;
+                lucy.isSummoned = false;
             }
         }
 
         public static void SpawnRedLucy()
         {
-            foreach (var lucy in UnityEngine.Resources.FindObjectsOfTypeAll<HalloweenGhostChaser>())
+            HalloweenGhostChaser lucy = Lucy;
+            if (lucy != null)
             {
-                if (lucy.gameObject.scene.isLoaded && lucy.gameObject.name.ToLower().Contains("bayou"))
-                {
-                    if (OwnsGhost(lucy.GetView))
-                    {
-                        lucy.currentState = HalloweenGhostChaser.ChaseState.Gong;
-                        lucy.isSummoned = true;
-                    }
-                    return;
-                }
+                if (lucy.GetView != null && !lucy.GetView.IsMine)
+                    lucy.GetView.RequestOwnership();
+                lucy.timeGongStarted = Time.time;
+                lucy.currentState = HalloweenGhostChaser.ChaseState.Gong;
+                lucy.isSummoned = true;
             }
         }
 
@@ -2262,6 +2273,7 @@ namespace iiMenu.Mods
         public static float lucyOrbitAngle;
         public static void LucyOrbit()
         {
+            EnsureLucySummoned();
             HalloweenGhostChaser hgc = Lucy;
             if (hgc != null && OwnsGhost(hgc.GetView))
             {
@@ -2275,6 +2287,7 @@ namespace iiMenu.Mods
         public static float lucyVerticalOrbitAngle;
         public static void LucyOrbitVertical()
         {
+            EnsureLucySummoned();
             HalloweenGhostChaser hgc = Lucy;
             if (hgc != null && OwnsGhost(hgc.GetView))
             {
@@ -2288,6 +2301,7 @@ namespace iiMenu.Mods
         public static float lucyCrownOrbitAngle;
         public static void LucyCrown()
         {
+            EnsureLucySummoned();
             HalloweenGhostChaser hgc = Lucy;
             if (hgc != null && OwnsGhost(hgc.GetView))
             {
@@ -2300,11 +2314,10 @@ namespace iiMenu.Mods
 
         public static void HelicopterLucy()
         {
+            EnsureLucySummoned();
             HalloweenGhostChaser hgc = Lucy;
             if (hgc != null && OwnsGhost(hgc.GetView))
-            {
                 hgc.transform.Rotate(Vector3.up * (Time.deltaTime * 1000f));
-            }
         }
 
         public static void HandGrabLucy()
@@ -2329,6 +2342,7 @@ namespace iiMenu.Mods
 
                 if (gunLocked && lockTarget != null)
                 {
+                    EnsureLucySummoned();
                     HalloweenGhostChaser hgc = Lucy;
                     if (hgc != null && OwnsGhost(hgc.GetView))
                     {
@@ -2372,6 +2386,7 @@ namespace iiMenu.Mods
 
                 if (gunLocked && lockTarget != null)
                 {
+                    EnsureLucySummoned();
                     HalloweenGhostChaser hgc = Lucy;
                     if (hgc != null && OwnsGhost(hgc.GetView))
                     {
@@ -2439,6 +2454,7 @@ namespace iiMenu.Mods
 
         public static void LucyBodyguard()
         {
+            EnsureLucySummoned();
             HalloweenGhostChaser hgc = Lucy;
             if (hgc != null && OwnsGhost(hgc.GetView))
             {
@@ -2619,6 +2635,7 @@ namespace iiMenu.Mods
 
                 if (gunLocked && lockTarget != null)
                 {
+                    EnsureLucySummoned();
                     HalloweenGhostChaser hgc = Lucy;
             if (hgc != null && OwnsGhost(hgc.GetView))
                     {
@@ -2725,6 +2742,7 @@ namespace iiMenu.Mods
 
             if (Lucy != null)
             {
+                EnsureLucySummoned();
                 VRRig.LocalRig.enabled = false;
                 VRRig.LocalRig.transform.position = GorillaTagger.Instance.bodyCollider.transform.position - Vector3.up * 99999f;
 
@@ -2745,9 +2763,9 @@ namespace iiMenu.Mods
 
                 if (GetGunInput(true))
                 {
+                    EnsureLucySummoned();
                     if (Lucy != null && OwnsGhost(Lucy.GetView))
                         Lucy.transform.position = NewPointer.transform.position + Vector3.up;
-                    
                 }
             }
         }
@@ -5043,18 +5061,7 @@ namespace iiMenu.Mods
 
             closeRoomDelay = Time.time + 0.1f;
 
-            for (int i = 0; i < 40; i++)
-            {
-                WebFlags flags = new WebFlags(byte.MaxValue);
-                RaiseEventOptions options = new RaiseEventOptions
-                {
-                    Flags = flags,
-                    Receivers = ReceiverGroup.All,
-                    CachingOption = EventCaching.AddToRoomCacheGlobal
-                };
-                byte code = 51;
-                PhotonNetwork.RaiseEvent(code, new object[] { serverLink }, options, SendOptions.SendUnreliable);
-            }
+            NotificationManager.SendNotification("<color=grey>[</color><color=red>ERROR</color><color=grey>]</color> Close Room is no longer supported.");
 
             RPCProtection();
         }
@@ -6002,7 +6009,7 @@ namespace iiMenu.Mods
                         if (PhotonNetwork.IsMasterClient)
                             SpecialTimeRPC(GRElevatorManager._instance.photonView, -750, "RemoteActivateTeleport", new RaiseEventOptions { TargetActors = new[] { gunTarget.GetPlayer().ActorNumber } }, (int)GRElevatorManager._instance.currentLocation, 3, GRElevatorManager.LowestActorNumberInElevator());
                         else
-                            GRElevatorManager._instance.SendRPC("RemoteElevatorButtonPress", RpcTarget.MasterClient, new[] { 3, (int)GRElevatorManager._instance.currentLocation });
+                            GRElevatorManager._instance.SendRPC("RemoteElevatorButtonPress", RpcTarget.MasterClient, 3, (int)GRElevatorManager._instance.currentLocation);
 
                         RPCProtection();
                     }
@@ -6015,7 +6022,7 @@ namespace iiMenu.Mods
             if (PhotonNetwork.IsMasterClient)
                 SpecialTimeRPC(GRElevatorManager._instance.photonView, -750, "RemoteActivateTeleport", new RaiseEventOptions { Receivers = ReceiverGroup.Others }, (int)GRElevatorManager._instance.currentLocation, 2, GRElevatorManager.LowestActorNumberInElevator());
             else
-                GRElevatorManager._instance.SendRPC("RemoteElevatorButtonPress", RpcTarget.MasterClient, new[] { 3, (int)GRElevatorManager._instance.currentLocation });
+                GRElevatorManager._instance.SendRPC("RemoteElevatorButtonPress", RpcTarget.MasterClient, 3, (int)GRElevatorManager._instance.currentLocation);
         }
 
         public static void ElevatorKickAura()
@@ -6038,7 +6045,7 @@ namespace iiMenu.Mods
                     if (PhotonNetwork.IsMasterClient)
                         SpecialTimeRPC(GRElevatorManager._instance.photonView, -750, "RemoteActivateTeleport", new RaiseEventOptions { TargetActors = new[] { nearbyPlayer.GetPlayer().ActorNumber } }, (int)GRElevatorManager._instance.currentLocation, 3, GRElevatorManager.LowestActorNumberInElevator());
                     else
-                        GRElevatorManager._instance.SendRPC("RemoteElevatorButtonPress", RpcTarget.MasterClient, new[] { 3, (int)GRElevatorManager._instance.currentLocation });
+                        GRElevatorManager._instance.SendRPC("RemoteElevatorButtonPress", RpcTarget.MasterClient, 3, (int)GRElevatorManager._instance.currentLocation);
 
                      RPCProtection();
                 }
@@ -6070,7 +6077,7 @@ namespace iiMenu.Mods
                     if (PhotonNetwork.IsMasterClient)
                         SpecialTimeRPC(GRElevatorManager._instance.photonView, -750, "RemoteActivateTeleport", new RaiseEventOptions { TargetActors = new[] { rig.GetPlayer().ActorNumber } }, (int)GRElevatorManager._instance.currentLocation, 3, GRElevatorManager.LowestActorNumberInElevator());
                     else
-                        GRElevatorManager._instance.SendRPC("RemoteElevatorButtonPress", RpcTarget.MasterClient, new[] { 3, (int)GRElevatorManager._instance.currentLocation });
+                        GRElevatorManager._instance.SendRPC("RemoteElevatorButtonPress", RpcTarget.MasterClient, 3, (int)GRElevatorManager._instance.currentLocation);
 
                     RPCProtection();
                 }
@@ -7758,7 +7765,6 @@ namespace iiMenu.Mods
             {
                 if (!PhotonNetwork.InRoom) yield break;
 
-                PhotonNetwork.RaiseEvent(250, new byte[800], new RaiseEventOptions { Receivers = ReceiverGroup.Others }, SendOptions.SendUnreliable);
                 PhotonNetwork.RaiseEvent(186, new object[1] { "x" }, new RaiseEventOptions { Receivers = ReceiverGroup.Others }, SendOptions.SendUnreliable);
 
                 yield return new WaitForSeconds(delay);
@@ -7961,6 +7967,458 @@ namespace iiMenu.Mods
                 CreateRoom(RandomString(), GorillaComputer.instance.currentGameMode.Value ?? "CASUAL", isPub: false, type: JoinType.JoinWithNearby);
                 stumpDragging = false;
             }));
+        }
+
+        private static bool bugPhysActive;
+        private static GameObject bugPhysObj;
+        private static Rigidbody bugPhysBody;
+        private static bool bugPhysGrabbing;
+        private static bool bugBecomeActive;
+        private static ThrowableBug bugPhysBug;
+
+        private static ThrowableBug GetNearestBug()
+        {
+            ThrowableBug[] bugs = UnityEngine.Object.FindObjectsByType<ThrowableBug>(FindObjectsSortMode.None);
+            ThrowableBug best = null;
+            float bestDist = float.MaxValue;
+            Vector3 myPos = GorillaTagger.Instance.offlineVRRig.transform.position;
+            foreach (ThrowableBug bug in bugs)
+            {
+                if (bug == null) continue;
+                float dist = Vector3.Distance(bug.transform.position, myPos);
+                if (dist < bestDist)
+                {
+                    bestDist = dist;
+                    best = bug;
+                }
+            }
+            return best;
+        }
+
+        private static bool GetBugControl()
+        {
+            ThrowableBug bug = GetNearestBug();
+            if (bug == null)
+            {
+                NotificationManager.SendNotification("<color=grey>[</color><color=red>BUG</color><color=grey>]</color> No throwable bugs in this map.");
+                return false;
+            }
+            bug.WorldShareableRequestOwnership();
+            return true;
+        }
+
+        public static void Enable_BugPhysics()
+        {
+            if (!GetBugControl()) return;
+            bugPhysBug = GetNearestBug();
+            if (bugPhysBug == null) return;
+            bugPhysActive = true;
+            NotificationManager.SendNotification("<color=grey>[</color><color=green>BUG</color><color=grey>]</color> Bug physics on - grab it with your grips.");
+        }
+
+        public static void Disable_BugPhysics()
+        {
+            bugPhysActive = false;
+            bugPhysGrabbing = false;
+            if (bugPhysObj != null)
+            {
+                UnityEngine.Object.Destroy(bugPhysObj);
+                bugPhysObj = null;
+            }
+        }
+
+        private static void BugPhysTick()
+        {
+            ThrowableBug bug = bugPhysBug;
+            if (bug == null)
+            {
+                bug = GetNearestBug();
+                if (bug == null) return;
+                bugPhysBug = bug;
+            }
+
+            if (bugPhysObj == null)
+            {
+                bugPhysObj = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+                bugPhysObj.name = "bugphys";
+                bugPhysObj.AddComponent<Rigidbody>();
+                bugPhysObj.layer = 3;
+                bugPhysObj.transform.localScale = new Vector3(0.2f, 0.2f, 0.2f);
+                bugPhysObj.transform.position = bug.transform.position;
+                bugPhysObj.GetComponent<Renderer>().material = new Material(Shader.Find("Universal Render Pipeline/Unlit")) { color = Color.red };
+            }
+
+            Transform rightHand = GorillaTagger.Instance.offlineVRRig.rightHandTransform;
+            Transform leftHand = GorillaTagger.Instance.offlineVRRig.leftHandTransform;
+            Rigidbody body = bugPhysBody != null ? bugPhysBody : bugPhysObj.GetComponent<Rigidbody>();
+            if (bugPhysBody == null) bugPhysBody = body;
+
+            if (Vector3.Distance(bug.transform.position, rightHand.position) < 0.7f && rightGrab)
+            {
+                if (!bugPhysGrabbing)
+                {
+                    bugPhysGrabbing = true;
+                    bug.targetVelocity = Vector3.zero;
+                    bug.thrownVeloicity = Vector3.zero;
+                    bug.bugRotationalVelocity = Quaternion.identity;
+                    bug.thrownYVelocity = 0f;
+                }
+                bugPhysObj.transform.SetPositionAndRotation(rightHand.position, rightHand.rotation);
+                body.velocity = Vector3.zero;
+                body.angularVelocity = Vector3.zero;
+            }
+            else if (Vector3.Distance(bug.transform.position, leftHand.position) < 0.7f && leftGrab)
+            {
+                if (!bugPhysGrabbing)
+                {
+                    bugPhysGrabbing = true;
+                    bug.targetVelocity = Vector3.zero;
+                    bug.thrownVeloicity = Vector3.zero;
+                    bug.bugRotationalVelocity = Quaternion.identity;
+                    bug.thrownYVelocity = 0f;
+                }
+                bugPhysObj.transform.SetPositionAndRotation(leftHand.position, leftHand.rotation);
+                body.velocity = Vector3.zero;
+                body.angularVelocity = Vector3.zero;
+            }
+            else if (bugPhysGrabbing)
+            {
+                bugPhysGrabbing = false;
+                if (Vector3.Distance(bug.transform.position, rightHand.position) < 0.7f)
+                {
+                    body.velocity = GorillaLocomotion.GTPlayer.Instance.rightHand.velocityTracker.GetAverageVelocity();
+                    body.angularVelocity = body.velocity * 10f;
+                }
+                else if (Vector3.Distance(bug.transform.position, leftHand.position) < 0.7f)
+                {
+                    body.velocity = GorillaLocomotion.GTPlayer.Instance.leftHand.velocityTracker.GetAverageVelocity();
+                    body.angularVelocity = body.velocity * 10f;
+                }
+            }
+
+            if ((bugPhysObj.transform.position - bug.transform.position).sqrMagnitude > 0.0001f)
+            {
+                bug.transform.position = bugPhysObj.transform.position;
+                bug.transform.rotation = bugPhysObj.transform.rotation;
+            }
+        }
+
+        public static void BouncyBugShot()
+        {
+            if (bugPhysObj == null)
+            {
+                NotificationManager.SendNotification("<color=grey>[</color><color=red>BUG</color><color=grey>]</color> Enable Bug Physics first.");
+                return;
+            }
+            SphereCollider collider = bugPhysObj.GetComponent<SphereCollider>();
+            collider.material.bounciness = 0.7f;
+            collider.material.bounceCombine = PhysicsMaterialCombine.Maximum;
+            collider.material.dynamicFriction = 0f;
+            NotificationManager.SendNotification("<color=grey>[</color><color=green>BUG</color><color=grey>]</color> Bug is now bouncy.");
+        }
+
+        public static void Enable_BecomeBug()
+        {
+            if (!GetBugControl()) return;
+            bugBecomeActive = true;
+            GorillaTagger.Instance.offlineVRRig.enabled = false;
+            NotificationManager.SendNotification("<color=grey>[</color><color=green>BUG</color><color=grey>]</color> You are the bug.");
+        }
+
+        public static void Disable_BecomeBug()
+        {
+            bugBecomeActive = false;
+            GorillaTagger.Instance.offlineVRRig.enabled = true;
+        }
+
+        private static void BugBecomeTick()
+        {
+            ThrowableBug bug = GetNearestBug();
+            if (bug == null) return;
+
+            bug.WorldShareableRequestOwnership();
+            bug.transform.position = GorillaLocomotion.GTPlayer.Instance.headCollider.transform.position;
+            bug.transform.rotation = GorillaLocomotion.GTPlayer.Instance.headCollider.transform.rotation;
+        }
+
+        public static void FreezeTheBug()
+        {
+            ThrowableBug bug = GetNearestBug();
+            if (bug == null)
+            {
+                NotificationManager.SendNotification("<color=grey>[</color><color=red>BUG</color><color=grey>]</color> No throwable bugs in this map.");
+                return;
+            }
+            GetBugControl();
+            bug.bugRotationalVelocity = Quaternion.identity;
+            bug.targetVelocity = Vector3.zero;
+            bug.thrownVeloicity = Vector3.zero;
+            bug.thrownYVelocity = 0f;
+            if (bug.reliableState != null)
+            {
+                bug.reliableState.travelingDirection = Vector3.zero;
+            }
+            NotificationManager.SendNotification("<color=grey>[</color><color=green>BUG</color><color=grey>]</color> Bug frozen in place.");
+        }
+
+        public static void BugPhysToggle()
+        {
+            if (!bugPhysActive) return;
+            if (!NetworkSystem.Instance.InRoom) return;
+            BugPhysTick();
+        }
+
+        public static void BugBecomeToggle()
+        {
+            if (!bugBecomeActive) return;
+            if (!NetworkSystem.Instance.InRoom) return;
+            BugBecomeTick();
+        }
+
+        public static void BugFollowMe()
+        {
+            ThrowableBug bug = GetNearestBug();
+            if (bug == null)
+            {
+                NotificationManager.SendNotification("<color=grey>[</color><color=red>BUG</color><color=grey>]</color> No throwable bugs in this map.");
+                return;
+            }
+            GetBugControl();
+            bug.followingRig = GorillaTagger.Instance.myVRRig.GetComponent<VRRig>();
+            NotificationManager.SendNotification("<color=grey>[</color><color=green>BUG</color><color=grey>]</color> Bug is now following you.");
+        }
+
+        private static float lucyOriginalCatch = -1f;
+        private static bool lucyPhysActive;
+        private static GameObject lucyPhysObj;
+        private static bool lucyPhysGrabbing;
+        private static HalloweenGhostChaser lucyPhysGhost;
+        private static HalloweenGhostChaser GetNearestGhost()
+        {
+            HalloweenGhostChaser[] ghosts = UnityEngine.Object.FindObjectsByType<HalloweenGhostChaser>(FindObjectsSortMode.None);
+            HalloweenGhostChaser best = null;
+            float bestDist = float.MaxValue;
+            Vector3 myPos = GorillaTagger.Instance.offlineVRRig.transform.position;
+            foreach (HalloweenGhostChaser ghost in ghosts)
+            {
+                if (ghost == null) continue;
+                float dist = Vector3.Distance(ghost.transform.position, myPos);
+                if (dist < bestDist)
+                {
+                    bestDist = dist;
+                    best = ghost;
+                }
+            }
+            return best;
+        }
+
+        public static void Enable_LucyPhysics()
+        {
+            HalloweenGhostChaser ghost = GetNearestGhost();
+            if (ghost == null)
+            {
+                NotificationManager.SendNotification("<color=grey>[</color><color=red>LUCY</color><color=grey>]</color> No Lucy in this map.");
+                return;
+            }
+            ghost.GetView.RequestOwnership();
+            lucyPhysGhost = ghost;
+            if (lucyOriginalCatch < 0f)
+                lucyOriginalCatch = ghost.catchDistance;
+            ghost.Allowed(true);
+            ghost.currentState = HalloweenGhostChaser.ChaseState.Chasing;
+            ghost.currentSpeed = 0f;
+            ghost.velocityStep = 0f;
+            ghost.catchDistance = 0f;
+            ghost.ResetPath();
+            if (ghost.ghostBody != null)
+                ghost.ghostBody.SetActive(true);
+            lucyPhysActive = true;
+            NotificationManager.SendNotification("<color=grey>[</color><color=green>LUCY</color><color=grey>]</color> Lucy physics on - grab her with your grips.");
+        }
+
+        public static void Disable_LucyPhysics()
+        {
+            lucyPhysActive = false;
+            lucyPhysGrabbing = false;
+            if (lucyPhysObj != null)
+            {
+                UnityEngine.Object.Destroy(lucyPhysObj);
+                lucyPhysObj = null;
+            }
+            HalloweenGhostChaser ghost = lucyPhysGhost;
+            lucyPhysGhost = null;
+            if (ghost != null)
+            {
+                ghost.Allowed(true);
+                if (lucyOriginalCatch >= 0f)
+                {
+                    ghost.catchDistance = lucyOriginalCatch;
+                    lucyOriginalCatch = -1f;
+                }
+                ghost.currentState = HalloweenGhostChaser.ChaseState.Dormant;
+                ghost.nextTimeToChasePlayer = Time.time;
+                ghost.ResetPath();
+            }
+        }
+
+        public static void LucyPhysToggle()
+        {
+            if (!lucyPhysActive) return;
+            if (!NetworkSystem.Instance.InRoom) return;
+
+            HalloweenGhostChaser ghost = lucyPhysGhost;
+            if (ghost == null) return;
+            ghost.currentSpeed = 0f;
+
+            if (lucyPhysObj == null)
+            {
+                lucyPhysObj = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+                lucyPhysObj.name = "lucyphys";
+                lucyPhysObj.AddComponent<Rigidbody>();
+                lucyPhysObj.layer = 3;
+                lucyPhysObj.transform.localScale = new Vector3(1.5f, 1.5f, 1.5f);
+                lucyPhysObj.transform.position = ghost.transform.position;
+                lucyPhysObj.GetComponent<Renderer>().material = new Material(Shader.Find("Universal Render Pipeline/Unlit")) { color = new Color(0.7f, 0.9f, 1f, 1f) };
+            }
+
+            Transform rightHand = GorillaTagger.Instance.offlineVRRig.rightHandTransform;
+            Transform leftHand = GorillaTagger.Instance.offlineVRRig.leftHandTransform;
+            Rigidbody body = lucyPhysObj.GetComponent<Rigidbody>();
+
+            if (Vector3.Distance(ghost.transform.position, rightHand.position) < 1.5f && rightGrab)
+            {
+                lucyPhysGrabbing = true;
+                lucyPhysObj.transform.SetPositionAndRotation(rightHand.position, rightHand.rotation);
+                body.velocity = Vector3.zero;
+                body.angularVelocity = Vector3.zero;
+            }
+            else if (Vector3.Distance(ghost.transform.position, leftHand.position) < 1.5f && leftGrab)
+            {
+                lucyPhysGrabbing = true;
+                lucyPhysObj.transform.SetPositionAndRotation(leftHand.position, leftHand.rotation);
+                body.velocity = Vector3.zero;
+                body.angularVelocity = Vector3.zero;
+            }
+            else if (lucyPhysGrabbing)
+            {
+                lucyPhysGrabbing = false;
+                if (Vector3.Distance(ghost.transform.position, rightHand.position) < 1.5f)
+                {
+                    body.velocity = GorillaLocomotion.GTPlayer.Instance.rightHand.velocityTracker.GetAverageVelocity();
+                    body.angularVelocity = body.velocity * 5f;
+                }
+                else if (Vector3.Distance(ghost.transform.position, leftHand.position) < 1.5f)
+                {
+                    body.velocity = GorillaLocomotion.GTPlayer.Instance.leftHand.velocityTracker.GetAverageVelocity();
+                    body.angularVelocity = body.velocity * 5f;
+                }
+            }
+
+            ghost.transform.position = lucyPhysObj.transform.position;
+        }
+
+        public static void BouncyLucy()
+        {
+            if (lucyPhysObj == null)
+            {
+                NotificationManager.SendNotification("<color=grey>[</color><color=red>LUCY</color><color=grey>]</color> Enable Lucy Physics first.");
+                return;
+            }
+            SphereCollider collider = lucyPhysObj.GetComponent<SphereCollider>();
+            collider.material.bounciness = 0.7f;
+            collider.material.bounceCombine = PhysicsMaterialCombine.Maximum;
+            collider.material.dynamicFriction = 0f;
+            NotificationManager.SendNotification("<color=grey>[</color><color=green>LUCY</color><color=grey>]</color> Lucy is now bouncy.");
+        }
+
+        public static void LucyFollowMe()
+        {
+            HalloweenGhostChaser ghost = GetNearestGhost();
+            if (ghost == null)
+            {
+                NotificationManager.SendNotification("<color=grey>[</color><color=red>LUCY</color><color=grey>]</color> No Lucy in this map.");
+                return;
+            }
+            ghost.GetView.RequestOwnership();
+            if (lucyOriginalCatch < 0f)
+                lucyOriginalCatch = ghost.catchDistance;
+            ghost.Allowed(true);
+            ghost.followTarget = GorillaLocomotion.GTPlayer.Instance.headCollider.transform;
+            ghost.targetPlayer = NetworkSystem.Instance.LocalPlayer;
+            ghost.currentState = HalloweenGhostChaser.ChaseState.Chasing;
+            ghost.currentSpeed = 3f;
+            ghost.velocityStep = 0f;
+            ghost.catchDistance = 0f;
+            ghost.ResetPath();
+            NotificationManager.SendNotification("<color=grey>[</color><color=green>LUCY</color><color=grey>]</color> Lucy is following you.");
+        }
+
+        private static bool spinCosmeticsActive;
+        private static HarmonyLib.Harmony spinCosmeticsHarmony;
+        private static readonly System.Collections.Generic.List<SpinParametricAnimation> spinCosmeticsAdded = new System.Collections.Generic.List<SpinParametricAnimation>();
+
+        public static void Enable_SpinCosmetics()
+        {
+            if (spinCosmeticsActive) return;
+
+            spinCosmeticsHarmony = new HarmonyLib.Harmony("iiReborn.SpinCosmetics");
+            var original = HarmonyLib.AccessTools.Method(typeof(GorillaNetworking.CosmeticItemRegistry), "InitializeCosmetic");
+            var postfix = new HarmonyLib.HarmonyMethod(typeof(Overpowered).GetMethod(nameof(Postfix_SpinCosmetics), System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static));
+            if (original != null && postfix != null)
+            {
+                spinCosmeticsHarmony.Patch(original, null, postfix);
+            }
+
+            spinCosmeticsActive = true;
+
+            if (GorillaTagger.Instance != null && GorillaTagger.Instance.myVRRig != null)
+            {
+                GorillaTagger.Instance.myVRRig.GetComponent<VRRig>().RefreshCosmetics();
+            }
+
+            NotificationManager.SendNotification("<color=grey>[</color><color=green>SPIN</color><color=grey>]</color> All enabled cosmetics now spinning.");
+        }
+
+        public static void Disable_SpinCosmetics()
+        {
+            if (!spinCosmeticsActive) return;
+
+            try
+            {
+                spinCosmeticsHarmony?.UnpatchSelf();
+            }
+            catch { }
+            spinCosmeticsHarmony = null;
+
+            foreach (SpinParametricAnimation spin in spinCosmeticsAdded)
+            {
+                if (spin != null) UnityEngine.Object.Destroy(spin);
+            }
+            spinCosmeticsAdded.Clear();
+            spinCosmeticsActive = false;
+
+            if (GorillaTagger.Instance != null && GorillaTagger.Instance.myVRRig != null)
+            {
+                GorillaTagger.Instance.myVRRig.GetComponent<VRRig>().RefreshCosmetics();
+            }
+
+            NotificationManager.SendNotification("<color=grey>[</color><color=grey>SPIN</color><color=grey>]</color> Cosmetics restored.");
+        }
+
+        private static void Postfix_SpinCosmetics(GorillaNetworking.CosmeticItemRegistry __instance, GameObject cosmeticGObj)
+        {
+            if (!spinCosmeticsActive) return;
+            if (__instance == null || __instance.Rig == null || cosmeticGObj == null) return;
+            if (GorillaTagger.Instance == null || GorillaTagger.Instance.myVRRig == null) return;
+            if (__instance.Rig != GorillaTagger.Instance.myVRRig.GetComponent<VRRig>()) return;
+            if (cosmeticGObj.GetComponent<SpinParametricAnimation>() != null) return;
+
+            SpinParametricAnimation spin = cosmeticGObj.AddComponent<SpinParametricAnimation>();
+            spin.axis = Vector3.up;
+            spin.WorldSpaceRotation = false;
+            spin.revolutionsPerSecond = 0.5f;
+            spin.timeCurve = AnimationCurve.Linear(0f, 0f, 1f, 1f);
+            spinCosmeticsAdded.Add(spin);
         }
 
         public static void NotifyState(string tag, bool on) =>

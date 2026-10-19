@@ -24,7 +24,7 @@ namespace iiMenu.Mods
 {
     public static class SoundboardManager
     {
-        public const string MyInstantsApiBase = "https://myinstants-api.vercel.app";
+        public const string MyInstantsApiBase = "https://myinstants-api-gamma.vercel.app";
         public const string MyInstantsSearchUrl = MyInstantsApiBase + "/search?q=";
 
         public const string MyInstantsRecentUrl = MyInstantsApiBase + "/recent";
@@ -159,14 +159,17 @@ namespace iiMenu.Mods
                     yield return req.SendWebRequest();
                     if (req.result == UnityWebRequest.Result.Success)
                     {
-                        try
+                    try
+                    {
+                        clip = DownloadHandlerAudioClip.GetContent(req);
+                        byte[] bytes = req.downloadHandler?.data;
+                        if (clip != null && bytes != null && bytes.Length > 1024)
                         {
-                            clip = DownloadHandlerAudioClip.GetContent(req);
-                            byte[] bytes = req.downloadHandler?.data;
-                            if (clip != null && bytes != null && bytes.Length > 1024)
-                                File.WriteAllBytes(abs, bytes);
+                            File.WriteAllBytes(abs, bytes);
+                            try { Sound.LoadSoundboard(false); } catch { }
                         }
-                        catch { clip = null; }
+                    }
+                    catch { clip = null; }
                     }
 
                     if (clip == null)
@@ -208,7 +211,8 @@ namespace iiMenu.Mods
 
                 if (req.result != UnityWebRequest.Result.Success)
                 {
-                    onError?.Invoke($"request failed (HTTP {(long)req.responseCode})");
+                    string reason = $"request failed (HTTP {(long)req.responseCode}): {req.error}";
+                    onError?.Invoke(reason);
                     list = new List<MyInstantEntry>();
                 }
                 else

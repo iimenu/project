@@ -318,6 +318,7 @@ namespace iiMenu.Mods
             }.Any(handPos => Vector3.Distance(handPos, position) < (range ?? threshold));
 
         private static bool antiReportMissingBoardLogged;
+        private static float antiReportBoardScanDelay;
 
         public static bool antiMute;
 
@@ -340,11 +341,8 @@ namespace iiMenu.Mods
             }
 
             bool foundLocalLine = false;
-            foreach (GorillaPlayerScoreboardLine line in GorillaScoreboardTotalUpdater.allScoreboardLines)
+            void ProcessLine(GorillaPlayerScoreboardLine line)
             {
-                if (line.linePlayer != NetworkSystem.Instance.LocalPlayer) continue;
-
-                foundLocalLine = true;
                 Transform report = line.reportButton.gameObject.transform;
                 Transform mute = line.muteButton != null ? line.muteButton.gameObject.transform : null;
 
@@ -355,6 +353,36 @@ namespace iiMenu.Mods
                                       where (smartAntiReport ? (SmartAntiReport(line.linePlayer) || pressing) : hovering)
                                       select vrrig)
                     onReport?.Invoke(vrrig, report.transform.position);
+            }
+
+            try
+            {
+                foreach (GorillaPlayerScoreboardLine line in GorillaScoreboardTotalUpdater.allScoreboardLines)
+                {
+                    if (line == null || line.linePlayer == null || line.reportButton == null) continue;
+                    if (line.linePlayer != NetworkSystem.Instance.LocalPlayer) continue;
+
+                    foundLocalLine = true;
+                    ProcessLine(line);
+                }
+            }
+            catch { }
+
+            if (!foundLocalLine && Time.time > antiReportBoardScanDelay)
+            {
+                antiReportBoardScanDelay = Time.time + 0.5f;
+                try
+                {
+                    foreach (GorillaPlayerScoreboardLine line in UnityEngine.Object.FindObjectsOfType<GorillaPlayerScoreboardLine>())
+                    {
+                        if (line == null || line.linePlayer == null || line.reportButton == null) continue;
+                        if (line.linePlayer != NetworkSystem.Instance.LocalPlayer) continue;
+
+                        foundLocalLine = true;
+                        ProcessLine(line);
+                    }
+                }
+                catch { }
             }
 
             if (!foundLocalLine && !antiReportMissingBoardLogged)

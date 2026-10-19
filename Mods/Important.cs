@@ -290,6 +290,212 @@ namespace iiMenu.Mods
             }
         }
 
+        public static bool BetterOptimizationEnabled;
+        private static float nextBetterOptCheckTime;
+        private static GTZone lastOptimizedZone = GTZone.none;
+
+        public static void EnableBetterOptimization()
+        {
+            BetterOptimizationEnabled = true;
+            ZonePatch.enabled = true;
+            GTZone current = GetCurrentZone();
+            lastOptimizedZone = current;
+            UnloadInactiveMaps(current);
+            RunOptimizationCleanup();
+        }
+
+        public static void DisableBetterOptimization()
+        {
+            BetterOptimizationEnabled = false;
+            ZonePatch.enabled = false;
+            try
+            {
+                ZoneManagement.AddSceneToForceStayLoaded("City");
+                ZoneManagement.SetActiveZone(GetCurrentZone());
+            }
+            catch { }
+        }
+
+        public static void BetterOptimizationUpdate()
+        {
+            if (!BetterOptimizationEnabled)
+                return;
+
+            if (Time.time < nextBetterOptCheckTime)
+                return;
+
+            nextBetterOptCheckTime = Time.time + 1f;
+
+            try
+            {
+                ZoneManagement.RemoveSceneFromForceStayLoaded("City");
+                GTZone current = GetCurrentZone();
+                if (current != lastOptimizedZone || (ZoneManagement.instance != null && ZoneManagement.instance.activeZones.Count > 1))
+                {
+                    lastOptimizedZone = current;
+                    UnloadInactiveMaps(current);
+                    RunOptimizationCleanup();
+                }
+            }
+            catch { }
+        }
+
+        public static void OnNetworkTrigger(GorillaNetworkJoinTrigger trigger)
+        {
+            if (!BetterOptimizationEnabled || trigger == null)
+                return;
+
+            try
+            {
+                GTZone destZone = trigger.zone;
+                if (destZone == GTZone.none && trigger.primaryTriggerForMyZone != null)
+                    destZone = trigger.primaryTriggerForMyZone.zone;
+
+                if (destZone == GTZone.none && !string.IsNullOrEmpty(trigger.networkZone))
+                    Enum.TryParse<GTZone>(trigger.networkZone, true, out destZone);
+
+                if (destZone == GTZone.none)
+                    return;
+
+                lastOptimizedZone = destZone;
+                UnloadInactiveMaps(destZone);
+
+                if (trigger.makeSureThisIsDisabled != null)
+                {
+                    foreach (var obj in trigger.makeSureThisIsDisabled)
+                    {
+                        if (obj != null && obj.activeSelf)
+                            obj.SetActive(false);
+                    }
+                }
+
+                if (trigger.makeSureThisIsEnabled != null)
+                {
+                    foreach (var obj in trigger.makeSureThisIsEnabled)
+                    {
+                        if (obj != null && !obj.activeSelf)
+                            obj.SetActive(true);
+                    }
+                }
+
+                RunOptimizationCleanup();
+            }
+            catch { }
+        }
+
+        public static void UnloadInactiveMaps(GTZone keepZone)
+        {
+            try
+            {
+                if (ZoneManagement.instance == null)
+                    return;
+
+                ZoneManagement.RemoveSceneFromForceStayLoaded("City");
+
+                string keepSceneName = null;
+                try
+                {
+                    var keepData = ZoneManagement.instance.GetZoneData(keepZone);
+                    if (keepData != null)
+                    {
+                        keepData.active = true;
+                        keepSceneName = keepData.sceneName;
+                        if (keepData.rootGameObjects != null)
+                        {
+                            foreach (var root in keepData.rootGameObjects)
+                            {
+                                if (root != null && !root.activeSelf)
+                                    root.SetActive(true);
+                            }
+                        }
+
+                        if (!string.IsNullOrEmpty(keepSceneName) && !SceneManager.GetSceneByName(keepSceneName).isLoaded)
+                            SceneManager.LoadSceneAsync(keepSceneName, LoadSceneMode.Additive);
+                    }
+                }
+                catch { }
+
+                foreach (GTZone z in Enum.GetValues(typeof(GTZone)))
+                {
+                    if (z == keepZone || z == GTZone.none)
+                        continue;
+
+                    try
+                    {
+                        var data = ZoneManagement.instance.GetZoneData(z);
+                        if (data != null)
+                        {
+                            data.active = false;
+                            if (data.rootGameObjects != null)
+                            {
+                                foreach (var root in data.rootGameObjects)
+                                {
+                                    if (root != null && root.activeSelf)
+                                        root.SetActive(false);
+                                }
+                            }
+                        }
+                    }
+                    catch { }
+                }
+
+                for (int i = 0; i < SceneManager.sceneCount; i++)
+                {
+                    Scene s = SceneManager.GetSceneAt(i);
+                    if (!s.isLoaded || s.name == "GorillaTag" || (!string.IsNullOrEmpty(keepSceneName) && s.name == keepSceneName))
+                        continue;
+
+                    try
+                    {
+                        ZoneManagement.RemoveSceneFromForceStayLoaded(s.name);
+                        SceneManager.UnloadSceneAsync(s, UnloadSceneOptions.UnloadAllEmbeddedSceneObjects);
+                    }
+                    catch { }
+                }
+
+                try
+                {
+                    ZoneManagement.SetActiveZone(keepZone);
+                }
+                catch { }
+            }
+            catch { }
+        }
+
+        public static void RunOptimizationCleanup()
+        {
+            try
+            {
+                Resources.UnloadUnusedAssets();
+                GC.Collect();
+
+                if (Camera.main != null && Camera.main.farClipPlane > 200f)
+                    Camera.main.farClipPlane = 200f;
+
+                QualitySettings.particleRaycastBudget = 64;
+                QualitySettings.vSyncCount = 0;
+            }
+            catch { }
+        }
+
+        public static GTZone GetCurrentZone()
+        {
+            try
+            {
+                if (VRRig.LocalRig != null && VRRig.LocalRig.zoneEntity != null && VRRig.LocalRig.zoneEntity.currentZone != GTZone.none)
+                    return VRRig.LocalRig.zoneEntity.currentZone;
+
+                if (PhotonNetworkController.Instance != null && PhotonNetworkController.Instance.currentJoinTrigger != null && PhotonNetworkController.Instance.currentJoinTrigger.zone != GTZone.none)
+                    return PhotonNetworkController.Instance.currentJoinTrigger.zone;
+
+                if (ZoneManagement.instance != null && ZoneManagement.instance.activeZones != null && ZoneManagement.instance.activeZones.Count > 0)
+                    return ZoneManagement.instance.activeZones[ZoneManagement.instance.activeZones.Count - 1];
+            }
+            catch { }
+
+            return GTZone.forest;
+        }
+
         public static IEnumerator MapStateReport()
         {
             yield return new WaitForSeconds(3f);
@@ -731,6 +937,7 @@ exit";
         
         public static void EnsureIntegrationProgram() { iiMenu.Managers.SmtcReader.Begin(); }
         public static System.Collections.IEnumerator UpdateDataCoroutinePublic(float delay = 0f) { yield break; }
+        public static void DownloadQuickSong() {}
 
         private static byte[] lastArtBytes;
         private static UnityEngine.Texture2D _icon = new UnityEngine.Texture2D(2, 2);

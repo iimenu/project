@@ -23,7 +23,7 @@ namespace iiMenu.Patches.Menu
         public class Awake
         {
             public static bool Prefix(VRRig __instance) =>
-                __instance.gameObject.name != "Local Gorilla Player(Clone)";
+                !__instance.gameObject.name.StartsWith("Local Gorilla Player(Clone)") && (iiMenu.Menu.Main.GhostRig == null || __instance != iiMenu.Menu.Main.GhostRig);
         }
 
         [HarmonyPatch(typeof(VRRig), nameof(VRRig.PostTick))]

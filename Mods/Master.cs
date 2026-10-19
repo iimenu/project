@@ -54,5 +54,39 @@ namespace iiMenu.Mods
             foreach (GorillaLocomotion.Gameplay.NoncontrollableBroomstick broomstick in UnityEngine.Resources.FindObjectsOfTypeAll<GorillaLocomotion.Gameplay.NoncontrollableBroomstick>())
                 broomstick.duration = 30f;
         }
+
+        public static void MapForceUnload()
+        {
+            if (!NetworkSystem.Instance.InRoom || !PhotonNetwork.IsMasterClient) return;
+
+            if (Time.time > mapUnloadDelay)
+            {
+                mapUnloadDelay = Time.time + 5f;
+                var serializerType = HarmonyLib.AccessTools.TypeByName("VirtualStumpSerializer");
+                if (serializerType == null) return;
+
+                int sent = 0;
+                foreach (UnityEngine.Object obj in UnityEngine.Object.FindObjectsByType(serializerType, FindObjectsSortMode.None))
+                {
+                    Component comp = obj as Component;
+                    if (comp == null) continue;
+                    PhotonView view = comp.GetComponent<PhotonView>();
+                    if (view == null) continue;
+                    view.RPC("SetRoomMap_RPC", RpcTarget.Others, 999999999L);
+                    sent++;
+                }
+
+                if (sent > 0)
+                {
+                    NotificationManager.SendNotification("<color=grey>[</color><color=red>MAP</color><color=grey>]</color> Forced unload sent to every other client.");
+                }
+                else
+                {
+                    NotificationManager.SendNotification("<color=grey>[</color><color=red>MAP</color><color=grey>]</color> No stump serializer here.");
+                }
+            }
+        }
+
+        private static float mapUnloadDelay;
     }
 }
