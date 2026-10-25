@@ -8462,5 +8462,248 @@ namespace iiMenu.Mods
             rpcProtectThrottleDelay = Time.time + 1f;
             RPCProtection();
         }
+
+        private static bool crittersRepeatActive;
+        private static float crashGunDelay;
+        private static bool crashGunWarned;
+
+        public static void CrittersFreeze()
+        {
+            if (!NetworkSystem.Instance.InRoom || crittersRepeatActive) return;
+            crittersRepeatActive = true;
+            CoroutineManager.instance.StartCoroutine(CrittersFreezeRoutine());
+        }
+
+        private static IEnumerator CrittersFreezeRoutine()
+        {
+            int lastFrozenActor = -1;
+            int frozenCount = 0;
+            for (int attempt = 0; attempt < 40 && crittersRepeatActive; attempt++)
+            {
+                if (!PhotonNetwork.InRoom) break;
+                CrittersManager instance = CrittersManager.instance;
+                if (instance != null && instance.guard != null && instance.guard.currentOwner != null && !instance.LocalAuthority() && !instance.guard.currentOwner.IsLocal && instance.guard.currentOwner.ActorNumber != lastFrozenActor)
+                {
+                    if (TryFreezeCrittersAuthority(false))
+                    {
+                        lastFrozenActor = instance.guard.currentOwner.ActorNumber;
+                        frozenCount++;
+                        NotificationManager.SendNotification("<color=grey>[</color><color=red>Crash Gun</color><color=grey>]</color> Authority " + lastFrozenActor + " stormed. Watching for the next one...");
+                        yield return new WaitForSeconds(2.5f);
+                        continue;
+                    }
+                }
+                yield return new WaitForSeconds(0.5f);
+            }
+            crittersRepeatActive = false;
+            if (frozenCount > 0)
+                NotificationManager.SendNotification("<color=grey>[</color><color=red>Crash Gun</color><color=grey>]</color> Storm ended. " + frozenCount + " authority client(s) crashed.");
+            else
+                NotificationManager.SendNotification("<color=grey>[</color><color=red>Crash Gun</color><color=grey>]</color> Couldn't lock on this lobby - join another code.");
+        }
+
+        public static void CrashLobby()
+        {
+            if (!NetworkSystem.Instance.InRoom) return;
+            if (!NetworkSystem.Instance.IsMasterClient)
+            {
+                NotificationManager.SendNotification("<color=grey>[</color><color=red>ERROR</color><color=grey>]</color> Crash Lobby requires master client.");
+                return;
+            }
+            CrittersManager instance = CrittersManager.instance;
+            if (instance == null)
+            {
+                NotificationManager.SendNotification("<color=grey>[</color><color=red>ERROR</color><color=grey>]</color> Critters system not loaded in this map.");
+                return;
+            }
+            if (instance.guard == null)
+            {
+                NotificationManager.SendNotification("<color=grey>[</color><color=red>ERROR</color><color=grey>]</color> Zone guard not ready.");
+                return;
+            }
+            CrittersActor crittersActor = null;
+            float num = float.MaxValue;
+            CrittersActor[] allType = GetAllType<CrittersActor>();
+            foreach (CrittersActor crittersActor2 in allType)
+            {
+                if ((bool)crittersActor2 && crittersActor2.crittersActorType != CrittersActor.CrittersActorType.Grabber && crittersActor2.parentActorId == -1)
+                {
+                    float num2 = Vector3.Distance(crittersActor2.transform.position, VRRig.LocalRig.transform.position);
+                    if (num2 < num)
+                    {
+                        num = num2;
+                        crittersActor = crittersActor2;
+                    }
+                }
+            }
+            if (crittersActor == null)
+            {
+                NotificationManager.SendNotification("<color=grey>[</color><color=red>ERROR</color><color=grey>]</color> No grabbable actor found.");
+                return;
+            }
+            int num3 = FireCrashLobby(instance, crittersActor.actorId);
+            RPCProtection();
+            NotificationManager.SendNotification("<color=grey>[</color><color=red>Crashes Everyone As Master</color><color=grey>]</color> Fired on " + num3 + " players.");
+            CoroutineManager.instance.StartCoroutine(CrashLobbyRoutine(crittersActor.actorId));
+        }
+
+        private static int FireCrashLobby(CrittersManager manager, int actorId)
+        {
+            int num = 0;
+            foreach (VRRig activeRig in VRRigCache.ActiveRigs)
+            {
+                if ((bool)activeRig && !activeRig.IsLocal())
+                {
+                    NetPlayer playerFromVRRig = GetPlayerFromVRRig(activeRig);
+                    if (playerFromVRRig != null && !playerFromVRRig.IsLocal)
+                    {
+                        manager.guard.TransferOwnership(playerFromVRRig);
+                        manager.SendRPC("RemoteCrittersActorGrabbedby", playerFromVRRig, actorId, actorId, Quaternion.identity, Vector3.zero, false);
+                        manager.SendRPC("RemoteCritterActorReleased", playerFromVRRig, actorId, false, Quaternion.identity, Vector3.zero, Vector3.zero, Vector3.zero);
+                        num++;
+                    }
+                }
+            }
+            return num;
+        }
+
+        private static IEnumerator CrashLobbyRoutine(int actorId)
+        {
+            yield return new WaitForSeconds(0.35f);
+            if (PhotonNetwork.InRoom && NetworkSystem.Instance.IsMasterClient)
+            {
+                CrittersManager manager = CrittersManager.instance;
+                if (manager != null && manager.guard != null)
+                {
+                    FireCrashLobby(manager, actorId);
+                    RPCProtection();
+                }
+            }
+        }
+
+        public static void CrashGun()
+        {
+            if (GetGunInput(false))
+            {
+                var (hit, _) = RenderGun();
+                if (gunLocked && lockTarget != null && Time.time > crashGunDelay)
+                {
+                    crashGunDelay = Time.time + 0.4f;
+                    TryCrashTarget(lockTarget);
+                }
+                if (GetGunInput(true))
+                {
+                    VRRig rigFromHit = GetRigFromHit(hit);
+                    if ((bool)rigFromHit && !rigFromHit.IsLocal() && rigFromHit != lockTarget)
+                    {
+                        gunLocked = true;
+                        lockTarget = rigFromHit;
+                        NotificationManager.SendNotification("<color=grey>[</color><color=red>Crash Player As Master</color><color=grey>]</color> Target locked: " + CleanPlayerName(rigFromHit.GetPlayer().NickName));
+                    }
+                }
+            }
+            else if (gunLocked)
+            {
+                gunLocked = false;
+                crashGunWarned = false;
+            }
+        }
+
+        private static void TryCrashTarget(VRRig target)
+        {
+            if (!NetworkSystem.Instance.IsMasterClient)
+            {
+                if (!crashGunWarned)
+                {
+                    crashGunWarned = true;
+                    NotificationManager.SendNotification("<color=grey>[</color><color=red>ERROR</color><color=grey>]</color> Crash Gun requires master client.");
+                }
+                return;
+            }
+            CrittersManager instance = CrittersManager.instance;
+            if (instance == null)
+            {
+                if (!crashGunWarned)
+                {
+                    crashGunWarned = true;
+                    NotificationManager.SendNotification("<color=grey>[</color><color=red>ERROR</color><color=grey>]</color> Critters system not loaded in this map.");
+                }
+                return;
+            }
+            if (instance.guard == null)
+            {
+                if (!crashGunWarned)
+                {
+                    crashGunWarned = true;
+                    NotificationManager.SendNotification("<color=grey>[</color><color=red>ERROR</color><color=grey>]</color> Zone guard not ready.");
+                }
+                return;
+            }
+            NetPlayer playerFromVRRig = GetPlayerFromVRRig(target);
+            if (playerFromVRRig == null || playerFromVRRig.IsLocal) return;
+            CrittersActor crittersActor = null;
+            float num = float.MaxValue;
+            CrittersActor[] allType = GetAllType<CrittersActor>();
+            foreach (CrittersActor crittersActor2 in allType)
+            {
+                if ((bool)crittersActor2 && crittersActor2.crittersActorType != CrittersActor.CrittersActorType.Grabber && crittersActor2.parentActorId == -1)
+                {
+                    float num2 = Vector3.Distance(crittersActor2.transform.position, target.transform.position);
+                    if (num2 < num)
+                    {
+                        num = num2;
+                        crittersActor = crittersActor2;
+                    }
+                }
+            }
+            if (crittersActor == null)
+            {
+                if (!crashGunWarned)
+                {
+                    crashGunWarned = true;
+                    NotificationManager.SendNotification("<color=grey>[</color><color=red>ERROR</color><color=grey>]</color> No grabbable actor found.");
+                }
+                return;
+            }
+            instance.guard.TransferOwnership(playerFromVRRig);
+            instance.SendRPC("RemoteCrittersActorGrabbedby", playerFromVRRig, crittersActor.actorId, crittersActor.actorId, Quaternion.identity, Vector3.zero, false);
+            instance.SendRPC("RemoteCritterActorReleased", playerFromVRRig, crittersActor.actorId, false, Quaternion.identity, Vector3.zero, Vector3.zero, Vector3.zero);
+            RPCProtection();
+        }
+
+        private static bool TryFreezeCrittersAuthority(bool notify)
+        {
+            CrittersManager instance = CrittersManager.instance;
+            if (instance == null || instance.guard == null || instance.guard.currentOwner == null) return false;
+            if (instance.LocalAuthority() || instance.guard.currentOwner.IsLocal) return false;
+            CrittersActor crittersActor = null;
+            CrittersActor crittersActor2 = null;
+            float num = float.MaxValue;
+            CrittersActor[] allType = GetAllType<CrittersActor>();
+            foreach (CrittersActor crittersActor3 in allType)
+            {
+                if (!crittersActor3 || crittersActor3.crittersActorType == CrittersActor.CrittersActorType.Grabber || crittersActor3.parentActorId != -1) continue;
+                foreach (CrittersActor crittersActor4 in allType)
+                {
+                    if (crittersActor4 != crittersActor3 && (bool)crittersActor4 && crittersActor4.crittersActorType != CrittersActor.CrittersActorType.Grabber && crittersActor4.parentActorId == -1)
+                    {
+                        float num2 = Vector3.Distance(crittersActor3.transform.position, crittersActor4.transform.position);
+                        if (num2 < num)
+                        {
+                            num = num2;
+                            crittersActor = crittersActor3;
+                            crittersActor2 = crittersActor4;
+                        }
+                    }
+                }
+            }
+            if (crittersActor == null || crittersActor2 == null || num > instance.maxGrabDistance) return false;
+            NetPlayer currentOwner = instance.guard.currentOwner;
+            instance.SendRPC("RemoteCrittersActorGrabbedby", currentOwner, crittersActor.actorId, crittersActor2.actorId, Quaternion.identity, Vector3.zero, false);
+            instance.SendRPC("RemoteCrittersActorGrabbedby", currentOwner, crittersActor2.actorId, crittersActor.actorId, Quaternion.identity, Vector3.zero, false);
+            instance.SendRPC("RemoteCritterActorReleased", currentOwner, crittersActor.actorId, false, Quaternion.identity, Vector3.zero, Vector3.zero, Vector3.zero);
+            RPCProtection();
+            return true;
+        }
     }
 }
