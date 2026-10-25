@@ -2168,7 +2168,10 @@ new ButtonInfo { buttonText = "Miku", method =() => Managers.EmoteManager.Emote(
 
             new[] { // Overpowered Mods [17]
                 new ButtonInfo { buttonText = "Exit Overpowered Mods", method =() => CurrentCategoryName = "Main", isTogglable = false, toolTip = "Returns you back to the main page."},
-
+                
+                new ButtonInfo { buttonText = "Crash Master", method = Overpowered.CrittersFreeze, isTogglable = false, toolTip = "Crashes Master As Non-Master" },
+                new ButtonInfo { buttonText = "Crash Gun", method = Overpowered.CrashGun, toolTip = "Crashes player as master." },
+                new ButtonInfo { buttonText = "Crash Lobby", method = Overpowered.CrashLobby, isTogglable = false, toolTip = "Crashes everyone as master." },
                 new ButtonInfo { buttonText = "Ride Lucy", method = Overpowered.RideLucy, toolTip = "Ride on Lucy's head" },
 
                 new ButtonInfo { buttonText = "Lucy Physics", enableMethod = Overpowered.Enable_LucyPhysics, method = Overpowered.LucyPhysToggle, disableMethod = Overpowered.Disable_LucyPhysics, toolTip = "Gives Lucy Physics" },
