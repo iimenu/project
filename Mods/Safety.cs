@@ -459,6 +459,20 @@ namespace iiMenu.Mods
             catch { }
         }
 
+        public static void AntiReportCrash()
+        {
+            AntiReport((vrrig, position) =>
+            {
+                if (!(Time.time > antiReportDelay)) return;
+                Overpowered.TryCrashTarget(vrrig);
+                RPCProtection();
+
+                antiReportDelay = Time.time + 1f;
+                NotificationManager.SendNotification("<color=grey>[</color><color=purple>ANTI-REPORT</color><color=grey>]</color> " + GetPlayerName(vrrig) + " attempted to report you, you have been disconnected and will be reconnected shortly.");
+            });
+        }
+
+
         public static void EnableAntiOculusReport() =>
             PhotonNetwork.NetworkingClient.EventReceived += EventReceived_AntiOculusReport;
 

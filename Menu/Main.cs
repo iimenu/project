@@ -170,19 +170,16 @@ namespace iiMenu.Menu
             }
 
             loadPreferencesTime = Time.time;
-            if (File.Exists($"{PluginInfo.BaseDirectory}/iiMenu_Preferences.txt"))
+            try
             {
-                try
-                {
-                    Settings.LoadPreferences();
-                }
-                catch (Exception exc)
-                {
-                    LogManager.LogError(
-                    $"Error with Settings.LoadPreferences() at {exc.StackTrace}: {exc.Message}");
+                Settings.LoadPreferences();
+            }
+            catch (Exception exc)
+            {
+                LogManager.LogError(
+                $"Error with Settings.LoadPreferences() at {exc.StackTrace}: {exc.Message}");
 
-                    CoroutineManager.instance.StartCoroutine(DelayLoadPreferences());
-                }
+                CoroutineManager.instance.StartCoroutine(DelayLoadPreferences());
             }
 
             try
@@ -1165,7 +1162,7 @@ namespace iiMenu.Menu
                         {
                             if (preferenceBackupCount >= 5)
                             {
-                                File.WriteAllText($"{PluginInfo.BaseDirectory}/Backups/{CurrentTimestamp().Replace(":", ".")}.txt", Settings.SavePreferencesToText());
+                                File.WriteAllText($"{PluginInfo.BaseDirectory}/Backups/{CurrentTimestamp().Replace(":", ".")}.txt", Settings.SavePreferencesToJson());
                                 preferenceBackupCount = 0;
                             }
 

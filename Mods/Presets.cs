@@ -74,7 +74,7 @@ namespace iiMenu.Mods
             if (!Directory.Exists($"{PluginInfo.BaseDirectory}/SavedPresets"))
                 Directory.CreateDirectory($"{PluginInfo.BaseDirectory}/SavedPresets");
             
-            File.WriteAllText($"{PluginInfo.BaseDirectory}/SavedPresets/Preset_" + id + ".txt", Settings.SavePreferencesToText());
+            File.WriteAllText($"{PluginInfo.BaseDirectory}/SavedPresets/Preset_" + id + ".txt", Settings.SavePreferencesToJson());
         }
 
         public static void LoadCustomPreset(int id)
