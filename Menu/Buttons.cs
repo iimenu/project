@@ -2172,6 +2172,7 @@ new ButtonInfo { buttonText = "Miku", method =() => Managers.EmoteManager.Emote(
                 new ButtonInfo { buttonText = "Exit Overpowered Mods", method =() => CurrentCategoryName = "Main", isTogglable = false, toolTip = "Returns you back to the main page."},
                 
                 new ButtonInfo { buttonText = "Crash Master", method = Overpowered.CrittersFreeze, isTogglable = false, toolTip = "Crashes Master As Non-Master" },
+<<<<<<< HEAD
                 new ButtonInfo { buttonText = "Crash Master <color=grey>[</color>Automatic<color=grey>]</color>", method = Overpowered.CrittersFreezeAuto, isTogglable = false , toolTip = "Crashes Master Automaticly self explanitory" },
                 new ButtonInfo { buttonText = "Crash Gun", method = Overpowered.CrashGun, toolTip = "Crashes player as master." },
                 new ButtonInfo { buttonText = "Crash Lobby", method = Overpowered.CrashLobby, isTogglable = false, toolTip = "Crashes everyone as master." },
@@ -2179,6 +2180,10 @@ new ButtonInfo { buttonText = "Miku", method =() => Managers.EmoteManager.Emote(
                 new ButtonInfo { buttonText = "Crash On Touch", method = Overpowered.CrashOnTouch, isTogglable = true, toolTip = "Crashes any player you touch (master only)." },
 
 
+=======
+                new ButtonInfo { buttonText = "Crash Gun", method = Overpowered.CrashGun, toolTip = "Crashes player as master." },
+                new ButtonInfo { buttonText = "Crash Lobby", method = Overpowered.CrashLobby, isTogglable = false, toolTip = "Crashes everyone as master." },
+>>>>>>> c9c763d3cbb07ebdecd5cfd6101a919e816eac1f
                 new ButtonInfo { buttonText = "Ride Lucy", method = Overpowered.RideLucy, toolTip = "Ride on Lucy's head" },
 
                 new ButtonInfo { buttonText = "Lucy Physics", enableMethod = Overpowered.Enable_LucyPhysics, method = Overpowered.LucyPhysToggle, disableMethod = Overpowered.Disable_LucyPhysics, toolTip = "Gives Lucy Physics" },

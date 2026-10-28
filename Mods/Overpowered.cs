@@ -8479,6 +8479,7 @@ namespace iiMenu.Mods
             RPCProtection();
         }
 
+<<<<<<< HEAD
         private static float crashGunDelay;
 
         private static bool IsTheAiCrashActive;
@@ -8555,11 +8556,21 @@ namespace iiMenu.Mods
         {
             if (!NetworkSystem.Instance.InRoom || IsTheAiCrashActive) return;
             IsTheAiCrashActive = true;
+=======
+        private static bool crittersRepeatActive;
+        private static float crashGunDelay;
+
+        public static void CrittersFreeze()
+        {
+            if (!NetworkSystem.Instance.InRoom || crittersRepeatActive) return;
+            crittersRepeatActive = true;
+>>>>>>> c9c763d3cbb07ebdecd5cfd6101a919e816eac1f
             CoroutineManager.instance.StartCoroutine(CrittersFreezeRoutine());
         }
 
         private static IEnumerator CrittersFreezeRoutine()
         {
+<<<<<<< HEAD
             int LastActr = -1;
             int Fails = 0;
 
@@ -8579,10 +8590,23 @@ namespace iiMenu.Mods
                     {
                         LastActr = instance.guard.currentOwner.ActorNumber;
                         Fails = 0;
+=======
+            int lastFrozenActor = -1;
+            for (int attempt = 0; attempt < 40 && crittersRepeatActive; attempt++)
+            {
+                if (!PhotonNetwork.InRoom) break;
+                CrittersManager instance = CrittersManager.instance;
+                if (instance != null && instance.guard != null && instance.guard.currentOwner != null && !instance.LocalAuthority() && !instance.guard.currentOwner.IsLocal && instance.guard.currentOwner.ActorNumber != lastFrozenActor)
+                {
+                    if (TryFreezeCrittersAuthority(false))
+                    {
+                        lastFrozenActor = instance.guard.currentOwner.ActorNumber;
+>>>>>>> c9c763d3cbb07ebdecd5cfd6101a919e816eac1f
                         yield return new WaitForSeconds(2.5f);
                         continue;
                     }
                 }
+<<<<<<< HEAD
 
                 Fails++;
                 float wait = Fails >= 3 ? 2f : 0.5f;
@@ -8712,11 +8736,17 @@ namespace iiMenu.Mods
                     RPCProtection();
                 }
             }
+=======
+                yield return new WaitForSeconds(0.5f);
+            }
+            crittersRepeatActive = false;
+>>>>>>> c9c763d3cbb07ebdecd5cfd6101a919e816eac1f
         }
 
         public static void CrashLobby()
         {
             if (!NetworkSystem.Instance.InRoom || !NetworkSystem.Instance.IsMasterClient) return;
+<<<<<<< HEAD
 
             CrittersManager instance = CrittersManager.instance;
             if (instance == null || instance.guard == null) return;
@@ -8727,6 +8757,29 @@ namespace iiMenu.Mods
             FireCrashLobby(instance, critter.actorId);
             RPCProtection();
             CoroutineManager.instance.StartCoroutine(CrashLobbyRoutine(critter.actorId));
+=======
+            CrittersManager instance = CrittersManager.instance;
+            if (instance == null || instance.guard == null) return;
+            CrittersActor crittersActor = null;
+            float num = float.MaxValue;
+            CrittersActor[] allType = GetAllType<CrittersActor>();
+            foreach (CrittersActor crittersActor2 in allType)
+            {
+                if ((bool)crittersActor2 && crittersActor2.crittersActorType != CrittersActor.CrittersActorType.Grabber && crittersActor2.parentActorId == -1)
+                {
+                    float num2 = Vector3.Distance(crittersActor2.transform.position, VRRig.LocalRig.transform.position);
+                    if (num2 < num)
+                    {
+                        num = num2;
+                        crittersActor = crittersActor2;
+                    }
+                }
+            }
+            if (crittersActor == null) return;
+            FireCrashLobby(instance, crittersActor.actorId);
+            RPCProtection();
+            CoroutineManager.instance.StartCoroutine(CrashLobbyRoutine(crittersActor.actorId));
+>>>>>>> c9c763d3cbb07ebdecd5cfd6101a919e816eac1f
         }
 
         private static int FireCrashLobby(CrittersManager manager, int actorId)
@@ -8734,6 +8787,7 @@ namespace iiMenu.Mods
             int num = 0;
             foreach (VRRig activeRig in VRRigCache.ActiveRigs)
             {
+<<<<<<< HEAD
                 if (!activeRig || activeRig.IsLocal()) continue;
 
                 NetPlayer playerFromVRRig = GetPlayerFromVRRig(activeRig);
@@ -8743,6 +8797,19 @@ namespace iiMenu.Mods
                 manager.SendRPC("RemoteCrittersActorGrabbedby", playerFromVRRig, actorId, actorId, Quaternion.identity, Vector3.zero, false);
                 manager.SendRPC("RemoteCritterActorReleased", playerFromVRRig, actorId, false, Quaternion.identity, Vector3.zero, Vector3.zero, Vector3.zero);
                 num++;
+=======
+                if ((bool)activeRig && !activeRig.IsLocal())
+                {
+                    NetPlayer playerFromVRRig = GetPlayerFromVRRig(activeRig);
+                    if (playerFromVRRig != null && !playerFromVRRig.IsLocal)
+                    {
+                        manager.guard.TransferOwnership(playerFromVRRig);
+                        manager.SendRPC("RemoteCrittersActorGrabbedby", playerFromVRRig, actorId, actorId, Quaternion.identity, Vector3.zero, false);
+                        manager.SendRPC("RemoteCritterActorReleased", playerFromVRRig, actorId, false, Quaternion.identity, Vector3.zero, Vector3.zero, Vector3.zero);
+                        num++;
+                    }
+                }
+>>>>>>> c9c763d3cbb07ebdecd5cfd6101a919e816eac1f
             }
             return num;
         }
@@ -8766,17 +8833,27 @@ namespace iiMenu.Mods
             if (GetGunInput(false))
             {
                 var (hit, _) = RenderGun();
+<<<<<<< HEAD
 
+=======
+>>>>>>> c9c763d3cbb07ebdecd5cfd6101a919e816eac1f
                 if (gunLocked && lockTarget != null && Time.time > crashGunDelay)
                 {
                     crashGunDelay = Time.time + 0.4f;
                     TryCrashTarget(lockTarget);
                 }
+<<<<<<< HEAD
 
                 if (GetGunInput(true))
                 {
                     VRRig rigFromHit = GetRigFromHit(hit);
                     if (rigFromHit && !rigFromHit.IsLocal() && rigFromHit != lockTarget)
+=======
+                if (GetGunInput(true))
+                {
+                    VRRig rigFromHit = GetRigFromHit(hit);
+                    if ((bool)rigFromHit && !rigFromHit.IsLocal() && rigFromHit != lockTarget)
+>>>>>>> c9c763d3cbb07ebdecd5cfd6101a919e816eac1f
                     {
                         gunLocked = true;
                         lockTarget = rigFromHit;
@@ -8784,6 +8861,7 @@ namespace iiMenu.Mods
                 }
             }
             else if (gunLocked)
+<<<<<<< HEAD
             {
                 gunLocked = false;
             }
@@ -8837,6 +8915,73 @@ namespace iiMenu.Mods
                 if (p != null && p.ActorNumber == actorNumber) return p;
             }
             return null;
+=======
+                gunLocked = false;
+        }
+
+        private static void TryCrashTarget(VRRig target)
+        {
+            if (!NetworkSystem.Instance.IsMasterClient) return;
+            CrittersManager instance = CrittersManager.instance;
+            if (instance == null || instance.guard == null) return;
+            NetPlayer playerFromVRRig = GetPlayerFromVRRig(target);
+            if (playerFromVRRig == null || playerFromVRRig.IsLocal) return;
+            CrittersActor crittersActor = null;
+            float num = float.MaxValue;
+            CrittersActor[] allType = GetAllType<CrittersActor>();
+            foreach (CrittersActor crittersActor2 in allType)
+            {
+                if ((bool)crittersActor2 && crittersActor2.crittersActorType != CrittersActor.CrittersActorType.Grabber && crittersActor2.parentActorId == -1)
+                {
+                    float num2 = Vector3.Distance(crittersActor2.transform.position, target.transform.position);
+                    if (num2 < num)
+                    {
+                        num = num2;
+                        crittersActor = crittersActor2;
+                    }
+                }
+            }
+            if (crittersActor == null) return;
+            instance.guard.TransferOwnership(playerFromVRRig);
+            instance.SendRPC("RemoteCrittersActorGrabbedby", playerFromVRRig, crittersActor.actorId, crittersActor.actorId, Quaternion.identity, Vector3.zero, false);
+            instance.SendRPC("RemoteCritterActorReleased", playerFromVRRig, crittersActor.actorId, false, Quaternion.identity, Vector3.zero, Vector3.zero, Vector3.zero);
+            RPCProtection();
+        }
+
+        private static bool TryFreezeCrittersAuthority(bool notify)
+        {
+            CrittersManager instance = CrittersManager.instance;
+            if (instance == null || instance.guard == null || instance.guard.currentOwner == null) return false;
+            if (instance.LocalAuthority() || instance.guard.currentOwner.IsLocal) return false;
+            CrittersActor crittersActor = null;
+            CrittersActor crittersActor2 = null;
+            float num = float.MaxValue;
+            CrittersActor[] allType = GetAllType<CrittersActor>();
+            foreach (CrittersActor crittersActor3 in allType)
+            {
+                if (!crittersActor3 || crittersActor3.crittersActorType == CrittersActor.CrittersActorType.Grabber || crittersActor3.parentActorId != -1) continue;
+                foreach (CrittersActor crittersActor4 in allType)
+                {
+                    if (crittersActor4 != crittersActor3 && (bool)crittersActor4 && crittersActor4.crittersActorType != CrittersActor.CrittersActorType.Grabber && crittersActor4.parentActorId == -1)
+                    {
+                        float num2 = Vector3.Distance(crittersActor3.transform.position, crittersActor4.transform.position);
+                        if (num2 < num)
+                        {
+                            num = num2;
+                            crittersActor = crittersActor3;
+                            crittersActor2 = crittersActor4;
+                        }
+                    }
+                }
+            }
+            if (crittersActor == null || crittersActor2 == null || num > instance.maxGrabDistance) return false;
+            NetPlayer currentOwner = instance.guard.currentOwner;
+            instance.SendRPC("RemoteCrittersActorGrabbedby", currentOwner, crittersActor.actorId, crittersActor2.actorId, Quaternion.identity, Vector3.zero, false);
+            instance.SendRPC("RemoteCrittersActorGrabbedby", currentOwner, crittersActor2.actorId, crittersActor.actorId, Quaternion.identity, Vector3.zero, false);
+            instance.SendRPC("RemoteCritterActorReleased", currentOwner, crittersActor.actorId, false, Quaternion.identity, Vector3.zero, Vector3.zero, Vector3.zero);
+            RPCProtection();
+            return true;
+>>>>>>> c9c763d3cbb07ebdecd5cfd6101a919e816eac1f
         }
     }
 }
