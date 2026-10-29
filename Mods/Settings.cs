@@ -1138,6 +1138,11 @@ exit";
             if (themeType < 1)
                 themeType = themeCount;
 
+            ApplyMenuTheme();
+        }
+
+        private static void ApplyMenuTheme()
+        {
             if (Buttons.GetIndex("Custom Menu Theme").enabled)
                 return;
 
@@ -4531,6 +4536,11 @@ exit";
             if (fontCycle < 0)
                 fontCycle = 14;
 
+            ApplyFont();
+        }
+
+        private static void ApplyFont()
+        {
             switch (fontCycle)
             {
                 case 0:
@@ -6716,7 +6726,7 @@ exit";
                         if (v == null) continue;
                         if (!v.detected && v.enabled && !v.hideFromArraylist && v.buttonText != "Save Preferences")
                             d.buttons.enabled.Add(v.buttonText);
-                        if (!string.IsNullOrEmpty(v.rebindKey))
+                        if (!string.IsNullOrEmpty(v.rebindKey) && v.buttonText != "Search")
                             d.buttons.rebinds.Add(new RebindEntry { button = v.buttonText, key = v.rebindKey });
                     }
                 }
@@ -7023,14 +7033,18 @@ exit";
             catch (Exception e) { LogManager.Log("[Prefs] soundboard: " + e.Message); }
 
             pageButtonType = (m.pageType == 0 ? 1 : m.pageType) - 1;
-            try { Toggle("Change Page Type"); } catch (Exception e) { LogManager.Log("[Prefs] pageType: " + e.Message); }
             if (pageButtonType < 1 || pageButtonType > 6) { pageButtonType = 1; buttonOffset = 2; }
+            buttonOffset = pageButtonType == 1 ? 2 : 0;
 
             themeType = (m.themeType == 0 ? 1 : m.themeType) - 1;
-            try { Toggle("Change Menu Theme"); } catch (Exception e) { LogManager.Log("[Prefs] themeType: " + e.Message); }
+            try { ApplyMenuTheme(); } catch (Exception e) { LogManager.Log("[Prefs] themeType: " + e.Message); }
 
             fontCycle = (m.fontType == 0 ? 1 : m.fontType) - 1;
-            try { Toggle("Change Font Type"); } catch (Exception e) { LogManager.Log("[Prefs] fontType: " + e.Message); }
+            fontCycle %= 15;
+            if (fontCycle < 0)
+                fontCycle = 14;
+            try { ApplyFont(); } catch (Exception e) { LogManager.Log("[Prefs] fontType: " + e.Message); }
+            if (!clickGUI) ReloadMenu();
 
             if (d.buttons?.bindings != null)
                 foreach (BindEntry entry in d.buttons.bindings)
@@ -7052,6 +7066,7 @@ exit";
                 foreach (RebindEntry rebind in d.buttons.rebinds)
                 {
                     if (rebind == null || string.IsNullOrEmpty(rebind.button) || string.IsNullOrEmpty(rebind.key)) continue;
+                    if (rebind.button == "Search") continue;
                     ButtonInfo button = Buttons.GetIndex(rebind.button);
                     if (button != null) button.rebindKey = rebind.key;
                 }
@@ -7310,14 +7325,18 @@ exit";
             catch (Exception e) { LogManager.Log("[Prefs] txt.soundboard: " + e.Message); }
 
             pageButtonType = GetPreferenceInt(textData, 3, 1) - 1;
-            try { Toggle("Change Page Type"); } catch (Exception e) { LogManager.Log("[Prefs] txt.pageType: " + e.Message); }
             if (pageButtonType < 1 || pageButtonType > 6) { pageButtonType = 1; buttonOffset = 2; }
+            buttonOffset = pageButtonType == 1 ? 2 : 0;
 
             themeType = GetPreferenceInt(textData, 4, 1) - 1;
-            try { Toggle("Change Menu Theme"); } catch (Exception e) { LogManager.Log("[Prefs] txt.themeType: " + e.Message); }
+            try { ApplyMenuTheme(); } catch (Exception e) { LogManager.Log("[Prefs] txt.themeType: " + e.Message); }
 
             fontCycle = GetPreferenceInt(textData, 5, 1) - 1;
-            try { Toggle("Change Font Type"); } catch (Exception e) { LogManager.Log("[Prefs] txt.fontType: " + e.Message); }
+            fontCycle %= 15;
+            if (fontCycle < 0)
+                fontCycle = 14;
+            try { ApplyFont(); } catch (Exception e) { LogManager.Log("[Prefs] txt.fontType: " + e.Message); }
+            if (!clickGUI) ReloadMenu();
 
             try
             {
