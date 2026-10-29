@@ -6790,7 +6790,8 @@ namespace iiMenu.Menu
                                     }
                                     else
                                     {
-                                        target.rebindKey = BindInput;
+                                        if (target.buttonText != "Search")
+                                            target.rebindKey = BindInput;
                                         VRRig.LocalRig.PlayHandTapLocal(50, rightHand, 0.4f);
                                         NotificationManager.SendNotification("<color=grey>[</color><color=purple>BINDS</color><color=grey>]</color> Successfully rebinded mod to {BindInput}.");
                                     }
@@ -6963,7 +6964,8 @@ namespace iiMenu.Menu
                             }
                             else
                             {
-                                target.rebindKey = BindInput;
+                                if (target.buttonText != "Search")
+                                    target.rebindKey = BindInput;
                                 VRRig.LocalRig.PlayHandTapLocal(50, rightHand, 0.4f);
                                 NotificationManager.SendNotification("<color=grey>[</color><color=purple>BINDS</color><color=grey>]</color> Successfully rebinded mod to {BindInput}.");
                             }
