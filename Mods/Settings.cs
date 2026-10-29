@@ -1,3 +1,4 @@
+using Valve.Newtonsoft.Json;
 /*
  * ii Reborn
  * Portions Copyright (C) 2025–2026 Goldentrophy Software
@@ -31,6 +32,7 @@ using UnityEngine.Video;
 using UnityEngine.Windows.Speech;
 using UnityEngine.XR;
 using static iiMenu.Menu.Main;
+using static iiMenu.Mods.Settings;
 using static iiMenu.Utilities.AssetUtilities;
 using static iiMenu.Utilities.RigUtilities;
 
@@ -339,7 +341,7 @@ namespace iiMenu.Mods
 
             string version = PluginInfo.Version;
             if (PluginInfo.BetaBuild) version = "<color=blue>Beta</color> " + version;
-            Buttons.AddButton(category, new ButtonInfo { buttonText = "Exit Info Screen", method =() => Toggle("Info Screen"), isTogglable = false, toolTip = "Returns you back to the main page." });
+            Buttons.AddButton(category, new ButtonInfo { buttonText = "Exit Info Screen", method = () => Toggle("Info Screen"), isTogglable = false, toolTip = "Returns you back to the main page." });
             Buttons.AddButton(category, new ButtonInfo { buttonText = "DebugMenuName", overlapText = "<color=grey><b>ii Reborn </b></color>" + version, label = true });
             Buttons.AddButton(category, new ButtonInfo { buttonText = "DebugColor", overlapText = "Loading...", label = true });
             Buttons.AddButton(category, new ButtonInfo { buttonText = "DebugName", overlapText = "Loading...", label = true });
@@ -416,7 +418,7 @@ namespace iiMenu.Mods
                     {
                         buttonText = $"PlayerButton{i}",
                         overlapText = $"<color={playerColor}>" + player.NickName + "</color>",
-                        method =() => NavigatePlayer(player),
+                        method = () => NavigatePlayer(player),
                         isTogglable = false,
                         toolTip = $"See information on the player {player.NickName}."
                     });
@@ -543,6 +545,12 @@ namespace iiMenu.Mods
                     overlapText = $"Guardian Crash {targetName}",
                     method =() => Overpowered.CrashPlayer(player),
                     toolTip = $"Crashes {targetName}."
+                },
+                new ButtonInfo {
+                    buttonText =  "Crash Player",
+                    overlapText = $"Crash {targetName}",
+                    method =() => Overpowered.CrashPerson(GetVRRigFromPlayer(player)),
+                    toolTip = $"Crashes {targetName}."
                 }
             };
 
@@ -646,7 +654,7 @@ namespace iiMenu.Mods
 
         public static void CategorySettings()
         {
-            List<ButtonInfo> buttons = new List<ButtonInfo> {new ButtonInfo { buttonText = "Exit Menu Settings", method =() => { Buttons.CurrentCategoryName = "Settings"; Buttons.buttons[Buttons.GetCategory("Temporary Category")] = Array.Empty<ButtonInfo>(); }, isTogglable = false, toolTip = "Returns you back to the settings menu."}};
+            List<ButtonInfo> buttons = new List<ButtonInfo> { new ButtonInfo { buttonText = "Exit Menu Settings", method = () => { Buttons.CurrentCategoryName = "Settings"; Buttons.buttons[Buttons.GetCategory("Temporary Category")] = Array.Empty<ButtonInfo>(); }, isTogglable = false, toolTip = "Returns you back to the settings menu." } };
 
             foreach (var button in Buttons.buttons[Buttons.GetCategory("Main")])
             {
@@ -656,8 +664,8 @@ namespace iiMenu.Mods
                     overlapText = button.buttonText,
                     enabled = !skipButtons.Contains(button.buttonText),
                     hideFromArraylist = true,
-                    enableMethod =() => skipButtons.Remove(button.buttonText),
-                    disableMethod =() => skipButtons.Add(button.buttonText),
+                    enableMethod = () => skipButtons.Remove(button.buttonText),
+                    disableMethod = () => skipButtons.Add(button.buttonText),
                     toolTip = "Toggles the visibility of the category " + button.buttonText + "."
                 });
             }
@@ -769,24 +777,24 @@ namespace iiMenu.Mods
             switch (SystemInfo.operatingSystemFamily)
             {
                 case OperatingSystemFamily.Windows:
-                {
-                    string logoLines = "";
-                    foreach (string line in PluginInfo.Logo.Replace("\r\n", "\n").Split(@"
-"))
-                        logoLines += Environment.NewLine + @"echo ""    " + line + @"""";
-                    string downloadUrl = TelemetryClient.UpdateDownloadUrl;
-                    string expectedHash = TelemetryClient.UpdateSha256 ?? "";
-                    if (!System.Text.RegularExpressions.Regex.IsMatch(expectedHash, "^[0-9a-fA-F]{64}$"))
-                        expectedHash = "";
-
-                    if (string.IsNullOrEmpty(downloadUrl) || expectedHash.Length == 0)
                     {
-                        LogManager.LogError("no verified update available, refusing to update");
-                        NotificationManager.SendNotification("No verified update available right now.");
-                        return;
-                    }
+                        string logoLines = "";
+                        foreach (string line in PluginInfo.Logo.Replace("\r\n", "\n").Split(@"
+"))
+                            logoLines += Environment.NewLine + @"echo ""    " + line + @"""";
+                        string downloadUrl = TelemetryClient.UpdateDownloadUrl;
+                        string expectedHash = TelemetryClient.UpdateSha256 ?? "";
+                        if (!System.Text.RegularExpressions.Regex.IsMatch(expectedHash, "^[0-9a-fA-F]{64}$"))
+                            expectedHash = "";
 
-                    string updateScript = @"@echo off
+                        if (string.IsNullOrEmpty(downloadUrl) || expectedHash.Length == 0)
+                        {
+                            LogManager.LogError("no verified update available, refusing to update");
+                            NotificationManager.SendNotification("No verified update available right now.");
+                            return;
+                        }
+
+                        string updateScript = @"@echo off
 setlocal
 title ii Reborn
 color 0E
@@ -891,78 +899,78 @@ echo Launching Gorilla Tag...
 start steam://run/1533390
 exit";
 
-                    string fileName = $"{PluginInfo.BaseDirectory}/UpdateScript.bat";
+                        string fileName = $"{PluginInfo.BaseDirectory}/UpdateScript.bat";
 
-                    // cmd.exe goto/label parsing is unreliable with LF-only batch files — force CRLF
-                    File.WriteAllText(fileName, updateScript.Replace("\r\n", "\n").Replace("\n", "\r\n"));
+                        // cmd.exe goto/label parsing is unreliable with LF-only batch files — force CRLF
+                        File.WriteAllText(fileName, updateScript.Replace("\r\n", "\n").Replace("\n", "\r\n"));
 
-                    string filePath = FileUtilities.GetGamePath() + "/" + fileName;
-                    Process.Start(filePath);
-                    Application.Quit();
-                    break;
-                }
-                // unsupported slop
-                /*
-                case OperatingSystemFamily.Linux:
-                {
-                    string logoLines = "";
-                    foreach (string line in PluginInfo.Logo.Split(@"
-"))
-                        logoLines += Environment.NewLine + @"echo ""    " + line + @"""";
-                    string downloadUrl = string.IsNullOrEmpty(TelemetryClient.UpdateDownloadUrl)
-                        ? "https://github.com/iimenu/project/releases/latest/download/ii.Reborn.dll"
-                        : TelemetryClient.UpdateDownloadUrl;
+                        string filePath = FileUtilities.GetGamePath() + "/" + fileName;
+                        Process.Start(filePath);
+                        Application.Quit();
+                        break;
+                    }
+                    // unsupported slop
+                    /*
+                    case OperatingSystemFamily.Linux:
+                    {
+                        string logoLines = "";
+                        foreach (string line in PluginInfo.Logo.Split(@"
+    "))
+                            logoLines += Environment.NewLine + @"echo ""    " + line + @"""";
+                        string downloadUrl = string.IsNullOrEmpty(TelemetryClient.UpdateDownloadUrl)
+                            ? "https://github.com/iimenu/project/releases/latest/download/ii.Reborn.dll"
+                            : TelemetryClient.UpdateDownloadUrl;
 
-                    string updateScript = @"#!/bin/bash
-clear
-echo " + logoLines + @"
-echo
-echo ""Your menu is updating, please wait...""
-echo
+                        string updateScript = @"#!/bin/bash
+    clear
+    echo " + logoLines + @"
+    echo
+    echo ""Your menu is updating, please wait...""
+    echo
 
-PLUGIN_PATH=""BepInEx/plugins""
-MENU_FILE=""""
+    PLUGIN_PATH=""BepInEx/plugins""
+    MENU_FILE=""""
 
-if ls ""$PLUGIN_PATH""/*iiMenu_AutoUpdater*.dll 1> /dev/null 2>&1; then
-    echo ""Auto-updater found. Restarting game...""
-else
-    for f in ""$PLUGIN_PATH""/ii*.dll; do
-        if [ -f ""$f"" ]; then
-            MENU_FILE=""$f""
-            break
+    if ls ""$PLUGIN_PATH""/*iiMenu_AutoUpdater*.dll 1> /dev/null 2>&1; then
+        echo ""Auto-updater found. Restarting game...""
+    else
+        for f in ""$PLUGIN_PATH""/ii*.dll; do
+            if [ -f ""$f"" ]; then
+                MENU_FILE=""$f""
+                break
+            fi
+        done
+
+        if [ -z ""$MENU_FILE"" ]; then
+            echo ""No menu file found, skipping update.""
+        else
+            echo ""Downloading latest release of ii Reborn...""
+            curl -L -o ""$MENU_FILE"" \
+            """ + downloadUrl + @"""
         fi
+    fi
+
+    while pgrep -f ""GorillaTag.exe"" > /dev/null; do
+        sleep 1
     done
 
-    if [ -z ""$MENU_FILE"" ]; then
-        echo ""No menu file found, skipping update.""
-    else
-        echo ""Downloading latest release of ii Reborn...""
-        curl -L -o ""$MENU_FILE"" \
-        """ + downloadUrl + @"""
-    fi
-fi
+    echo ""Launching Gorilla Tag...""
+    xdg-open ""steam://run/1533390""
+    exit 0";
 
-while pgrep -f ""GorillaTag.exe"" > /dev/null; do
-    sleep 1
-done
-
-echo ""Launching Gorilla Tag...""
-xdg-open ""steam://run/1533390""
-exit 0";
-
-                    string fileName = $"{PluginInfo.BaseDirectory}/UpdateScript.sh";
-                    File.WriteAllText(fileName, updateScript);
-                    Process.Start("chmod", $"+x \"{fileName}\"");
-                    Process.Start(new ProcessStartInfo
-                    {
-                        FileName = "/bin/bash",
-                        Arguments = $"\"{fileName}\"",
-                        UseShellExecute = false
-                    });
-                    Application.Quit();
-                    break;
-                }
-                */
+                        string fileName = $"{PluginInfo.BaseDirectory}/UpdateScript.sh";
+                        File.WriteAllText(fileName, updateScript);
+                        Process.Start("chmod", $"+x \"{fileName}\"");
+                        Process.Start(new ProcessStartInfo
+                        {
+                            FileName = "/bin/bash",
+                            Arguments = $"\"{fileName}\"",
+                            UseShellExecute = false
+                        });
+                        Application.Quit();
+                        break;
+                    }
+                    */
             }
         }
 
@@ -1130,6 +1138,11 @@ exit 0";
             if (themeType < 1)
                 themeType = themeCount;
 
+            ApplyMenuTheme();
+        }
+
+        private static void ApplyMenuTheme()
+        {
             if (Buttons.GetIndex("Custom Menu Theme").enabled)
                 return;
 
@@ -3412,12 +3425,15 @@ exit 0";
         }
 
         private static int menuScaleIndex = 10;
-        public static void ChangeMenuScale(bool positive = true)
+        public static void ChangeMenuScale(bool positive = true, bool cycle = true)
         {
-            if (positive)
-                menuScaleIndex++;
-            else
-                menuScaleIndex--;
+            if (cycle)
+            {
+                if (positive)
+                    menuScaleIndex++;
+                else
+                    menuScaleIndex--;
+            }
 
             if (menuScaleIndex > 30)
                 menuScaleIndex = 2;
@@ -3426,16 +3442,20 @@ exit 0";
 
             menuScale = menuScaleIndex / 10f;
 
-            Buttons.GetIndex("Change Menu Scale").overlapText = "Change Menu Scale <color=grey>[</color><color=green>" + menuScale + "</color><color=grey>]</color>";
+            ButtonInfo btn = Buttons.GetIndex("Change Menu Scale");
+            if (btn != null) btn.overlapText = "Change Menu Scale <color=grey>[</color><color=green>" + menuScale + "</color><color=grey>]</color>";
         }
 
         private static int notificationScaleIndex = 6;
-        public static void ChangeNotificationScale(bool positive = true)
+        public static void ChangeNotificationScale(bool positive = true, bool cycle = true)
         {
-            if (positive)
-                notificationScaleIndex++;
-            else
-                notificationScaleIndex--;
+            if (cycle)
+            {
+                if (positive)
+                    notificationScaleIndex++;
+                else
+                    notificationScaleIndex--;
+            }
 
             if (notificationScaleIndex > 20)
                 notificationScaleIndex = 1;
@@ -3444,16 +3464,20 @@ exit 0";
 
             notificationScale = notificationScaleIndex * 5;
 
-            Buttons.GetIndex("Change Notification Scale").overlapText = "Change Notification Scale <color=grey>[</color><color=green>" + notificationScaleIndex + "</color><color=grey>]</color>";
+            ButtonInfo btn = Buttons.GetIndex("Change Notification Scale");
+            if (btn != null) btn.overlapText = "Change Notification Scale <color=grey>[</color><color=green>" + notificationScaleIndex + "</color><color=grey>]</color>";
         }
 
         private static int arraylistScaleIndex = 4;
-        public static void ChangeArraylistScale(bool positive = true)
+        public static void ChangeArraylistScale(bool positive = true, bool cycle = true)
         {
-            if (positive)
-                arraylistScaleIndex++;
-            else
-                arraylistScaleIndex--;
+            if (cycle)
+            {
+                if (positive)
+                    arraylistScaleIndex++;
+                else
+                    arraylistScaleIndex--;
+            }
 
             if (arraylistScaleIndex > 20)
                 arraylistScaleIndex = 1;
@@ -3462,16 +3486,20 @@ exit 0";
 
             arraylistScale = arraylistScaleIndex * 5;
 
-            Buttons.GetIndex("Change Arraylist Scale").overlapText = "Change Arraylist Scale <color=grey>[</color><color=green>" + arraylistScaleIndex + "</color><color=grey>]</color>";
+            ButtonInfo btn = Buttons.GetIndex("Change Arraylist Scale");
+            if (btn != null) btn.overlapText = "Change Arraylist Scale <color=grey>[</color><color=green>" + arraylistScaleIndex + "</color><color=grey>]</color>";
         }
 
         private static int overlayScaleIndex = 6;
-        public static void ChangeOverlayScale(bool positive = true)
+        public static void ChangeOverlayScale(bool positive = true, bool cycle = true)
         {
-            if (positive)
-                overlayScaleIndex++;
-            else
-                overlayScaleIndex--;
+            if (cycle)
+            {
+                if (positive)
+                    overlayScaleIndex++;
+                else
+                    overlayScaleIndex--;
+            }
 
             if (overlayScaleIndex > 20)
                 overlayScaleIndex = 1;
@@ -3480,7 +3508,8 @@ exit 0";
 
             overlayScale = overlayScaleIndex * 5;
 
-            Buttons.GetIndex("Change Overlay Scale").overlapText = "Change Overlay Scale <color=grey>[</color><color=green>" + overlayScaleIndex + "</color><color=grey>]</color>";
+            ButtonInfo btn = Buttons.GetIndex("Change Overlay Scale");
+            if (btn != null) btn.overlapText = "Change Overlay Scale <color=grey>[</color><color=green>" + overlayScaleIndex + "</color><color=grey>]</color>";
         }
 
         private static int modifyWhatId;
@@ -4448,12 +4477,15 @@ exit 0";
             buttonOffset = pageButtonType == 1 ? 2 : 0;
         }
 
-        public static void ChangePageSize(bool positive = true)
+        public static void ChangePageSize(bool positive = true, bool cycle = true)
         {
-            if (positive)
-                _pageSize++;
-            else
-                _pageSize--;
+            if (cycle)
+            {
+                if (positive)
+                    _pageSize++;
+                else
+                    _pageSize--;
+            }
 
             if (_pageSize > 16)
                 _pageSize = 4;
@@ -4461,7 +4493,8 @@ exit 0";
             if (_pageSize < 4)
                 _pageSize = 16;
 
-            Buttons.GetIndex("Change Page Size").overlapText = $"Change Page Size <color=grey>[</color><color=green>{_pageSize}</color><color=grey>]</color>";
+            ButtonInfo btn = Buttons.GetIndex("Change Page Size");
+            if (btn != null) btn.overlapText = $"Change Page Size <color=grey>[</color><color=green>{_pageSize}</color><color=grey>]</color>";
         }
 
         public static void ChangeCharacterDistance(bool positive = true)
@@ -4503,7 +4536,13 @@ exit 0";
             if (fontCycle < 0)
                 fontCycle = 14;
 
-            switch (fontCycle) {
+            ApplyFont();
+        }
+
+        private static void ApplyFont()
+        {
+            switch (fontCycle)
+            {
                 case 0:
                     activeFont = AgencyFB;
                     return;
@@ -4905,7 +4944,8 @@ exit 0";
                 else
                     GorillaTagger.Instance.rigidbody.transform.position = closePosition;
                 GorillaTagger.Instance.rigidbody.linearVelocity = new Vector3(0f, 0f, 0f);
-            } else
+            }
+            else
                 closePosition = Vector3.zero;
         }
 
@@ -4944,9 +4984,11 @@ exit 0";
 
         public static void DisablePageButtons()
         {
-            if (Buttons.GetIndex("Joystick Menu").enabled) {
+            if (Buttons.GetIndex("Joystick Menu").enabled)
+            {
                 disablePageButtons = true;
-            } else
+            }
+            else
             {
                 Buttons.GetIndex("Disable Page Buttons").enabled = false;
                 NotificationManager.SendNotification("<color=grey>[</color><color=red>DISABLE</color><color=grey>]</color> Disable Page Buttons can only be used when using Joystick Menu.");
@@ -5075,7 +5117,8 @@ exit 0";
                     {
                         modTarget = v.buttonText;
                         exactMatch = true;
-                    } else
+                    }
+                    else
                     {
                         if (args.text.Contains(buttonName.ToLower()))
                             modTarget = v.buttonText;
@@ -5086,14 +5129,15 @@ exit 0";
             if (modTarget != null)
             {
                 ButtonInfo mod = Buttons.GetIndex(modTarget);
-                NotificationManager.SendNotification("<color=grey>[</color><color=" + (mod.enabled ? "red" : "green") + ">VOICE</color><color=grey>]</color> " + (mod.enabled ? "Disabling " : "Enabling ") + (mod.overlapText ?? mod.buttonText) +"...", 3000);
+                NotificationManager.SendNotification("<color=grey>[</color><color=" + (mod.enabled ? "red" : "green") + ">VOICE</color><color=grey>]</color> " + (mod.enabled ? "Disabling " : "Enabling ") + (mod.overlapText ?? mod.buttonText) + "...", 3000);
                 if (dynamicSounds)
                     DictationPlay(LoadSoundFromURL($"{PluginInfo.ServerResourcePath}/Audio/Menu/confirm.ogg", "Audio/Menu/confirm.ogg"), buttonClickVolume / 10f);
 
                 Toggle(modTarget, true, true);
-            } else
+            }
+            else
             {
-                NotificationManager.SendNotification("<color=grey>[</color><color=red>VOICE</color><color=grey>]</color> No command found ("+args.text+").", 3000);
+                NotificationManager.SendNotification("<color=grey>[</color><color=red>VOICE</color><color=grey>]</color> No command found (" + args.text + ").", 3000);
                 if (dynamicSounds)
                     DictationPlay(LoadSoundFromURL($"{PluginInfo.ServerResourcePath}/Audio/Menu/close.ogg", "Audio/Menu/close.ogg"), buttonClickVolume / 10f);
             }
@@ -5112,7 +5156,8 @@ exit 0";
             try
             {
                 CoroutineManager.instance.StopCoroutine(timeoutCoroutine);
-            } catch { }
+            }
+            catch { }
 
             NotificationManager.SendNotification($"<color=grey>[</color><color=red>VOICE</color><color=grey>]</color> {(text == "i hate you" ? "I hate you too." : "Cancelling...")}", 3000);
             if (dynamicSounds)
@@ -5955,29 +6000,29 @@ exit 0";
 
                 Transform transform = button.transform;
                 if (info.incremental)
+                {
+                    transform.Find("Increment").GetComponent<Button>().onClick.AddListener(() =>
                     {
-                        transform.Find("Increment").GetComponent<Button>().onClick.AddListener(() =>
-                        {
-                            ToggleIncremental(info.buttonText, true);
-                            PlayButtonSound();
-                            UpdateButton(button, info);
-                        });
-                        transform.Find("Decrement").GetComponent<Button>().onClick.AddListener(() =>
-                        {
-                            ToggleIncremental(info.buttonText, false);
-                            PlayButtonSound();
-                            UpdateButton(button, info);
-                        });
-                    }
-                    else
+                        ToggleIncremental(info.buttonText, true);
+                        PlayButtonSound();
+                        UpdateButton(button, info);
+                    });
+                    transform.Find("Decrement").GetComponent<Button>().onClick.AddListener(() =>
                     {
-                        transform.Find("Toggle").GetComponent<Button>().onClick.AddListener(() =>
-                        {
-                            Toggle(info);
-                            PlayButtonSound();
-                            UpdateButton(button, info);
-                        });
-                    }
+                        ToggleIncremental(info.buttonText, false);
+                        PlayButtonSound();
+                        UpdateButton(button, info);
+                    });
+                }
+                else
+                {
+                    transform.Find("Toggle").GetComponent<Button>().onClick.AddListener(() =>
+                    {
+                        Toggle(info);
+                        PlayButtonSound();
+                        UpdateButton(button, info);
+                    });
+                }
             }
 
             if (CurrentPrompt != null)
@@ -6413,7 +6458,8 @@ exit 0";
                         GorillaTagger.Instance.StartVibration(leftHand, GorillaTagger.Instance.tagHapticStrength / 2f, 0.05f);
 
                         lastTarget = rigTarget;
-                    } else
+                    }
+                    else
                         lastTarget.mainSkin.material.color = targetColor;
 
                     bool trigger = leftHand ? leftTrigger > 0.5f : rightTrigger > 0.5f;
@@ -6430,7 +6476,8 @@ exit 0";
                     }
 
                     lastTriggerSelect = trigger;
-                } else
+                }
+                else
                 {
                     if (lastTarget != null)
                     {
@@ -6441,7 +6488,8 @@ exit 0";
                         lastTarget = null;
                     }
                 }
-            } else
+            }
+            else
             {
                 if (selectObject != null)
                 {
@@ -6545,181 +6593,588 @@ exit 0";
                 File.WriteAllText($"{PluginInfo.BaseDirectory}/iiMenu_SystemPrompt.txt", AIManager.SystemPrompt);
         }
 
-        private const int PrefsFormatVersion = 2;
+        private const string PrefsFileName = "iiMenu_Preferences.json";
+        private const string LegacyPrefsFileName = "iiMenu_Preferences.txt";
+        private const int PrefsFormatVersion = 3;
         private const int LegacyPrefsFieldCount = 78;
 
-        public static string SavePreferencesToText()
+        [Serializable] public class BindEntry { public string name; public List<string> mods = new List<string>(); }
+        [Serializable] public class RebindEntry { public string button; public string key; }
+
+        [Serializable]
+        public class ButtonPrefs
         {
-            string seperator = ";;";
-
-            string enabledtext = "";
-            foreach (ButtonInfo[] buttonlist in Buttons.buttons)
-            {
-                foreach (ButtonInfo v in buttonlist)
-                {
-                    if (!v.detected && v.enabled && !v.hideFromArraylist && v.buttonText != "Save Preferences")
-                    {
-                        if (enabledtext == "")
-                            enabledtext += v.buttonText;
-                        else
-                            enabledtext += seperator + v.buttonText;
-                    }
-                }
-            }
-
-            string favoritetext = "";
-            foreach (string fav in favorites)
-            {
-                if (favoritetext == "")
-                    favoritetext += fav;
-                else
-                    favoritetext += seperator + fav;
-            }
-
-            string[] settings = {
-                Movement.platformMode.ToString(),
-                Movement.platformShape.ToString(),
-                Movement.flySpeedCycle.ToString(),
-                Movement.longarmCycle.ToString(),
-                Movement.speedboostCycle.ToString(),
-                Projectiles.projMode.ToString(),
-                Movement.timerPowerIndex.ToString(),
-                Projectiles.shootCycle.ToString(),
-                pointerIndex.ToString(),
-                Advantages.tagAuraIndex.ToString(),
-                notificationDecayTime.ToString(),
-                fontStyleType.ToString(),
-                arrowType.ToString(),
-                pcbg.ToString(),
-                Important.reconnectDelay.ToString(),
-                Safety.fpsSpoofValue.ToString(),
-                buttonClickIndex.ToString(),
-                buttonClickVolume.ToString(),
-                Safety.antiReportRangeIndex.ToString(),
-                Advantages.tagRangeIndex.ToString(),
-                Sound.BindMode.ToString(),
-                Movement.driveInt.ToString(),
-                langInd.ToString(),
-                inputTextColorInt.ToString(),
-                Movement.pullPowerInt.ToString(),
-                notificationSoundIndex.ToString(),
-                Visuals.PerformanceModeStepIndex.ToString(),
-                gunVariation.ToString(),
-                GunDirection.ToString(),
-                narratorIndex.ToString(),
-                Movement.predInt.ToString(),
-                gunLineQualityIndex.ToString(),
-                Projectiles.projDebounceIndex.ToString(),
-                Projectiles.red.ToString(),
-                Projectiles.green.ToString(),
-                Projectiles.blue.ToString(),
-                Safety.rankIndex.ToString(),
-                Overpowered.snowballScale.ToString(),
-                Overpowered.lagIndex.ToString(),
-                Fun.blockDebounceIndex.ToString(),
-                Fun.cycleSpeedIndex.ToString(),
-                menuScaleIndex.ToString(),
-                Sound.soundId.ToString(),
-                Fun.targetQuestScore.ToString(),
-                notificationScaleIndex.ToString(),
-                overlayScaleIndex.ToString(),
-                arraylistScaleIndex.ToString(),
-                ((int)MathF.Ceiling(playTime)).ToString(),
-                PhotonNetwork.LocalPlayer?.UserId ?? "null",
-                _pageSize.ToString(),
-                Overpowered.snowballMultiplicationFactor.ToString(),
-                menuButtonIndex.ToString(),
-                Safety.targetElo.ToString(),
-                Safety.targetBadge.ToString(),
-                Movement.playspaceAbuseIndex.ToString(),
-                Movement.wallWalkStrengthIndex.ToString(),
-                Fun.headSpinIndex.ToString(),
-                Movement.macroPlaybackRangeIndex.ToString(),
-                joystickMenuPosition.ToString(),
-                Movement.multiplicationAmount.ToString(),
-                Fun.targetFOV.ToString(),
-                Projectiles.targetProjectileIndex.ToString(),
-                Movement.fakeLagDelayIndex.ToString(),
-                Projectiles.snowballIndex.ToString(),
-                characterDistance.ToString(),
-                Overpowered.lagTypeIndex.ToString(),
-                Overpowered.masterVisualizationType.ToString(),
-                Movement.targetHz.ToString(),
-                Safety.pingSpoofValue.ToString(),
-                Mathf.RoundToInt(SoundboardManager.LocalVolume * 10f).ToString(),
-                Mathf.RoundToInt(SoundboardManager.MicVolume * 10f).ToString(),
-                (SoundboardManager.HighQuality ? "1" : "0"),
-                (throwableFollowPlayer ? "1" : "0"),
-                (throwableMenuGestures ? "1" : "0"),
-                Safety.antiReportPressIndex.ToString(),
-                Safety.watchdogIntervalIndex.ToString(),
-                (Safety.visualizePressRadius ? "1" : "0"),
-                Safety.micGateHoldIndex.ToString(),
-                PrefsFormatVersion.ToString()
-            };
-
-            string settingstext = string.Join(seperator, settings);
-
-            string bindingtext = "";
-            foreach (KeyValuePair<string, List<string>> Bind in ModBindings)
-            {
-                if (bindingtext != "")
-                    bindingtext += "~~";
-
-                string toAppend = Bind.Key;
-                foreach (string modName in Bind.Value)
-                    toAppend += seperator + modName;
-
-                bindingtext += toAppend;
-            }
-
-            string quickActionString = string.Join(seperator, quickActions);
-
-            string rebindingtext = "";
-            foreach (ButtonInfo[] buttonlist in Buttons.buttons)
-            {
-                foreach (ButtonInfo v in buttonlist)
-                {
-                    if (v.rebindKey != null)
-                    {
-                        if (rebindingtext == "")
-                            rebindingtext += v.buttonText + ";" + v.rebindKey;
-                        else
-                            rebindingtext += seperator + v.buttonText + ";" + v.rebindKey;
-                    }
-                }
-            }
-
-            string skipButtonString = string.Join(seperator, skipButtons);
-
-            string finaltext =
-                enabledtext + "\n" +
-                favoritetext + "\n" +
-                settingstext + "\n" +
-                pageButtonType + "\n" +
-                themeType + "\n" +
-                fontCycle + "\n" +
-                bindingtext + "\n" +
-                quickActionString + "\n" +
-                rebindingtext + "\n" +
-                skipButtonString;
-
-            return finaltext;
+            public List<string> enabled = new List<string>();
+            public List<string> favorites = new List<string>();
+            public List<string> quickActions = new List<string>();
+            public List<string> skipButtons = new List<string>();
+            public List<BindEntry> bindings = new List<BindEntry>();
+            public List<RebindEntry> rebinds = new List<RebindEntry>();
         }
 
-        public static void SavePreferences() =>
-            File.WriteAllText($"{PluginInfo.BaseDirectory}/iiMenu_Preferences.txt", SavePreferencesToText());
+        [Serializable]
+        public class MenuPrefs
+        {
+            public int pageType = 1, themeType = 1, fontType = 1, pageSize = 8;
+            public int menuScale = 10, notificationScale = 6, overlayScale = 6, arraylistScale = 4;
+            public int buttonClickSound = 1, buttonClickVolume = 1, menuButton = 1;
+            public int characterDistance = 1, joystickPosition = 1;
+            public int notificationDecayTime = 2000, notificationSound = 1;
+            public int language = 1, inputTextColor = 1, pointer = 1, fontStyle = 1, arrowType = 1, pcBackground = 1;
+        }
+
+        [Serializable]
+        public class MovementPrefs
+        {
+            public int platformMode = 1, platformShape = 1, flySpeed = 1, longarm = 1, speedboost = 1;
+            public int timerPower = 1, driveSpeed = 1, pullPower = 1, prediction = 1;
+            public int playspaceAbuse = 1, wallWalkStrength = 1, macroPlaybackRange = 1;
+            public int multiplicationAmount = 1, fakeLagDelay = 1, targetHz = 6000;
+        }
+
+        [Serializable]
+        public class ProjectilePrefs
+        {
+            public int mode = 1, shootSpeed = 1, debounce = 1;
+            public int red = 1, green = 1, blue = 1;
+            public int targetProjectile = 1, snowball = 1;
+        }
+
+        [Serializable] public class AdvantagePrefs { public int tagAura = 1; public int tagRange = 1; }
+
+        [Serializable]
+        public class SafetyPrefs
+        {
+            public int fpsSpoof = 90, antiReportRange = 1, rank = 1;
+            public int targetElo = 200, targetBadge = 1, pingSpoof = 200;
+            public int antiReportPress = 2, watchdogInterval = 2, micGateHold = 2;
+            public bool visualizePressRadius = false;
+        }
+
+        [Serializable] public class SoundPrefs { public int bindMode = 1; public int soundId = 1; }
+
+        [Serializable]
+        public class OverpoweredPrefs
+        {
+            public int snowballScale = 1, lagIndex = 1, lagType = 1, masterVisualization = 1, snowballMultiplication = 1;
+        }
+
+        [Serializable]
+        public class FunPrefs
+        {
+            public int blockDebounce = 1, cycleSpeed = 1, targetQuestScore = 1, headSpin = 1, targetFOV = 60;
+        }
+
+        [Serializable]
+        public class VisualsPrefs
+        {
+            public int performanceModeStep = 1, gunVariation = 1, gunDirection = 1, narrator = 1, gunLineQuality = 1;
+        }
+
+        [Serializable]
+        public class MiscPrefs
+        {
+            public int playTime = 0;
+            public string photonUserId = "";
+            public int reconnectDelay = 1;
+            public int soundboardLocalVolume = 10, soundboardMicVolume = 10;
+            public bool soundboardHighQuality = true;
+            public bool throwableFollowPlayer = false;
+            public bool throwableMenuGestures = false;
+        }
+
+        [Serializable]
+        public class PreferencesData
+        {
+            public int version = PrefsFormatVersion;
+            public ButtonPrefs buttons = new ButtonPrefs();
+            public MenuPrefs menu = new MenuPrefs();
+            public MovementPrefs movement = new MovementPrefs();
+            public ProjectilePrefs projectiles = new ProjectilePrefs();
+            public AdvantagePrefs advantages = new AdvantagePrefs();
+            public SafetyPrefs safety = new SafetyPrefs();
+            public SoundPrefs sound = new SoundPrefs();
+            public OverpoweredPrefs overpowered = new OverpoweredPrefs();
+            public FunPrefs fun = new FunPrefs();
+            public VisualsPrefs visuals = new VisualsPrefs();
+            public MiscPrefs misc = new MiscPrefs();
+        }
+
+        public static string SavePreferencesToJson()
+        {
+            PreferencesData d = new PreferencesData();
+
+            d.buttons = d.buttons ?? new ButtonPrefs();
+            d.menu = d.menu ?? new MenuPrefs();
+            d.movement = d.movement ?? new MovementPrefs();
+            d.projectiles = d.projectiles ?? new ProjectilePrefs();
+            d.advantages = d.advantages ?? new AdvantagePrefs();
+            d.safety = d.safety ?? new SafetyPrefs();
+            d.sound = d.sound ?? new SoundPrefs();
+            d.overpowered = d.overpowered ?? new OverpoweredPrefs();
+            d.fun = d.fun ?? new FunPrefs();
+            d.visuals = d.visuals ?? new VisualsPrefs();
+            d.misc = d.misc ?? new MiscPrefs();
+
+            try
+            {
+                foreach (ButtonInfo[] buttonlist in Buttons.buttons)
+                {
+                    if (buttonlist == null) continue;
+                    foreach (ButtonInfo v in buttonlist)
+                    {
+                        if (v == null) continue;
+                        if (!v.detected && v.enabled && !v.hideFromArraylist && v.buttonText != "Save Preferences")
+                            d.buttons.enabled.Add(v.buttonText);
+                        if (!string.IsNullOrEmpty(v.rebindKey) && v.buttonText != "Search")
+                            d.buttons.rebinds.Add(new RebindEntry { button = v.buttonText, key = v.rebindKey });
+                    }
+                }
+            }
+            catch (Exception e) { LogManager.Log("[Prefs] save buttons: " + e.Message); }
+
+            if (favorites != null) d.buttons.favorites.AddRange(favorites);
+            if (quickActions != null) d.buttons.quickActions.AddRange(quickActions);
+            if (skipButtons != null) d.buttons.skipButtons.AddRange(skipButtons);
+
+            if (ModBindings != null)
+                foreach (KeyValuePair<string, List<string>> bind in ModBindings)
+                {
+                    BindEntry entry = new BindEntry { name = bind.Key };
+                    if (bind.Value != null) entry.mods.AddRange(bind.Value);
+                    d.buttons.bindings.Add(entry);
+                }
+
+            d.menu.pageType = pageButtonType + 1;
+            d.menu.themeType = themeType + 1;
+            d.menu.fontType = fontCycle + 1;
+            d.menu.pageSize = _pageSize;
+            d.menu.menuScale = menuScaleIndex;
+            d.menu.notificationScale = notificationScaleIndex;
+            d.menu.overlayScale = overlayScaleIndex;
+            d.menu.arraylistScale = arraylistScaleIndex;
+            d.menu.buttonClickSound = buttonClickIndex + 1;
+            d.menu.buttonClickVolume = buttonClickVolume + 1;
+            d.menu.menuButton = menuButtonIndex + 1;
+            d.menu.characterDistance = characterDistance + 1;
+            d.menu.joystickPosition = joystickMenuPosition + 1;
+            d.menu.notificationDecayTime = notificationDecayTime + 1000;
+            d.menu.notificationSound = notificationSoundIndex + 1;
+            d.menu.language = langInd + 1;
+            d.menu.inputTextColor = inputTextColorInt + 1;
+            d.menu.pointer = pointerIndex + 1;
+            d.menu.fontStyle = fontStyleType + 1;
+            d.menu.arrowType = arrowType + 1;
+            d.menu.pcBackground = pcbg + 1;
+
+            d.movement.platformMode = Movement.platformMode + 1;
+            d.movement.platformShape = Movement.platformShape + 1;
+            d.movement.flySpeed = Movement.flySpeedCycle + 1;
+            d.movement.longarm = Movement.longarmCycle + 1;
+            d.movement.speedboost = Movement.speedboostCycle + 1;
+            d.movement.timerPower = Movement.timerPowerIndex + 1;
+            d.movement.driveSpeed = Movement.driveInt + 1;
+            d.movement.pullPower = Movement.pullPowerInt + 1;
+            d.movement.prediction = Movement.predInt + 1;
+            d.movement.playspaceAbuse = Movement.playspaceAbuseIndex + 1;
+            d.movement.wallWalkStrength = Movement.wallWalkStrengthIndex + 1;
+            d.movement.macroPlaybackRange = Movement.macroPlaybackRangeIndex + 1;
+            d.movement.multiplicationAmount = Movement.multiplicationAmount + 1;
+            d.movement.fakeLagDelay = Movement.fakeLagDelayIndex + 1;
+            d.movement.targetHz = Movement.targetHz + 500;
+
+            d.projectiles.mode = Projectiles.projMode + 1;
+            d.projectiles.shootSpeed = Projectiles.shootCycle + 1;
+            d.projectiles.debounce = Projectiles.projDebounceIndex + 1;
+            d.projectiles.red = Projectiles.red + 1;
+            d.projectiles.green = Projectiles.green + 1;
+            d.projectiles.blue = Projectiles.blue + 1;
+            d.projectiles.targetProjectile = Projectiles.targetProjectileIndex + 1;
+            d.projectiles.snowball = Projectiles.snowballIndex + 1;
+
+            d.advantages.tagAura = Advantages.tagAuraIndex + 1;
+            d.advantages.tagRange = Advantages.tagRangeIndex + 1;
+
+            d.safety.fpsSpoof = Safety.fpsSpoofValue + 5;
+            d.safety.antiReportRange = Safety.antiReportRangeIndex + 1;
+            d.safety.rank = Safety.rankIndex + 1;
+            d.safety.targetElo = Safety.targetElo + 100;
+            d.safety.targetBadge = Safety.targetBadge + 1;
+            d.safety.pingSpoof = Safety.pingSpoofValue + 100;
+            d.safety.antiReportPress = Safety.antiReportPressIndex + 1;
+            d.safety.watchdogInterval = Safety.watchdogIntervalIndex + 1;
+            d.safety.micGateHold = Safety.micGateHoldIndex + 1;
+            d.safety.visualizePressRadius = Safety.visualizePressRadius;
+
+            d.sound.bindMode = Sound.BindMode + 1;
+            d.sound.soundId = Sound.soundId + 1;
+
+            d.overpowered.snowballScale = Overpowered.snowballScale + 1;
+            d.overpowered.lagIndex = Overpowered.lagIndex + 1;
+            d.overpowered.lagType = Overpowered.lagTypeIndex + 1;
+            d.overpowered.masterVisualization = Overpowered.masterVisualizationType + 1;
+            d.overpowered.snowballMultiplication = Overpowered.snowballMultiplicationFactor + 1;
+
+            d.fun.blockDebounce = Fun.blockDebounceIndex + 1;
+            d.fun.cycleSpeed = Fun.cycleSpeedIndex + 1;
+            d.fun.targetQuestScore = Fun.targetQuestScore + 1;
+            d.fun.headSpin = Fun.headSpinIndex + 1;
+            d.fun.targetFOV = Fun.targetFOV + 5;
+
+            d.visuals.performanceModeStep = Visuals.PerformanceModeStepIndex + 1;
+            d.visuals.gunVariation = gunVariation + 1;
+            d.visuals.gunDirection = GunDirection + 1;
+            d.visuals.narrator = narratorIndex + 1;
+            d.visuals.gunLineQuality = gunLineQualityIndex + 1;
+
+            d.misc.playTime = (int)MathF.Ceiling(playTime);
+            try { d.misc.photonUserId = PhotonNetwork.LocalPlayer?.UserId ?? "null"; } catch { d.misc.photonUserId = "null"; }
+            d.misc.reconnectDelay = Important.reconnectDelay + 1;
+            d.misc.soundboardLocalVolume = Mathf.RoundToInt(SoundboardManager.LocalVolume * 10f);
+            d.misc.soundboardMicVolume = Mathf.RoundToInt(SoundboardManager.MicVolume * 10f);
+            d.misc.soundboardHighQuality = SoundboardManager.HighQuality;
+            d.misc.throwableFollowPlayer = throwableFollowPlayer;
+            d.misc.throwableMenuGestures = throwableMenuGestures;
+
+            return JsonConvert.SerializeObject(d, Formatting.Indented);
+        }
+
+        public static void SavePreferences()
+        {
+            string json;
+            try { json = SavePreferencesToJson(); }
+            catch (Exception e)
+            {
+                LogManager.Log("[Prefs] SavePreferencesToJson threw, file NOT written: " + e);
+                return;
+            }
+
+            if (string.IsNullOrEmpty(json) || json.Length < 200
+                || !json.Contains("\"buttons\"")
+                || !json.Contains("\"movement\"")
+                || !json.Contains("\"safety\""))
+            {
+                LogManager.Log($"[Prefs] REFUSING to write invalid JSON ({json?.Length ?? 0} chars): {json}");
+                return;
+            }
+
+            File.WriteAllText($"{PluginInfo.BaseDirectory}/{PrefsFileName}", json);
+        }
 
         public static int loadingPreferencesFrame;
+
+        private static void LoadIntPref(string label, ref int field, int value, Action after = null)
+        {
+            int prev = field;
+            try
+            {
+                field = value;
+                after?.Invoke();
+            }
+            catch (Exception e)
+            {
+                field = prev;
+                LogManager.Log($"[Prefs] {label}: {e.GetType().Name}: {e.Message}");
+            }
+        }
+
+        public static void LoadPreferencesFromJson(string json)
+        {
+            loadingPreferencesFrame = Time.frameCount;
+
+            if (string.IsNullOrWhiteSpace(json)) { hasLoadedPreferences = true; return; }
+
+            PreferencesData d;
+            try { d = JsonConvert.DeserializeObject<PreferencesData>(json); }
+            catch (Exception e)
+            {
+                LogManager.Log("Invalid preferences JSON: " + e.Message);
+                hasLoadedPreferences = true;
+                return;
+            }
+
+            if (d == null) { hasLoadedPreferences = true; return; }
+
+            Panic();
+
+            if (d.buttons?.enabled != null)
+            {
+                foreach (string buttonText in d.buttons.enabled)
+                {
+                    if (string.IsNullOrEmpty(buttonText)) continue;
+                    ButtonInfo info = Buttons.GetIndex(buttonText);
+                    if (info == null) continue;
+                    if (buttonText == "Connect to iiServers") { info.enabled = false; continue; }
+                    try { Toggle(buttonText); }
+                    catch (Exception e) { LogManager.Log($"[Prefs] toggle {buttonText}: {e.Message}"); }
+                }
+            }
+
+            favorites.Clear();
+            if (d.buttons?.favorites != null)
+                foreach (string fav in d.buttons.favorites)
+                    if (!string.IsNullOrEmpty(fav) && Buttons.GetIndex(fav) != null)
+                        favorites.Add(fav);
+
+            MenuPrefs m = d.menu ?? new MenuPrefs();
+            MovementPrefs mv = d.movement ?? new MovementPrefs();
+            ProjectilePrefs pj = d.projectiles ?? new ProjectilePrefs();
+            AdvantagePrefs ad = d.advantages ?? new AdvantagePrefs();
+            SafetyPrefs sf = d.safety ?? new SafetyPrefs();
+            SoundPrefs sd = d.sound ?? new SoundPrefs();
+            OverpoweredPrefs op = d.overpowered ?? new OverpoweredPrefs();
+            FunPrefs fn = d.fun ?? new FunPrefs();
+            VisualsPrefs vs = d.visuals ?? new VisualsPrefs();
+            MiscPrefs ms = d.misc ?? new MiscPrefs();
+
+            LoadIntPref("platformMode", ref Movement.platformMode, mv.platformMode - 1, () => Movement.ChangePlatformType());
+            LoadIntPref("platformShape", ref Movement.platformShape, mv.platformShape - 1, () => Movement.ChangePlatformShape());
+            LoadIntPref("flySpeed", ref Movement.flySpeedCycle, mv.flySpeed - 1, () => Movement.ChangeFlySpeed());
+            LoadIntPref("longarm", ref Movement.longarmCycle, mv.longarm - 1, () => Movement.ChangeArmLength());
+            LoadIntPref("speedboost", ref Movement.speedboostCycle, mv.speedboost - 1, () => Movement.ChangeSpeedBoostAmount());
+            LoadIntPref("timerPower", ref Movement.timerPowerIndex, mv.timerPower - 1, () => Movement.ChangeTimerSpeed());
+            LoadIntPref("driveSpeed", ref Movement.driveInt, mv.driveSpeed - 1, () => Movement.ChangeDriveSpeed());
+            LoadIntPref("pullPower", ref Movement.pullPowerInt, mv.pullPower - 1, () => Movement.ChangePullModPower());
+            LoadIntPref("prediction", ref Movement.predInt, mv.prediction - 1, () => Movement.ChangePredictionAmount());
+            LoadIntPref("playspaceAbuse", ref Movement.playspaceAbuseIndex, mv.playspaceAbuse - 1, () => Movement.ChangePlayspaceAbuseSpeed());
+            LoadIntPref("wallWalkStrength", ref Movement.wallWalkStrengthIndex, mv.wallWalkStrength - 1, () => Movement.ChangeWallWalkStrength());
+            LoadIntPref("macroPlaybackRange", ref Movement.macroPlaybackRangeIndex, mv.macroPlaybackRange - 1, () => Movement.ChangeMacroPlaybackRange());
+            LoadIntPref("multiplicationAmount", ref Movement.multiplicationAmount, mv.multiplicationAmount - 1, () => Movement.MultiplicationAmount());
+            LoadIntPref("fakeLagDelay", ref Movement.fakeLagDelayIndex, mv.fakeLagDelay - 1, () => Movement.ChangeFakeLagStrength());
+            LoadIntPref("targetHz", ref Movement.targetHz, mv.targetHz - 500, () => Movement.ChangeTinnitusHz());
+
+            LoadIntPref("projMode", ref Projectiles.projMode, pj.mode - 1, () => Projectiles.ChangeProjectile());
+            LoadIntPref("shootSpeed", ref Projectiles.shootCycle, pj.shootSpeed - 1, () => Projectiles.ChangeShootSpeed());
+            LoadIntPref("projDebounce", ref Projectiles.projDebounceIndex, pj.debounce - 1, () => Projectiles.ChangeProjectileDelay());
+            LoadIntPref("projRed", ref Projectiles.red, pj.red - 1, () => Projectiles.IncreaseRed());
+            LoadIntPref("projGreen", ref Projectiles.green, pj.green - 1, () => Projectiles.IncreaseGreen());
+            LoadIntPref("projBlue", ref Projectiles.blue, pj.blue - 1, () => Projectiles.IncreaseBlue());
+            LoadIntPref("targetProjectile", ref Projectiles.targetProjectileIndex, pj.targetProjectile - 1, () => Projectiles.ChangeProjectileIndex());
+            LoadIntPref("snowball", ref Projectiles.snowballIndex, pj.snowball - 1, () => Projectiles.ChangeGrowingProjectile());
+
+            LoadIntPref("tagAura", ref Advantages.tagAuraIndex, ad.tagAura - 1, () => Advantages.ChangeTagAuraRange());
+            LoadIntPref("tagRange", ref Advantages.tagRangeIndex, ad.tagRange - 1, () => Advantages.ChangeTagReachDistance());
+
+            LoadIntPref("fpsSpoof", ref Safety.fpsSpoofValue, sf.fpsSpoof - 5, () => Safety.ChangeFPSSpoofValue());
+            LoadIntPref("antiReportRange", ref Safety.antiReportRangeIndex, sf.antiReportRange - 1, () => Safety.ChangeAntiReportRange());
+            LoadIntPref("rank", ref Safety.rankIndex, sf.rank - 1, () => Safety.ChangeRankedTier());
+            LoadIntPref("targetElo", ref Safety.targetElo, sf.targetElo - 100, () => Safety.ChangeELOValue());
+            LoadIntPref("targetBadge", ref Safety.targetBadge, sf.targetBadge - 1, () => Safety.ChangeBadgeTier());
+            LoadIntPref("pingSpoof", ref Safety.pingSpoofValue, sf.pingSpoof - 100, () => Safety.ChangePingSpoofValue());
+            LoadIntPref("antiReportPress", ref Safety.antiReportPressIndex, sf.antiReportPress - 1, () => Safety.ChangeAntiReportPressDistance());
+            LoadIntPref("watchdogInterval", ref Safety.watchdogIntervalIndex, sf.watchdogInterval - 1, () => Safety.ChangeWatchdogInterval());
+            LoadIntPref("micGateHold", ref Safety.micGateHoldIndex, sf.micGateHold - 1, () => Safety.ChangeMicGateHoldTime());
+            Safety.visualizePressRadius = sf.visualizePressRadius;
+
+            LoadIntPref("bindMode", ref Sound.BindMode, sd.bindMode - 1, () => Sound.SoundBindings());
+            LoadIntPref("soundId", ref Sound.soundId, sd.soundId - 1, () => Sound.IncreaseSoundID());
+
+            LoadIntPref("snowballScale", ref Overpowered.snowballScale, op.snowballScale - 1, () => Overpowered.ChangeSnowballScale());
+            LoadIntPref("lagIndex", ref Overpowered.lagIndex, op.lagIndex - 1, () => Overpowered.ChangeLagPower());
+            LoadIntPref("lagType", ref Overpowered.lagTypeIndex, op.lagType - 1, () => Overpowered.ChangeLagType());
+            LoadIntPref("masterVisualization", ref Overpowered.masterVisualizationType, op.masterVisualization - 1, () => Overpowered.MasterVisualizationType());
+            LoadIntPref("snowballMultiplication", ref Overpowered.snowballMultiplicationFactor, op.snowballMultiplication - 1, () => Overpowered.ChangeSnowballMultiplicationFactor());
+
+            LoadIntPref("blockDebounce", ref Fun.blockDebounceIndex, fn.blockDebounce - 1, () => Fun.ChangeBlockDelay());
+            LoadIntPref("cycleSpeed", ref Fun.cycleSpeedIndex, fn.cycleSpeed - 1, () => Fun.ChangeCycleDelay());
+            LoadIntPref("targetQuestScore", ref Fun.targetQuestScore, fn.targetQuestScore - 1, () => Fun.ChangeCustomQuestScore());
+            LoadIntPref("headSpin", ref Fun.headSpinIndex, fn.headSpin - 1, () => Fun.ChangeHeadSpinSpeed());
+            LoadIntPref("targetFOV", ref Fun.targetFOV, fn.targetFOV - 5, () => Fun.ChangeTargetFOV());
+
+            LoadIntPref("performanceModeStep", ref Visuals.PerformanceModeStepIndex, vs.performanceModeStep - 1, () => Visuals.ChangePerformanceModeVisualStep());
+            LoadIntPref("gunVariation", ref gunVariation, vs.gunVariation - 1, () => ChangeGunVariation());
+            LoadIntPref("gunDirection", ref GunDirection, vs.gunDirection - 1, () => ChangeGunDirection());
+            LoadIntPref("narrator", ref narratorIndex, vs.narrator - 1, () => ChangeNarrationVoice());
+            LoadIntPref("gunLineQuality", ref gunLineQualityIndex, vs.gunLineQuality - 1, () => ChangeGunLineQuality());
+
+            LoadIntPref("pointer", ref pointerIndex, m.pointer - 1, () => ChangePointerPosition());
+            LoadIntPref("notificationDecay", ref notificationDecayTime, m.notificationDecayTime - 1000, () => ChangeNotificationTime());
+            LoadIntPref("fontStyle", ref fontStyleType, m.fontStyle - 1, () => ChangeFontStyleType());
+            LoadIntPref("arrowType", ref arrowType, m.arrowType - 1, () => ChangeArrowType());
+            LoadIntPref("pcBackground", ref pcbg, m.pcBackground - 1, () => ChangePCUI());
+            LoadIntPref("buttonClickSound", ref buttonClickIndex, m.buttonClickSound - 1, () => ChangeButtonSound());
+            LoadIntPref("buttonClickVolume", ref buttonClickVolume, m.buttonClickVolume - 1, () => ChangeButtonVolume());
+            LoadIntPref("language", ref langInd, m.language - 1, () => ChangeMenuLanguage());
+            LoadIntPref("inputTextColor", ref inputTextColorInt, m.inputTextColor - 1, () => ChangeInputTextColor());
+            LoadIntPref("notificationSound", ref notificationSoundIndex, m.notificationSound - 1, () => ChangeNotificationSound());
+            if (m.menuScale < 2 || m.menuScale > 30 || (m.menuScale == 30 && m.pageSize == 16)) m.menuScale = 10;
+            LoadIntPref("menuScale", ref menuScaleIndex, m.menuScale, () => ChangeMenuScale(cycle: false));
+            if (m.notificationScale < 1 || m.notificationScale > 20) m.notificationScale = 6;
+            LoadIntPref("notificationScale", ref notificationScaleIndex, m.notificationScale, () => ChangeNotificationScale(cycle: false));
+            if (m.overlayScale < 1 || m.overlayScale > 20) m.overlayScale = 6;
+            LoadIntPref("overlayScale", ref overlayScaleIndex, m.overlayScale, () => ChangeOverlayScale(cycle: false));
+            if (m.arraylistScale < 1 || m.arraylistScale > 20) m.arraylistScale = 4;
+            LoadIntPref("arraylistScale", ref arraylistScaleIndex, m.arraylistScale, () => ChangeArraylistScale(cycle: false));
+            if (m.pageSize < 4 || m.pageSize > 16 || (m.pageSize == 16 && m.menuScale == 10)) m.pageSize = 8;
+            LoadIntPref("pageSize", ref _pageSize, m.pageSize, () => ChangePageSize(cycle: false));
+            LoadIntPref("menuButton", ref menuButtonIndex, m.menuButton - 1, () => ChangeMenuButton());
+            LoadIntPref("characterDistance", ref characterDistance, m.characterDistance - 1, () => ChangeCharacterDistance());
+            LoadIntPref("joystickPosition", ref joystickMenuPosition, m.joystickPosition - 1, () => ChangeJoystickMenuPosition());
+
+            playTime = ms.playTime;
+            Important.oldId = ms.photonUserId;
+            LoadIntPref("reconnectDelay", ref Important.reconnectDelay, ms.reconnectDelay - 1, () => ChangeReconnectTime());
+
+            try
+            {
+                SoundboardManager.LocalVolume = Mathf.Clamp(ms.soundboardLocalVolume / 10f, 0f, 2f);
+                SoundboardManager.MicVolume = Mathf.Clamp(ms.soundboardMicVolume / 10f, 0f, 2f);
+                SoundboardManager.HighQuality = ms.soundboardHighQuality;
+                throwableFollowPlayer = ms.throwableFollowPlayer;
+                throwableMenuGestures = ms.throwableMenuGestures;
+                SoundboardManager.ApplySettings();
+                try
+                {
+                    Buttons.GetIndex("Soundboard Local Volume").overlapText = $"Soundboard Local Volume <color=grey>[</color><color=green>{Mathf.RoundToInt(SoundboardManager.LocalVolume * 100)}%</color><color=grey>]</color>";
+                    Buttons.GetIndex("Soundboard Mic Volume").overlapText = $"Soundboard Mic Volume <color=grey>[</color><color=green>{Mathf.RoundToInt(SoundboardManager.MicVolume * 100)}%</color><color=grey>]</color>";
+                }
+                catch { }
+            }
+            catch (Exception e) { LogManager.Log("[Prefs] soundboard: " + e.Message); }
+
+            pageButtonType = (m.pageType == 0 ? 1 : m.pageType) - 1;
+            if (pageButtonType < 1 || pageButtonType > 6) { pageButtonType = 1; buttonOffset = 2; }
+            buttonOffset = pageButtonType == 1 ? 2 : 0;
+
+            themeType = (m.themeType == 0 ? 1 : m.themeType) - 1;
+            try { ApplyMenuTheme(); } catch (Exception e) { LogManager.Log("[Prefs] themeType: " + e.Message); }
+
+            fontCycle = (m.fontType == 0 ? 1 : m.fontType) - 1;
+            fontCycle %= 15;
+            if (fontCycle < 0)
+                fontCycle = 14;
+            try { ApplyFont(); } catch (Exception e) { LogManager.Log("[Prefs] fontType: " + e.Message); }
+            if (!clickGUI) ReloadMenu();
+
+            if (d.buttons?.bindings != null)
+                foreach (BindEntry entry in d.buttons.bindings)
+                {
+                    if (entry == null || string.IsNullOrEmpty(entry.name)) continue;
+                    List<string> binds = new List<string>();
+                    if (entry.mods != null)
+                        foreach (string modName in entry.mods)
+                            if (Buttons.GetIndex(modName) != null) binds.Add(modName);
+                    ModBindings[entry.name] = binds;
+                }
+
+            quickActions.Clear();
+            if (d.buttons?.quickActions != null)
+                foreach (string qa in d.buttons.quickActions)
+                    if (Buttons.GetIndex(qa) != null) quickActions.Add(qa);
+
+            if (d.buttons?.rebinds != null)
+                foreach (RebindEntry rebind in d.buttons.rebinds)
+                {
+                    if (rebind == null || string.IsNullOrEmpty(rebind.button) || string.IsNullOrEmpty(rebind.key)) continue;
+                    if (rebind.button == "Search") continue;
+                    ButtonInfo button = Buttons.GetIndex(rebind.button);
+                    if (button != null) button.rebindKey = rebind.key;
+                }
+
+            skipButtons.Clear();
+            if (d.buttons?.skipButtons != null)
+                foreach (string sb in d.buttons.skipButtons)
+                    if (Buttons.GetIndex(sb) != null) skipButtons.Add(sb);
+
+            hasLoadedPreferences = true;
+            clickGUI = false;
+            ButtonInfo cg = Buttons.GetIndex("Click GUI");
+            if (cg != null) cg.enabled = false;
+        }
+
+
+
+        public static bool TryMigrateLegacyPreferences()
+        {
+            string jsonPath = $"{PluginInfo.BaseDirectory}/{PrefsFileName}";
+            string legacyPath = $"{PluginInfo.BaseDirectory}/{LegacyPrefsFileName}";
+
+            if (!File.Exists(legacyPath)) return false;
+
+            if (File.Exists(jsonPath))
+            {
+                try { File.Copy(jsonPath, jsonPath + ".bak", true); } catch { }
+            }
+
+            try
+            {
+                string legacyText = File.ReadAllText(legacyPath);
+                LogManager.Log($"[Prefs] Migrating {legacyText.Length} chars from .txt");
+
+                LoadPreferencesFromText(legacyText);
+
+                if (menuScaleIndex < 2 || menuScaleIndex > 30)
+                {
+                    menuScaleIndex = 10;
+                    menuScale = 1f;
+                }
+                if (_pageSize < 4 || _pageSize > 16)
+                {
+                    _pageSize = 8;
+                }
+
+                string json = SavePreferencesToJson();
+                if (string.IsNullOrEmpty(json) || json.Length < 200 || !json.Contains("\"buttons\""))
+                {
+                    LogManager.Log($"[Prefs] Migration SAVE FAILED: JSON looks broken ({json?.Length ?? 0} chars): {json}");
+                    return false;
+                }
+
+                File.WriteAllText(jsonPath, json);
+                File.Delete(legacyPath);
+                LogManager.Log($"[Prefs] Migration complete -> {PrefsFileName} ({json.Length} chars), .txt deleted.");
+                hasLoadedPreferences = true;
+                return true;
+            }
+            catch (Exception e)
+            {
+                LogManager.Log("[Prefs] Migration failed, keeping .txt: " + e);
+                return false;
+            }
+        }
+
+        public static void LoadPreferences()
+        {
+            string jsonPath = $"{PluginInfo.BaseDirectory}/{PrefsFileName}";
+            string legacyPath = $"{PluginInfo.BaseDirectory}/{LegacyPrefsFileName}";
+
+            try
+            {
+                if (File.Exists(legacyPath))
+                {
+                    if (TryMigrateLegacyPreferences())
+                        return;
+                }
+
+                if (File.Exists(jsonPath))
+                {
+                    string existingJson = File.ReadAllText(jsonPath);
+                    if (!string.IsNullOrWhiteSpace(existingJson) && existingJson.Length >= 200 && existingJson.Contains("\"buttons\""))
+                    {
+                        LoadPreferencesFromJson(existingJson);
+                        return;
+                    }
+                    LogManager.Log("[Prefs] Existing JSON is corrupt or incomplete. Recreating...");
+                }
+
+                SavePreferences();
+                hasLoadedPreferences = true;
+                clickGUI = false;
+            }
+            catch (Exception e)
+            {
+                LogManager.Log("Error loading preferences: " + e.Message);
+                hasLoadedPreferences = true;
+            }
+        }
+
 
         private static string GetPreferenceLine(string[] lines, int index) =>
             lines != null && index >= 0 && index < lines.Length ? lines[index] : string.Empty;
 
         private static int GetPreferenceInt(string[] data, int index, int fallback)
         {
-            if (data == null || index < 0 || index >= data.Length)
-                return fallback;
-
+            if (data == null || index < 0 || index >= data.Length) return fallback;
             return int.TryParse(data[index], out int value) ? value : fallback;
         }
 
@@ -6727,11 +7182,7 @@ exit 0";
         {
             loadingPreferencesFrame = Time.frameCount;
 
-            if (string.IsNullOrWhiteSpace(text))
-            {
-                hasLoadedPreferences = true;
-                return;
-            }
+            if (string.IsNullOrWhiteSpace(text)) { hasLoadedPreferences = true; return; }
 
             Panic();
             string[] textData = text.Replace("\r", "").Split('\n');
@@ -6739,11 +7190,8 @@ exit 0";
             string[] activebuttons = GetPreferenceLine(textData, 0).Split(";;");
             for (int index = 0; index < activebuttons.Length; index++)
             {
-                if (string.IsNullOrEmpty(activebuttons[index]))
-                    continue;
-
-                if (Buttons.GetIndex(activebuttons[index]) == null)
-                    continue;
+                if (string.IsNullOrEmpty(activebuttons[index])) continue;
+                if (Buttons.GetIndex(activebuttons[index]) == null) continue;
 
                 if (activebuttons[index] == "Connect to iiServers")
                 {
@@ -6751,355 +7199,192 @@ exit 0";
                     continue;
                 }
 
-                Toggle(activebuttons[index]);
+                string btn = activebuttons[index];
+                try { Toggle(btn); } catch (Exception e) { LogManager.Log($"[Prefs] txt toggle {btn}: {e.Message}"); }
             }
 
             favorites.Clear();
             foreach (string favorite in GetPreferenceLine(textData, 1).Split(";;"))
-            {
                 if (!string.IsNullOrEmpty(favorite) && Buttons.GetIndex(favorite) != null)
                     favorites.Add(favorite);
-            }
+
+            string[] data = GetPreferenceLine(textData, 2).Split(";;");
+
+            LoadIntPref("txt.platformMode", ref Movement.platformMode, GetPreferenceInt(data, 0, 1) - 1, () => Movement.ChangePlatformType());
+            LoadIntPref("txt.platformShape", ref Movement.platformShape, GetPreferenceInt(data, 1, 1) - 1, () => Movement.ChangePlatformShape());
+            LoadIntPref("txt.flySpeed", ref Movement.flySpeedCycle, GetPreferenceInt(data, 2, 1) - 1, () => Movement.ChangeFlySpeed());
+            LoadIntPref("txt.longarm", ref Movement.longarmCycle, GetPreferenceInt(data, 3, 1) - 1, () => Movement.ChangeArmLength());
+            LoadIntPref("txt.speedboost", ref Movement.speedboostCycle, GetPreferenceInt(data, 4, 1) - 1, () => Movement.ChangeSpeedBoostAmount());
+            LoadIntPref("txt.timerPower", ref Movement.timerPowerIndex, GetPreferenceInt(data, 6, 1) - 1, () => Movement.ChangeTimerSpeed());
+            LoadIntPref("txt.driveSpeed", ref Movement.driveInt, GetPreferenceInt(data, 21, 1) - 1, () => Movement.ChangeDriveSpeed());
+            LoadIntPref("txt.pullPower", ref Movement.pullPowerInt, GetPreferenceInt(data, 24, 1) - 1, () => Movement.ChangePullModPower());
+            LoadIntPref("txt.prediction", ref Movement.predInt, GetPreferenceInt(data, 30, 1) - 1, () => Movement.ChangePredictionAmount());
+            LoadIntPref("txt.playspaceAbuse", ref Movement.playspaceAbuseIndex, GetPreferenceInt(data, 54, 1) - 1, () => Movement.ChangePlayspaceAbuseSpeed());
+            LoadIntPref("txt.wallWalkStrength", ref Movement.wallWalkStrengthIndex, GetPreferenceInt(data, 55, 1) - 1, () => Movement.ChangeWallWalkStrength());
+            LoadIntPref("txt.macroPlaybackRange", ref Movement.macroPlaybackRangeIndex, GetPreferenceInt(data, 57, 1) - 1, () => Movement.ChangeMacroPlaybackRange());
+            LoadIntPref("txt.multiplicationAmount", ref Movement.multiplicationAmount, GetPreferenceInt(data, 59, 1) - 1, () => Movement.MultiplicationAmount());
+            LoadIntPref("txt.fakeLagDelay", ref Movement.fakeLagDelayIndex, GetPreferenceInt(data, 62, 1) - 1, () => Movement.ChangeFakeLagStrength());
+            LoadIntPref("txt.targetHz", ref Movement.targetHz, GetPreferenceInt(data, 67, 500) - 500, () => Movement.ChangeTinnitusHz());
+
+            LoadIntPref("txt.projMode", ref Projectiles.projMode, GetPreferenceInt(data, 5, 1) - 1, () => Projectiles.ChangeProjectile());
+            LoadIntPref("txt.shootSpeed", ref Projectiles.shootCycle, GetPreferenceInt(data, 7, 1) - 1, () => Projectiles.ChangeShootSpeed());
+            LoadIntPref("txt.projDebounce", ref Projectiles.projDebounceIndex, GetPreferenceInt(data, 32, 1) - 1, () => Projectiles.ChangeProjectileDelay());
+            LoadIntPref("txt.projRed", ref Projectiles.red, GetPreferenceInt(data, 33, 1) - 1, () => Projectiles.IncreaseRed());
+            LoadIntPref("txt.projGreen", ref Projectiles.green, GetPreferenceInt(data, 34, 1) - 1, () => Projectiles.IncreaseGreen());
+            LoadIntPref("txt.projBlue", ref Projectiles.blue, GetPreferenceInt(data, 35, 1) - 1, () => Projectiles.IncreaseBlue());
+            LoadIntPref("txt.targetProjectile", ref Projectiles.targetProjectileIndex, GetPreferenceInt(data, 61, 1) - 1, () => Projectiles.ChangeProjectileIndex());
+            LoadIntPref("txt.snowball", ref Projectiles.snowballIndex, GetPreferenceInt(data, 63, 1) - 1, () => Projectiles.ChangeGrowingProjectile());
+
+            LoadIntPref("txt.tagAura", ref Advantages.tagAuraIndex, GetPreferenceInt(data, 9, 1) - 1, () => Advantages.ChangeTagAuraRange());
+            LoadIntPref("txt.tagRange", ref Advantages.tagRangeIndex, GetPreferenceInt(data, 19, 1) - 1, () => Advantages.ChangeTagReachDistance());
+
+            LoadIntPref("txt.fpsSpoof", ref Safety.fpsSpoofValue, GetPreferenceInt(data, 15, 90) - 5, () => Safety.ChangeFPSSpoofValue());
+            LoadIntPref("txt.antiReportRange", ref Safety.antiReportRangeIndex, GetPreferenceInt(data, 18, 1) - 1, () => Safety.ChangeAntiReportRange());
+            LoadIntPref("txt.rank", ref Safety.rankIndex, GetPreferenceInt(data, 36, 1) - 1, () => Safety.ChangeRankedTier());
+            LoadIntPref("txt.targetElo", ref Safety.targetElo, GetPreferenceInt(data, 52, 100) - 100, () => Safety.ChangeELOValue());
+            LoadIntPref("txt.targetBadge", ref Safety.targetBadge, GetPreferenceInt(data, 53, 1) - 1, () => Safety.ChangeBadgeTier());
+            LoadIntPref("txt.pingSpoof", ref Safety.pingSpoofValue, GetPreferenceInt(data, 68, 100) - 100, () => Safety.ChangePingSpoofValue());
+            LoadIntPref("txt.antiReportPress", ref Safety.antiReportPressIndex, GetPreferenceInt(data, 74, 2) - 1, () => Safety.ChangeAntiReportPressDistance());
+            LoadIntPref("txt.watchdogInterval", ref Safety.watchdogIntervalIndex, GetPreferenceInt(data, 75, 2) - 1, () => Safety.ChangeWatchdogInterval());
+            LoadIntPref("txt.micGateHold", ref Safety.micGateHoldIndex, GetPreferenceInt(data, 77, 2) - 1, () => Safety.ChangeMicGateHoldTime());
+            Safety.visualizePressRadius = GetPreferenceInt(data, 76, 0) != 0;
+
+            LoadIntPref("txt.bindMode", ref Sound.BindMode, GetPreferenceInt(data, 20, 1) - 1, () => Sound.SoundBindings());
+            LoadIntPref("txt.soundId", ref Sound.soundId, GetPreferenceInt(data, 42, 1) - 1, () => Sound.IncreaseSoundID());
+
+            LoadIntPref("txt.snowballScale", ref Overpowered.snowballScale, GetPreferenceInt(data, 37, 1) - 1, () => Overpowered.ChangeSnowballScale());
 
             try
             {
-                string[] data = GetPreferenceLine(textData, 2).Split(";;");
-                Movement.platformMode = GetPreferenceInt(data, 0, 1) - 1;
-                Movement.ChangePlatformType();
-
-                Movement.platformShape = int.Parse(data[1]) - 1;
-                Movement.ChangePlatformShape();
-
-                Movement.flySpeedCycle = int.Parse(data[2]) - 1;
-                Movement.ChangeFlySpeed();
-
-                Movement.longarmCycle = int.Parse(data[3]) - 1;
-                Movement.ChangeArmLength();
-
-                Movement.speedboostCycle = int.Parse(data[4]) - 1;
-                Movement.ChangeSpeedBoostAmount();
-
-                Projectiles.projMode = int.Parse(data[5]) - 1;
-                Projectiles.ChangeProjectile();
-
-                Movement.timerPowerIndex = int.Parse(data[6]) - 1;
-                Movement.ChangeTimerSpeed();
-
-                Projectiles.shootCycle = int.Parse(data[7]) - 1;
-                Projectiles.ChangeShootSpeed();
-
-                pointerIndex = int.Parse(data[8]) - 1;
-                ChangePointerPosition();
-
-                Advantages.tagAuraIndex = int.Parse(data[9]) - 1;
-                Advantages.ChangeTagAuraRange();
-
-                notificationDecayTime = int.Parse(data[10]) - 1000;
-                ChangeNotificationTime();
-
-                fontStyleType = int.Parse(data[11]) - 1;
-                ChangeFontStyleType();
-
-                arrowType = int.Parse(data[12]) - 1;
-                ChangeArrowType();
-
-                pcbg = int.Parse(data[13]) - 1;
-                ChangePCUI();
-
-                Important.reconnectDelay = int.Parse(data[14]) - 1;
-                ChangeReconnectTime();
-
-                Safety.fpsSpoofValue = string.IsNullOrWhiteSpace(data[15]) ? 85 : int.Parse(data[15]) - 5;
-                Safety.ChangeFPSSpoofValue();
-
-                buttonClickIndex = int.Parse(data[16]) - 1;
-                ChangeButtonSound();
-
-                buttonClickVolume = int.Parse(data[17]) - 1;
-                ChangeButtonVolume();
-
-                Safety.antiReportRangeIndex = int.Parse(data[18]) - 1;
-                Safety.ChangeAntiReportRange();
-
-                Advantages.tagRangeIndex = int.Parse(data[19]) - 1;
-                Advantages.ChangeTagReachDistance();
-
-                Sound.BindMode = int.Parse(data[20]) - 1;
-                Sound.SoundBindings();
-
-                Movement.driveInt = int.Parse(data[21]) - 1;
-                Movement.ChangeDriveSpeed();
-
-                langInd = int.Parse(data[22]) - 1;
-                ChangeMenuLanguage();
-
-                inputTextColorInt = int.Parse(data[23]) - 1;
-                ChangeInputTextColor();
-
-                Movement.pullPowerInt = int.Parse(data[24]) - 1;
-                Movement.ChangePullModPower();
-
-                notificationSoundIndex = int.Parse(data[25]) - 1;
-                ChangeNotificationSound();
-
-                Visuals.PerformanceModeStepIndex = int.Parse(data[26]) - 1;
-                Visuals.ChangePerformanceModeVisualStep();
-
-                gunVariation = int.Parse(data[27]) - 1;
-                ChangeGunVariation();
-
-                GunDirection = int.Parse(data[28]) - 1;
-                ChangeGunDirection();
-
-                narratorIndex = int.Parse(data[29]) - 1;
-                ChangeNarrationVoice();
-
-                Movement.predInt = int.Parse(data[30]) - 1;
-                Movement.ChangePredictionAmount();
-
-                gunLineQualityIndex = int.Parse(data[31]) - 1;
-                ChangeGunLineQuality();
-
-                Projectiles.projDebounceIndex = int.Parse(data[32]) - 1;
-                Projectiles.ChangeProjectileDelay();
-
-                Projectiles.red = int.Parse(data[33]) - 1;
-                Projectiles.IncreaseRed();
-
-                Projectiles.green = int.Parse(data[34]) - 1;
-                Projectiles.IncreaseGreen();
-
-                Projectiles.blue = int.Parse(data[35]) - 1;
-                Projectiles.IncreaseBlue();
-
-                Safety.rankIndex = int.Parse(data[36]) - 1;
-                Safety.ChangeRankedTier();
-
-                Overpowered.snowballScale = int.Parse(data[37]) - 1;
-                Overpowered.ChangeSnowballScale();
-
-                Overpowered.lagIndex = (data.Length <= LegacyPrefsFieldCount ? Overpowered.DefaultLagIndex : int.Parse(data[38])) - 1;
-                Overpowered.ChangeLagPower();
-
-                Fun.blockDebounceIndex = int.Parse(data[39]) - 1;
-                Fun.ChangeBlockDelay();
-
-                Fun.cycleSpeedIndex = int.Parse(data[40]) - 1;
-                Fun.ChangeCycleDelay();
-
-                menuScaleIndex = int.Parse(data[41]) - 1;
-                ChangeMenuScale();
-
-                Sound.soundId = int.Parse(data[42]) - 1;
-                Sound.IncreaseSoundID();
-
-                Fun.targetQuestScore = int.Parse(data[43]) - 1;
-                Fun.ChangeCustomQuestScore();
-
-                notificationScaleIndex = int.Parse(data[44]) - 1;
-                ChangeNotificationScale();
-
-                overlayScaleIndex = int.Parse(data[45]) - 1;
-                ChangeOverlayScale();
-
-                arraylistScaleIndex = int.Parse(data[46]) - 1;
-                ChangeArraylistScale();
-
-                playTime = int.Parse(data[47]);
-
-                Important.oldId = data[48];
-
-                _pageSize = int.Parse(data[49]) - 1;
-                ChangePageSize();
-
-                Overpowered.snowballMultiplicationFactor = int.Parse(data[50]) - 1;
-                Overpowered.ChangeSnowballMultiplicationFactor();
-
-                menuButtonIndex = int.Parse(data[51]) - 1;
-                ChangeMenuButton();
-
-                Safety.targetElo = int.Parse(data[52]) - 100;
-                Safety.ChangeELOValue();
-
-                Safety.targetBadge = int.Parse(data[53]) - 1;
-                Safety.ChangeBadgeTier();
-
-                Movement.playspaceAbuseIndex = int.Parse(data[54]) - 1;
-                Movement.ChangePlayspaceAbuseSpeed();
-
-                Movement.wallWalkStrengthIndex = int.Parse(data[55]) - 1;
-                Movement.ChangeWallWalkStrength();
-
-                Fun.headSpinIndex = int.Parse(data[56]) - 1;
-                Fun.ChangeHeadSpinSpeed();
-
-                Movement.macroPlaybackRangeIndex = int.Parse(data[57]) - 1;
-                Movement.ChangeMacroPlaybackRange();
-
-                joystickMenuPosition = int.Parse(data[58]) - 1;
-                ChangeJoystickMenuPosition();
-
-                Movement.multiplicationAmount = int.Parse(data[59]) - 1;
-                Movement.MultiplicationAmount();
-
-                Fun.targetFOV = int.Parse(data[60]) - 5;
-                Fun.ChangeTargetFOV();
-
-                Projectiles.targetProjectileIndex = int.Parse(data[61]) - 1;
-                Projectiles.ChangeProjectileIndex();
-
-                Movement.fakeLagDelayIndex = int.Parse(data[62]) - 1;
-                Movement.ChangeFakeLagStrength();
-
-                Projectiles.snowballIndex = int.Parse(data[63]) - 1;
-                Projectiles.ChangeGrowingProjectile();
-
-                characterDistance = int.Parse(data[64]) - 1;
-                ChangeCharacterDistance();
-
-                Overpowered.lagTypeIndex = int.Parse(data[65]) - 1;
-                Overpowered.ChangeLagType();
-
-                Overpowered.masterVisualizationType = int.Parse(data[66]) - 1;
-                Overpowered.MasterVisualizationType();
-
-                Movement.targetHz = int.Parse(data[67]) - 500;
-                Movement.ChangeTinnitusHz();
-
-                Safety.pingSpoofValue = int.Parse(data[68]) - 100;
-                Safety.ChangePingSpoofValue();
-
+                int lagVal = (data.Length <= LegacyPrefsFieldCount
+                    ? Overpowered.DefaultLagIndex
+                    : GetPreferenceInt(data, 38, 1)) - 1;
+                LoadIntPref("txt.lagIndex", ref Overpowered.lagIndex, lagVal, () => Overpowered.ChangeLagPower());
+            }
+            catch (Exception e) { LogManager.Log("[Prefs] txt.lagIndex: " + e.Message); }
+
+            LoadIntPref("txt.lagType", ref Overpowered.lagTypeIndex, GetPreferenceInt(data, 65, 1) - 1, () => Overpowered.ChangeLagType());
+            LoadIntPref("txt.masterVisualization", ref Overpowered.masterVisualizationType, GetPreferenceInt(data, 66, 1) - 1, () => Overpowered.MasterVisualizationType());
+            LoadIntPref("txt.snowballMult", ref Overpowered.snowballMultiplicationFactor, GetPreferenceInt(data, 50, 1) - 1, () => Overpowered.ChangeSnowballMultiplicationFactor());
+
+            LoadIntPref("txt.blockDebounce", ref Fun.blockDebounceIndex, GetPreferenceInt(data, 39, 1) - 1, () => Fun.ChangeBlockDelay());
+            LoadIntPref("txt.cycleSpeed", ref Fun.cycleSpeedIndex, GetPreferenceInt(data, 40, 1) - 1, () => Fun.ChangeCycleDelay());
+            LoadIntPref("txt.targetQuestScore", ref Fun.targetQuestScore, GetPreferenceInt(data, 43, 1) - 1, () => Fun.ChangeCustomQuestScore());
+            LoadIntPref("txt.headSpin", ref Fun.headSpinIndex, GetPreferenceInt(data, 56, 1) - 1, () => Fun.ChangeHeadSpinSpeed());
+            LoadIntPref("txt.targetFOV", ref Fun.targetFOV, GetPreferenceInt(data, 60, 5) - 5, () => Fun.ChangeTargetFOV());
+
+            LoadIntPref("txt.performanceModeStep", ref Visuals.PerformanceModeStepIndex, GetPreferenceInt(data, 26, 1) - 1, () => Visuals.ChangePerformanceModeVisualStep());
+            LoadIntPref("txt.gunVariation", ref gunVariation, GetPreferenceInt(data, 27, 1) - 1, () => ChangeGunVariation());
+            LoadIntPref("txt.gunDirection", ref GunDirection, GetPreferenceInt(data, 28, 1) - 1, () => ChangeGunDirection());
+            LoadIntPref("txt.narrator", ref narratorIndex, GetPreferenceInt(data, 29, 1) - 1, () => ChangeNarrationVoice());
+            LoadIntPref("txt.gunLineQuality", ref gunLineQualityIndex, GetPreferenceInt(data, 31, 1) - 1, () => ChangeGunLineQuality());
+
+            LoadIntPref("txt.pointer", ref pointerIndex, GetPreferenceInt(data, 8, 1) - 1, () => ChangePointerPosition());
+            LoadIntPref("txt.notificationDecay", ref notificationDecayTime, GetPreferenceInt(data, 10, 1000) - 1000, () => ChangeNotificationTime());
+            LoadIntPref("txt.fontStyle", ref fontStyleType, GetPreferenceInt(data, 11, 1) - 1, () => ChangeFontStyleType());
+            LoadIntPref("txt.arrowType", ref arrowType, GetPreferenceInt(data, 12, 1) - 1, () => ChangeArrowType());
+            LoadIntPref("txt.pcBackground", ref pcbg, GetPreferenceInt(data, 13, 1) - 1, () => ChangePCUI());
+            LoadIntPref("txt.buttonClickSound", ref buttonClickIndex, GetPreferenceInt(data, 16, 1) - 1, () => ChangeButtonSound());
+            LoadIntPref("txt.buttonClickVolume", ref buttonClickVolume, GetPreferenceInt(data, 17, 1) - 1, () => ChangeButtonVolume());
+            LoadIntPref("txt.language", ref langInd, GetPreferenceInt(data, 22, 1) - 1, () => ChangeMenuLanguage());
+            LoadIntPref("txt.inputTextColor", ref inputTextColorInt, GetPreferenceInt(data, 23, 1) - 1, () => ChangeInputTextColor());
+            LoadIntPref("txt.notificationSound", ref notificationSoundIndex, GetPreferenceInt(data, 25, 1) - 1, () => ChangeNotificationSound());
+            int legacyMenuScale = GetPreferenceInt(data, 41, 10);
+            if (legacyMenuScale < 2 || legacyMenuScale >= 30) legacyMenuScale = 10;
+            LoadIntPref("txt.menuScale", ref menuScaleIndex, legacyMenuScale, () => ChangeMenuScale(cycle: false));
+            LoadIntPref("txt.notificationScale", ref notificationScaleIndex, GetPreferenceInt(data, 44, 6), () => ChangeNotificationScale(cycle: false));
+            LoadIntPref("txt.overlayScale", ref overlayScaleIndex, GetPreferenceInt(data, 45, 6), () => ChangeOverlayScale(cycle: false));
+            LoadIntPref("txt.arraylistScale", ref arraylistScaleIndex, GetPreferenceInt(data, 46, 4), () => ChangeArraylistScale(cycle: false));
+            int legacyPageSize = GetPreferenceInt(data, 49, 8);
+            if (legacyPageSize < 4 || legacyPageSize >= 16) legacyPageSize = 8;
+            LoadIntPref("txt.pageSize", ref _pageSize, legacyPageSize, () => ChangePageSize(cycle: false));
+            LoadIntPref("txt.menuButton", ref menuButtonIndex, GetPreferenceInt(data, 51, 1) - 1, () => ChangeMenuButton());
+            LoadIntPref("txt.characterDistance", ref characterDistance, GetPreferenceInt(data, 64, 1) - 1, () => ChangeCharacterDistance());
+            LoadIntPref("txt.joystickPosition", ref joystickMenuPosition, GetPreferenceInt(data, 58, 1) - 1, () => ChangeJoystickMenuPosition());
+
+            try { playTime = GetPreferenceInt(data, 47, 0); } catch { }
+            try { if (data.Length > 48) Important.oldId = data[48]; } catch { }
+            LoadIntPref("txt.reconnectDelay", ref Important.reconnectDelay, GetPreferenceInt(data, 14, 1) - 1, () => ChangeReconnectTime());
+
+            try
+            {
+                if (data.Length > 69) SoundboardManager.LocalVolume = Mathf.Clamp(GetPreferenceInt(data, 69, 10) / 10f, 0f, 2f);
+                if (data.Length > 70) SoundboardManager.MicVolume = Mathf.Clamp(GetPreferenceInt(data, 70, 10) / 10f, 0f, 2f);
+                if (data.Length > 71) SoundboardManager.HighQuality = data[71] != "0";
+                if (data.Length > 72) throwableFollowPlayer = data[72] != "0";
+                if (data.Length > 73) throwableMenuGestures = data[73] != "0";
+
+                SoundboardManager.ApplySettings();
                 try
                 {
-                    if (data.Length > 69) SoundboardManager.LocalVolume = Mathf.Clamp(int.Parse(data[69]) / 10f, 0f, 2f);
-                    if (data.Length > 70) SoundboardManager.MicVolume = Mathf.Clamp(int.Parse(data[70]) / 10f, 0f, 2f);
-                    if (data.Length > 71) SoundboardManager.HighQuality = data[71] != "0";
-                    if (data.Length > 72) throwableFollowPlayer = data[72] != "0";
-                    if (data.Length > 73) throwableMenuGestures = data[73] != "0";
-
-                    Safety.antiReportPressIndex = GetPreferenceInt(data, 74, 2) - 1;
-                    Safety.ChangeAntiReportPressDistance();
-
-                    Safety.watchdogIntervalIndex = GetPreferenceInt(data, 75, 2) - 1;
-                    Safety.ChangeWatchdogInterval();
-
-                    if (data.Length > 76) Safety.visualizePressRadius = data[76] != "0";
-
-                    Safety.micGateHoldIndex = GetPreferenceInt(data, 77, 2) - 1;
-                    Safety.ChangeMicGateHoldTime();
-
-                    SoundboardManager.ApplySettings();
-                    try
-                    {
-                        Buttons.GetIndex("Soundboard Local Volume").overlapText = $"Soundboard Local Volume <color=grey>[</color><color=green>{Mathf.RoundToInt(SoundboardManager.LocalVolume * 100)}%</color><color=grey>]</color>";
-                        Buttons.GetIndex("Soundboard Mic Volume").overlapText = $"Soundboard Mic Volume <color=grey>[</color><color=green>{Mathf.RoundToInt(SoundboardManager.MicVolume * 100)}%</color><color=grey>]</color>";
-                    }
-                    catch { }
+                    Buttons.GetIndex("Soundboard Local Volume").overlapText = $"Soundboard Local Volume <color=grey>[</color><color=green>{Mathf.RoundToInt(SoundboardManager.LocalVolume * 100)}%</color><color=grey>]</color>";
+                    Buttons.GetIndex("Soundboard Mic Volume").overlapText = $"Soundboard Mic Volume <color=grey>[</color><color=green>{Mathf.RoundToInt(SoundboardManager.MicVolume * 100)}%</color><color=grey>]</color>";
                 }
                 catch { }
             }
-            catch { LogManager.Log("Save file out of date"); }
+            catch (Exception e) { LogManager.Log("[Prefs] txt.soundboard: " + e.Message); }
 
             pageButtonType = GetPreferenceInt(textData, 3, 1) - 1;
-            Toggle("Change Page Type");
-            if (pageButtonType < 1 || pageButtonType > 6)
-            {
-                pageButtonType = 1;
-                buttonOffset = 2;
-            }
+            if (pageButtonType < 1 || pageButtonType > 6) { pageButtonType = 1; buttonOffset = 2; }
+            buttonOffset = pageButtonType == 1 ? 2 : 0;
+
             themeType = GetPreferenceInt(textData, 4, 1) - 1;
-            Toggle("Change Menu Theme");
+            try { ApplyMenuTheme(); } catch (Exception e) { LogManager.Log("[Prefs] txt.themeType: " + e.Message); }
+
             fontCycle = GetPreferenceInt(textData, 5, 1) - 1;
-            Toggle("Change Font Type");
+            fontCycle %= 15;
+            if (fontCycle < 0)
+                fontCycle = 14;
+            try { ApplyFont(); } catch (Exception e) { LogManager.Log("[Prefs] txt.fontType: " + e.Message); }
+            if (!clickGUI) ReloadMenu();
 
             try
             {
                 foreach (string Bindings in GetPreferenceLine(textData, 6).Split("~~"))
                 {
-                    if (Bindings.Contains(";;"))
-                    {
-                        string[] BindData = Bindings.Split(";;");
-                        string BindName = BindData[0];
-
-                        List<string> Binds = new List<string>();
-
-                        for (int i = 1; i < BindData.Length; i++)
-                        {
-                            string ModName = BindData[i];
-                            if (Buttons.GetIndex(ModName) != null)
-                                Binds.Add(ModName);
-                        }
-
-                        ModBindings[BindName] = Binds;
-                    }
+                    if (!Bindings.Contains(";;")) continue;
+                    string[] BindData = Bindings.Split(";;");
+                    string BindName = BindData[0];
+                    List<string> Binds = new List<string>();
+                    for (int i = 1; i < BindData.Length; i++)
+                        if (Buttons.GetIndex(BindData[i]) != null) Binds.Add(BindData[i]);
+                    ModBindings[BindName] = Binds;
                 }
-            } catch { }
+            }
+            catch { }
 
             try
             {
                 quickActions.Clear();
                 foreach (string quickAction in GetPreferenceLine(textData, 7).Split(";;"))
-                {
-                    ButtonInfo button = Buttons.GetIndex(quickAction);
-                    if (button != null)
-                        quickActions.Add(quickAction);
-                }
-            } catch { }
+                    if (Buttons.GetIndex(quickAction) != null) quickActions.Add(quickAction);
+            }
+            catch { }
 
             try
             {
                 foreach (string bind in GetPreferenceLine(textData, 8).Split(";;"))
                 {
                     string[] rebindData = bind.Split(";");
-                    if (rebindData.Length < 2)
-                        continue;
-
-                    string rebindText = rebindData[0];
-                    string rebindKey = rebindData[1];
-                    ButtonInfo button = Buttons.GetIndex(rebindText);
-                    if (button != null)
-                        button.rebindKey = rebindKey;
+                    if (rebindData.Length < 2) continue;
+                    ButtonInfo button = Buttons.GetIndex(rebindData[0]);
+                    if (button != null) button.rebindKey = rebindData[1];
                 }
-            } catch { }
+            }
+            catch { }
 
             try
             {
                 skipButtons.Clear();
                 foreach (string skipButton in GetPreferenceLine(textData, 9).Split(";;"))
-                {
-                    ButtonInfo button = Buttons.GetIndex(skipButton);
-                    if (button != null)
-                        skipButtons.Add(skipButton);
-                }
-            } catch { }
+                    if (Buttons.GetIndex(skipButton) != null) skipButtons.Add(skipButton);
+            }
+            catch { }
 
             hasLoadedPreferences = true;
             clickGUI = false;
-            ButtonInfo clickGuiButton = Buttons.GetIndex("Click GUI");
-            if (clickGuiButton != null)
-                clickGuiButton.enabled = false;
-        }
-
-        public static void LoadPreferences()
-        {
-            try
-            {
-                if (!File.Exists($"{PluginInfo.BaseDirectory}/iiMenu_Preferences.txt"))
-                {
-                    hasLoadedPreferences = true;
-                    clickGUI = false;
-                    return;
-                }
-
-                string text = File.ReadAllText($"{PluginInfo.BaseDirectory}/iiMenu_Preferences.txt");
-                LoadPreferencesFromText(text);
-            }
-            catch (Exception e)
-            {
-                LogManager.Log("Error loading preferences: " + e.Message);
-
-                hasLoadedPreferences = true;
-            }
+            ButtonInfo cg = Buttons.GetIndex("Click GUI");
+            if (cg != null) cg.enabled = false;
         }
 
         public static void Panic()

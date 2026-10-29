@@ -7,6 +7,7 @@
  */
 
 using HarmonyLib;
+using static iiMenu.Patches.PatchHandler;
 
 namespace iiMenu.Patches.Menu
 {
@@ -14,24 +15,27 @@ namespace iiMenu.Patches.Menu
     {
         public static bool enabled;
 
+        [PatchOnAwake]
         [HarmonyPatch(typeof(GorillaTelemetry), nameof(GorillaTelemetry.EnqueueTelemetryEvent))]
         public class EnqueueTelemetryEvent
         {
             public static bool Prefix() => !enabled;
         }
-
+        [PatchOnAwake]
         [HarmonyPatch(typeof(GorillaTelemetry), nameof(GorillaTelemetry.FlushMothershipTelemetry))]
         public class FlushMothershipTelemetry
         {
             public static bool Prefix() => !enabled;
         }
 
+        [PatchOnAwake]
         [HarmonyPatch(typeof(GorillaTelemetry), nameof(GorillaTelemetry.EnqueueZoneEvent))]
         public class EnqueueZoneEvent
         {
             public static bool Prefix() => !enabled;
         }
 
+        [PatchOnAwake]
         [HarmonyPatch(typeof(GorillaTelemetry), nameof(GorillaTelemetry.PostGameModeEvent))]
         public class PostGameModeEvent
         {

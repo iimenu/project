@@ -595,6 +595,7 @@ namespace iiMenu.Menu
                 new ButtonInfo { buttonText = "Anti Report <color=grey>[</color><color=green>Notify</color><color=grey>]</color>", method = Safety.AntiReportNotify, toolTip = "Notifies you when anyone comes near your report button, without disconnecting you."},
                 new ButtonInfo { buttonText = "Anti Report <color=grey>[</color><color=green>Overlay</color><color=grey>]</color>", method = Safety.AntiReportOverlay, toolTip = "Shows a persistent overlay naming who is near your report button."},
                 new ButtonInfo { buttonText = "Anti Report <color=grey>[</color><color=green>Oculus</color><color=grey>]</color>", enableMethod = Safety.EnableAntiOculusReport, disableMethod = Safety.DisableAntiOculusReport, toolTip = "Disconnects you when you get reported with the Oculus report menu."},
+                new ButtonInfo { buttonText = "Anti Report <color=grey>[</color><color=green>Crash</color><color=grey>]</color>", method = Safety.AntiReportCrash, toolTip = "Shows a persistent overlay naming who is near your report button."},
 
                 new ButtonInfo { buttonText = "Bypass Automod", method = Safety.BypassAutomod, toolTip = "Attempts to bypass automod muting yourself and others."},
                 new ButtonInfo { buttonText = "Bypass Mod Checkers", enableMethod =() => PropertiesPatches.enabled = true, method = Safety.BypassModCheckers, disableMethod =() => PropertiesPatches.enabled = false, toolTip = "Tells players using mod checkers that you have no mods."},
@@ -626,7 +627,8 @@ namespace iiMenu.Menu
                 new ButtonInfo { buttonText = "Color Spoof", method = Safety.ColorSpoof, toolTip = "Makes your color appear different to every player."},
 
                 new ButtonInfo { buttonText = "Unload Menu", method = () => Prompt("Are you sure you want unload the menu?", UnloadMenu), isTogglable = false, toolTip = "Unloads the menu from your game."},
-                new ButtonInfo { buttonText = "Disable Anti Telemetry", enableMethod =() => TelemetryPatches.enabled = false, disableMethod =() => TelemetryPatches.enabled = true, toolTip = "Allows the game to send log data to Gorilla Tag's servers." }
+                new ButtonInfo { buttonText = "Disable Anti Telemetry", enableMethod =() => TelemetryPatches.enabled = false, disableMethod =() => TelemetryPatches.enabled = true, toolTip = "Allows the game to send log data to Gorilla Tag's servers." },
+                new ButtonInfo { buttonText = "Disable Mothership Telementry</color>", enableMethod =() => { MothershipPatches.enabled = true; StealthPatches.enabled = true; }, method =() => { }, disableMethod =() => { MothershipPatches.enabled = false; StealthPatches.enabled = false; }, toolTip = "Telementry disabler for mothership, NOT a mothership anti ban" }
             },
 
             new[] { // Movement Mods [9]
@@ -2170,18 +2172,26 @@ new ButtonInfo { buttonText = "Miku", method =() => Managers.EmoteManager.Emote(
                 new ButtonInfo { buttonText = "Exit Overpowered Mods", method =() => CurrentCategoryName = "Main", isTogglable = false, toolTip = "Returns you back to the main page."},
                 
                 new ButtonInfo { buttonText = "Crash Master", method = Overpowered.CrittersFreeze, isTogglable = false, toolTip = "Crashes Master As Non-Master" },
+<<<<<<< HEAD
+                new ButtonInfo { buttonText = "Crash Master <color=grey>[</color>Automatic<color=grey>]</color>", method = Overpowered.CrittersFreezeAuto, isTogglable = false , toolTip = "Crashes Master Automaticly self explanitory" },
                 new ButtonInfo { buttonText = "Crash Gun", method = Overpowered.CrashGun, toolTip = "Crashes player as master." },
                 new ButtonInfo { buttonText = "Crash Lobby", method = Overpowered.CrashLobby, isTogglable = false, toolTip = "Crashes everyone as master." },
+                new ButtonInfo { buttonText = "Crash Closest", method = Overpowered.CrashClosest, isTogglable = false, toolTip = "Crashes nearest player as master." },
+                new ButtonInfo { buttonText = "Crash On Touch", method = Overpowered.CrashOnTouch, isTogglable = true, toolTip = "Crashes any player you touch (master only)." },
+
+
+=======
+                new ButtonInfo { buttonText = "Crash Gun", method = Overpowered.CrashGun, toolTip = "Crashes player as master." },
+                new ButtonInfo { buttonText = "Crash Lobby", method = Overpowered.CrashLobby, isTogglable = false, toolTip = "Crashes everyone as master." },
+>>>>>>> c9c763d3cbb07ebdecd5cfd6101a919e816eac1f
                 new ButtonInfo { buttonText = "Ride Lucy", method = Overpowered.RideLucy, toolTip = "Ride on Lucy's head" },
 
                 new ButtonInfo { buttonText = "Lucy Physics", enableMethod = Overpowered.Enable_LucyPhysics, method = Overpowered.LucyPhysToggle, disableMethod = Overpowered.Disable_LucyPhysics, toolTip = "Gives Lucy Physics" },
                 new ButtonInfo { buttonText = "Bouncy Lucy", method = Overpowered.BouncyLucy, isTogglable = false, toolTip = "Makes Lucy Bouncy" },
                 new ButtonInfo { buttonText = "Lucy Follow Me", method = Overpowered.LucyFollowMe, isTogglable = false, toolTip = "Makes Lucy follow you" },
 
-                new ButtonInfo { buttonText = "Snowball Overload <color=grey>[</color><color=green>UD</color><color=grey>]</color>", aliases = new[] { "effect overload" }, enableMethod =() => Overpowered.NotifyState("SNOWBALL SPAM", true), method = Overpowered.EffectOverload, disableMethod =() => { Overpowered.SnowballSpamOff(); Overpowered.NotifyState("SNOWBALL SPAM", false); }, toolTip = "funny snowball spam, very fast and undetected." },
-                new ButtonInfo { buttonText = "Mothership Anti-Ban <color=grey>[</color><color=green>T</color><color=grey>]</color>", enableMethod =() => { MothershipPatches.enabled = true; StealthPatches.enabled = true; Overpowered.NotifyState("MOTHERSHIP", true); }, method =() => { }, disableMethod =() => { MothershipPatches.enabled = false; StealthPatches.enabled = false; Overpowered.NotifyState("MOTHERSHIP", false); }, toolTip = "Blocks telemetry from Mothership so you don't get flagged" },
-                new ButtonInfo { buttonText = "Stump Anti-Ban <color=grey>[</color><color=green>T</color><color=grey>]</color>", aliases = new[] { "group join", "stump group join" }, enableMethod =() => Overpowered.NotifyState("STUMP ANTI-BAN", true), method = Overpowered.StumpGroupJoin, disableMethod =() => Overpowered.NotifyState("STUMP ANTI-BAN", false), toolTip = "Group Join into modded private lobby, undetected use of detected category" },
-               
+                new ButtonInfo { buttonText = "SnowBall Spam <color=grey>[</color> Client Sided for them<color=grey>]</color>", method = Overpowered.EffectOverload, disableMethod =() => Overpowered.SnowballSpamOff(), toolTip = "Spams snowball hit effect on every player, you cant see it happen to others as only they can see it happen to them self" },
+ 
                 new ButtonInfo { buttonText = "Always Guardian", method = Overpowered.AlwaysGuardian, disableMethod = Movement.EnableRig, toolTip = "Makes you always the guardian."},
                 new ButtonInfo { buttonText = "Guardian Protector", method = Overpowered.GuardianProtector, toolTip = "Pushes people away from the guardian moon if they try to approach it."},
 

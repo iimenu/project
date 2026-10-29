@@ -60,7 +60,7 @@ namespace iiMenu.Mods
         public static void UploadConfigToDiscord()
         {
             EnsureFolder();
-            string text = Settings.SavePreferencesToText();
+            string text = Settings.SavePreferencesToJson();
             GUIUtility.systemCopyBuffer = text;
             try
             {
@@ -277,7 +277,7 @@ namespace iiMenu.Mods
             EnsureFolder();
             try
             {
-                string text = Settings.SavePreferencesToText();
+                string text = Settings.SavePreferencesToJson();
                 File.WriteAllText(Path.Combine(ConfigsFolder, $"{name.Replace(" ", "_")}.txt"), text);
             }
             catch { }
@@ -385,7 +385,7 @@ namespace iiMenu.Mods
             EnsureFolder();
             try
             {
-                string text = Settings.SavePreferencesToText();
+                string text = Settings.SavePreferencesToJson();
                 string fileName = $"Config_{DateTime.Now:yyyyMMdd_HHmmss}.txt";
                 File.WriteAllText(Path.Combine(ConfigsFolder, fileName), text);
                 File.WriteAllText(Path.Combine(ConfigsFolder, "LastSavedConfig.txt"), text);

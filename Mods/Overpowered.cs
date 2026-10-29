@@ -52,7 +52,7 @@ namespace iiMenu.Mods
             GorillaGuardianManager guardianManager = (GorillaGuardianManager)GorillaGameManager.instance;
             if (guardianManager.IsPlayerGuardian(target))
                 return;
-            
+
             foreach (TappableGuardianIdol tgi in GetAllType<TappableGuardianIdol>())
             {
                 if (tgi.manager && tgi.manager.photonView && !tgi.isChangingPositions)
@@ -101,7 +101,7 @@ namespace iiMenu.Mods
                     i++;
                 }
             }
-            
+
         }
 
         public static void UnguardianSelf()
@@ -111,7 +111,7 @@ namespace iiMenu.Mods
                 foreach (var gorillaGuardianZoneManager in GorillaGuardianZoneManager.zoneManagers.Where(gorillaGuardianZoneManager => gorillaGuardianZoneManager.enabled && gorillaGuardianZoneManager.IsZoneValid()).Where(gorillaGuardianZoneManager => gorillaGuardianZoneManager.CurrentGuardian == NetworkSystem.Instance.LocalPlayer))
                     gorillaGuardianZoneManager.SetGuardian(null);
             }
-            
+
         }
 
         public static void UnguardianGun()
@@ -131,7 +131,7 @@ namespace iiMenu.Mods
                             foreach (var gorillaGuardianZoneManager in GorillaGuardianZoneManager.zoneManagers.Where(gorillaGuardianZoneManager => gorillaGuardianZoneManager.enabled && gorillaGuardianZoneManager.IsZoneValid()).Where(gorillaGuardianZoneManager => gorillaGuardianZoneManager.CurrentGuardian == GetPlayerFromVRRig(gunTarget)))
                                 gorillaGuardianZoneManager.SetGuardian(null);
                         }
-                        
+
                         guardianDelay = Time.time + 0.1f;
                     }
                 }
@@ -145,7 +145,7 @@ namespace iiMenu.Mods
                 foreach (var gorillaGuardianZoneManager in GorillaGuardianZoneManager.zoneManagers.Where(gorillaGuardianZoneManager => gorillaGuardianZoneManager.enabled && gorillaGuardianZoneManager.IsZoneValid()))
                     gorillaGuardianZoneManager.SetGuardian(null);
             }
-            
+
         }
 
         public static void SetPlayerColors(Dictionary<int, int> colors) // ActorNumber : Team // 0 = Blue, 1 = Red, -1 = None
@@ -274,7 +274,7 @@ namespace iiMenu.Mods
                 NotificationManager.SendNotification("<color=grey>[</color><color=red>ERROR</color><color=grey>]</color> You are not master client.");
                 return;
             }
-                
+
             NetPlayer player = GetPlayerFromVRRig(rig);
             materialState.TryGetValue(rig, out var state);
 
@@ -866,10 +866,10 @@ namespace iiMenu.Mods
                         return;
                 }
 
-                List<GameEntity> entities = gameEntityManager.entities.Where(e => 
-                    e != null && 
-                    e.typeId == hash && 
-                    Vector3.Distance(ServerLeftHandPos, e.transform.position) < maxDistance && 
+                List<GameEntity> entities = gameEntityManager.entities.Where(e =>
+                    e != null &&
+                    e.typeId == hash &&
+                    Vector3.Distance(ServerLeftHandPos, e.transform.position) < maxDistance &&
                     Vector3.Distance(GorillaTagger.Instance.bodyCollider.transform.position, e.transform.position) > 3f &&
                     gameEntityManager.ValidateGrab(e, PhotonNetwork.LocalPlayer.actorNumber, true)).ToList();
 
@@ -952,9 +952,9 @@ namespace iiMenu.Mods
 
                 byte[] array = GZipStream.CompressBuffer(data);
 
-                object[] createData = { 
-                    (int)manager.zone, 
-                    array 
+                object[] createData = {
+                    (int)manager.zone,
+                    array
                 };
 
                 switch (target)
@@ -1437,7 +1437,8 @@ namespace iiMenu.Mods
                             {
                                 ManagerRegistry.GhostReactor.GameEntityManager.photonView.RPC("DestroyItemRPC", RpcTarget.All, new[] { gameEntity.GetNetId() });
                                 RPCProtection();
-                            } else
+                            }
+                            else
                             {
                                 gameEntity.RequestGrab(true, Vector3.zero, Quaternion.identity);
                                 gameEntity.RequestThrow(true, GorillaTagger.Instance.bodyCollider.transform.position - (Vector3.up * 14f), Quaternion.identity, Vector3.zero, Vector3.zero);
@@ -1501,7 +1502,8 @@ namespace iiMenu.Mods
             Transform head = GorillaTagger.Instance.headCollider.transform;
             VRRig targetRig = rigs
                 .Where(rig => rig != null)
-                .Select(rig => new {
+                .Select(rig => new
+                {
                     Rig = rig,
                     ToRig = (rig.transform.position - head.position).normalized,
                     Distance = Vector3.Distance(head.position, rig.transform.position)
@@ -1526,7 +1528,7 @@ namespace iiMenu.Mods
             ControllerInputPoller.instance.leftControllerGripFloat = 1f;
 
             int hash = GadgetByName["MegaChargeBlasterGadget"];
- 
+
             GameEntityManager gameEntityManager = ManagerRegistry.SuperInfection.GameEntityManager;
             if (!GamePlayer.TryGetGamePlayer(PhotonNetwork.LocalPlayer, out GamePlayer gamePlayer))
                 gamePlayer = null;
@@ -1537,7 +1539,8 @@ namespace iiMenu.Mods
                     return blaster;
                 else
                     entity.RequestThrow(true, entity.transform.position, entity.transform.rotation, Vector3.zero, Vector3.zero, gameEntityManager);
-            } else
+            }
+            else
             {
                 if (NetworkSystem.Instance.IsMasterClient)
                 {
@@ -1756,25 +1759,26 @@ namespace iiMenu.Mods
         {
             if (GetBlaster() == null)
                 SerializePatch.OverrideSerialization = null;
-            else SerializePatch.OverrideSerialization ??= () => {
-                    MassSerialize(true, new[] { GorillaTagger.Instance.myVRRig.GetView });
+            else SerializePatch.OverrideSerialization ??= () =>
+            {
+                MassSerialize(true, new[] { GorillaTagger.Instance.myVRRig.GetView });
 
-                    Vector3 archivePos = VRRig.LocalRig.transform.position;
+                Vector3 archivePos = VRRig.LocalRig.transform.position;
 
-                    foreach (NetPlayer Player in NetworkSystem.Instance.PlayerListOthers)
-                    {
-                        VRRig targetRig = GetVRRigFromPlayer(Player);
+                foreach (NetPlayer Player in NetworkSystem.Instance.PlayerListOthers)
+                {
+                    VRRig targetRig = GetVRRigFromPlayer(Player);
 
-                        VRRig.LocalRig.transform.position = targetRig.transform.position - Vector3.up;
-                        SendSerialize(GorillaTagger.Instance.myVRRig.GetView, new RaiseEventOptions { TargetActors = new[] { Player.ActorNumber } });
-                    }
+                    VRRig.LocalRig.transform.position = targetRig.transform.position - Vector3.up;
+                    SendSerialize(GorillaTagger.Instance.myVRRig.GetView, new RaiseEventOptions { TargetActors = new[] { Player.ActorNumber } });
+                }
 
-                    RPCProtection();
+                RPCProtection();
 
-                    VRRig.LocalRig.transform.position = archivePos;
+                VRRig.LocalRig.transform.position = archivePos;
 
-                    return false;
-                };
+                return false;
+            };
 
             foreach (NetPlayer Player in NetworkSystem.Instance.PlayerListOthers)
             {
@@ -1814,7 +1818,8 @@ namespace iiMenu.Mods
         {
             if (GetBlaster() == null)
                 SerializePatch.OverrideSerialization = null;
-            else SerializePatch.OverrideSerialization ??= () => {
+            else SerializePatch.OverrideSerialization ??= () =>
+            {
                 MassSerialize(true, new[] { GorillaTagger.Instance.myVRRig.GetView });
 
                 Vector3 archivePos = VRRig.LocalRig.transform.position;
@@ -1872,7 +1877,8 @@ namespace iiMenu.Mods
         {
             if (GetBlaster() == null)
                 SerializePatch.OverrideSerialization = null;
-            else SerializePatch.OverrideSerialization ??= () => {
+            else SerializePatch.OverrideSerialization ??= () =>
+            {
                 MassSerialize(true, new[] { GorillaTagger.Instance.myVRRig.GetView });
 
                 Vector3 archivePos = VRRig.LocalRig.transform.position;
@@ -1934,7 +1940,8 @@ namespace iiMenu.Mods
         {
             if (GetBlaster() == null)
                 SerializePatch.OverrideSerialization = null;
-            else SerializePatch.OverrideSerialization ??= () => {
+            else SerializePatch.OverrideSerialization ??= () =>
+            {
                 MassSerialize(true, new[] { GorillaTagger.Instance.myVRRig.GetView });
 
                 Vector3 archivePos = VRRig.LocalRig.transform.position;
@@ -1988,11 +1995,11 @@ namespace iiMenu.Mods
             }
         }
 
-        public static Dictionary<string, int> GadgetByName 
-        { 
-            get => 
+        public static Dictionary<string, int> GadgetByName
+        {
+            get =>
                 GameEntityManager.itemPrefabFactory
-                .ToDictionary(prefab => prefab.Value.name, prefab => prefab.Key); 
+                .ToDictionary(prefab => prefab.Value.name, prefab => prefab.Key);
         }
 
         public static void SpamGadgetGrip(int objectId)
@@ -2117,7 +2124,7 @@ namespace iiMenu.Mods
         private static HalloweenGhostChaser _lucy;
         public static HalloweenGhostChaser Lucy
         {
-            get 
+            get
             {
                 if (_lucy == null || UnityEngine.Time.time > lastLucyTime + 1f)
                 {
@@ -2351,7 +2358,7 @@ namespace iiMenu.Mods
                         hgc.transform.position = lockTarget.headMesh.transform.position + offset + Vector3.up * 0.5f;
                         hgc.transform.LookAt(lockTarget.headMesh.transform.position);
                     }
-                    
+
                 }
 
                 if (GetGunInput(true))
@@ -2481,7 +2488,7 @@ namespace iiMenu.Mods
                     hgc.transform.position = Vector3.MoveTowards(hgc.transform.position, guardPos, Time.deltaTime * 8f);
                 }
             }
-            
+
         }
 
         public static void LucyFlingGun()
@@ -2502,7 +2509,7 @@ namespace iiMenu.Mods
                         hgc.targetPlayer = lockTarget.GetPlayer();
                         hgc.currentSpeed = 50f;
                     }
-                    
+
                 }
 
                 if (GetGunInput(true))
@@ -2637,7 +2644,7 @@ namespace iiMenu.Mods
                 {
                     EnsureLucySummoned();
                     HalloweenGhostChaser hgc = Lucy;
-            if (hgc != null && OwnsGhost(hgc.GetView))
+                    if (hgc != null && OwnsGhost(hgc.GetView))
                     {
                         if (Time.time > lucyDelay)
                         {
@@ -2675,7 +2682,8 @@ namespace iiMenu.Mods
             HalloweenGhostChaser hgc = Lucy;
             if (SerializePatch.OverrideSerialization != null)
             {
-                SerializePatch.OverrideSerialization = () => {
+                SerializePatch.OverrideSerialization = () =>
+                {
                     MassSerialize(true, new[] { hgc.GetView });
                     return false;
                 };
@@ -2712,7 +2720,7 @@ namespace iiMenu.Mods
                     lucyDelay = Time.time + 0.1f;
                 }
             }
-            
+
         }
 
         public static void AnnoyingLucy()
@@ -2729,7 +2737,7 @@ namespace iiMenu.Mods
                     lucyDelay = Time.time + 0.1f;
                 }
             }
-            
+
         }
 
         public static void BecomeLucy()
@@ -2775,7 +2783,7 @@ namespace iiMenu.Mods
             HalloweenGhostChaser hgc = Lucy;
             if (hgc != null && OwnsGhost(hgc.GetView))
                 hgc.currentSpeed = 10f;
-            
+
         }
 
         public static void SlowLucy()
@@ -2783,14 +2791,14 @@ namespace iiMenu.Mods
             HalloweenGhostChaser hgc = Lucy;
             if (hgc != null && OwnsGhost(hgc.GetView))
                 hgc.currentSpeed = 1f;
-            
+
         }
 
         public static void SpawnLurker()
         {
             if (Lurker != null && OwnsGhost(Lurker.GetView))
                 Lurker.currentState = LurkerGhost.ghostState.patrol;
-            
+
         }
 
         public static void MoveLurkerGun()
@@ -2804,7 +2812,7 @@ namespace iiMenu.Mods
                 {
                     if (Lurker != null && OwnsGhost(Lurker.GetView))
                         Lurker.transform.position = NewPointer.transform.position + Vector3.up;
-                    
+
                 }
             }
         }
@@ -2815,7 +2823,7 @@ namespace iiMenu.Mods
             {
                 Lurker.currentState = LurkerGhost.ghostState.patrol;
             }
-            
+
         }
 
         public static void LurkerAttack(NetPlayer player)
@@ -2831,7 +2839,7 @@ namespace iiMenu.Mods
                 Lurker.currentState = LurkerGhost.ghostState.possess;
                 Lurker.targetPlayer = player;
             }
-            
+
         }
 
         public static void LurkerAttackGun()
@@ -2865,7 +2873,8 @@ namespace iiMenu.Mods
         {
             if (SerializePatch.OverrideSerialization != null)
             {
-                SerializePatch.OverrideSerialization = () => {
+                SerializePatch.OverrideSerialization = () =>
+                {
                     MassSerialize(true, new[] { Lurker.GetView });
                     return false;
                 };
@@ -2899,7 +2908,7 @@ namespace iiMenu.Mods
                     lurkerDelay = Time.time + 0.1f;
                 }
             }
-            
+
         }
 
         public static void BreakLurker()
@@ -2911,7 +2920,7 @@ namespace iiMenu.Mods
 
                 SendSerialize(Lurker.GetView);
             }
-            
+
         }
 
         public static void AnnoyingLurker()
@@ -2925,7 +2934,7 @@ namespace iiMenu.Mods
                     lurkerDelay = Time.time + 0.1f;
                 }
             }
-            
+
         }
 
         public static void BecomeLurker()
@@ -2945,7 +2954,8 @@ namespace iiMenu.Mods
                 Lurker.transform.rotation = GorillaTagger.Instance.headCollider.transform.rotation;
 
                 Lurker.currentState = LurkerGhost.ghostState.seek;
-                SerializePatch.OverrideSerialization = () => {
+                SerializePatch.OverrideSerialization = () =>
+                {
                     MassSerialize(true, new[] { GorillaTagger.Instance.myVRRig.GetView });
 
                     foreach (NetPlayer Player in NetworkSystem.Instance.PlayerListOthers)
@@ -2996,21 +3006,21 @@ namespace iiMenu.Mods
                             break;
                         }
                     case RpcTarget.Others:
-                    {
-                        foreach (var rig in VRRigCache.ActiveRigs.Where(rig => !rig.isLocal))
                         {
-                            GetNetworkViewFromVRRig(rig).SendRPC("GrabbedByPlayer", GetPlayerFromVRRig(rig), true, false, false);
-                            GetNetworkViewFromVRRig(rig).SendRPC("DroppedByPlayer", GetPlayerFromVRRig(rig), velocity);
-                        }
+                            foreach (var rig in VRRigCache.ActiveRigs.Where(rig => !rig.isLocal))
+                            {
+                                GetNetworkViewFromVRRig(rig).SendRPC("GrabbedByPlayer", GetPlayerFromVRRig(rig), true, false, false);
+                                GetNetworkViewFromVRRig(rig).SendRPC("DroppedByPlayer", GetPlayerFromVRRig(rig), velocity);
+                            }
 
-                        break;
-                    }
+                            break;
+                        }
                     case RpcTarget.MasterClient:
-                    {
-                        GetNetworkViewFromVRRig(GetVRRigFromPlayer(NetworkSystem.Instance.MasterClient)).SendRPC("GrabbedByPlayer", RpcTarget.Others, true, false, false);
-                        GetNetworkViewFromVRRig(GetVRRigFromPlayer(NetworkSystem.Instance.MasterClient)).SendRPC("DroppedByPlayer", RpcTarget.Others, velocity);
-                        break;
-                    }
+                        {
+                            GetNetworkViewFromVRRig(GetVRRigFromPlayer(NetworkSystem.Instance.MasterClient)).SendRPC("GrabbedByPlayer", RpcTarget.Others, true, false, false);
+                            GetNetworkViewFromVRRig(GetVRRigFromPlayer(NetworkSystem.Instance.MasterClient)).SendRPC("DroppedByPlayer", RpcTarget.Others, velocity);
+                            break;
+                        }
                 }
             }
             else
@@ -3123,7 +3133,7 @@ namespace iiMenu.Mods
                     VRRig gunTarget = iiMenu.Utilities.RigUtilities.GetRigFromHit(Ray);
                     if (gunTarget && !gunTarget.IsLocal())
                     {
-                        BetaSetVelocityPlayer(GetPlayerFromVRRig(gunTarget), new Vector3(0f, 19.9f, 0f) );
+                        BetaSetVelocityPlayer(GetPlayerFromVRRig(gunTarget), new Vector3(0f, 19.9f, 0f));
                         RPCProtection();
                         flingDelay = Time.time + 0.1f;
                     }
@@ -3202,7 +3212,8 @@ namespace iiMenu.Mods
 
                 Object.Destroy(SlingshotProjectileGameObject);
                 return Data;
-            } catch
+            }
+            catch
             {
                 LogManager.Log("Falling back to archiveIncrement");
 
@@ -3449,7 +3460,7 @@ namespace iiMenu.Mods
                     SendSerialize(GorillaTagger.Instance.myVRRig.GetView, options);
                 }
             }
-            catch (Exception e) 
+            catch (Exception e)
             {
                 LogManager.LogError($"Error in BetaSpawnSnowball: {e}");
             }
@@ -3941,7 +3952,7 @@ namespace iiMenu.Mods
                     {
                         Vector3 targetDirection = GorillaTagger.Instance.headCollider.transform.position - rig.headMesh.transform.position;
                         BetaSpawnSnowball(GorillaTagger.Instance.headCollider.transform.position + new Vector3(0f, 0.5f, 0f) + new Vector3(targetDirection.x, 0f, targetDirection.z).normalized / 1.7f, new Vector3(0f, -500f, 0f), 2, NetPlayerToPlayer(GetPlayerFromVRRig(rig)));
-                        
+
                         if (Buttons.GetIndex("Graphic Punch Mod").enabled)
                             Projectiles.BetaFireProjectile("AppleLeftAnchor", rig.headMesh.transform.position, Vector3.down * 600f, new Color32(100, 0, 0, 255));
 
@@ -4587,7 +4598,7 @@ namespace iiMenu.Mods
 
                 if (photonView.Prefix > 0)
                     rpcData[1] = (short)photonView.Prefix;
-                
+
                 if (PhotonNetwork.PhotonServerSettings.RpcList.Contains(method))
                     rpcData[5] = (byte)PhotonNetwork.PhotonServerSettings.RpcList.IndexOf(method);
 
@@ -4953,7 +4964,7 @@ namespace iiMenu.Mods
                     {
                         foreach (var plr in VRRigCache.ActiveRigs.Where(plr => !plr.isLocal))
                             BetaSetVelocityPlayer(GetPlayerFromVRRig(plr), Vector3.Normalize(NewPointer.transform.position - plr.transform.position) * 50f);
-                        
+
                         RPCProtection();
                         flingDelay = Time.time + 0.2f;
                     }
@@ -4974,7 +4985,7 @@ namespace iiMenu.Mods
                     {
                         foreach (var plr in VRRigCache.ActiveRigs.Where(plr => !plr.isLocal))
                             BetaSetVelocityPlayer(GetPlayerFromVRRig(plr), Vector3.Normalize(plr.transform.position - NewPointer.transform.position) * 50f);
-                        
+
                         RPCProtection();
                         flingDelay = Time.time + 0.2f;
                     }
@@ -4983,7 +4994,7 @@ namespace iiMenu.Mods
         }
 
         public static void AntiStump() { }
-        
+
         private static float slamDel;
         private static bool flip;
         public static void EffectSpamHands()
@@ -5001,7 +5012,7 @@ namespace iiMenu.Mods
                     }
                     else
                         NotificationManager.SendNotification("<color=grey>[</color><color=red>ERROR</color><color=grey>]</color> You must be guardian.");
-                    
+
                     slamDel = Time.time + 0.05f;
                 }
             }
@@ -5018,7 +5029,7 @@ namespace iiMenu.Mods
                     }
                     else
                         NotificationManager.SendNotification("<color=grey>[</color><color=red>ERROR</color><color=grey>]</color> You must be guardian.");
-                    
+
                     slamDel = Time.time + 0.05f;
                 }
             }
@@ -5044,10 +5055,10 @@ namespace iiMenu.Mods
                         }
                         else
                             NotificationManager.SendNotification("<color=grey>[</color><color=red>ERROR</color><color=grey>]</color> You must be guardian.");
-                        
+
                         slamDel = Time.time + 0.05f;
                     }
-                    
+
                 }
             }
         }
@@ -5316,7 +5327,8 @@ namespace iiMenu.Mods
 
                         break;
                 }
-            } else
+            }
+            else
             {
                 object[] data = { -2147483647, 76, float.NaN };
 
@@ -5473,7 +5485,7 @@ namespace iiMenu.Mods
                     for (int i = 0; i < 2; i++)
                         MuteTarget(new int[] { lockTarget.GetPlayer().ActorNumber });
                 }
-                    
+
 
                 if (GetGunInput(true))
                 {
@@ -5890,13 +5902,13 @@ namespace iiMenu.Mods
             var cfg = new RoomConfig
             {
                 createIfMissing = true,
-                isJoinable      = true,
-                isPublic        = isPub,
-                MaxPlayers      = size == 0
+                isJoinable = true,
+                isPublic = isPub,
+                MaxPlayers = size == 0
                                     ? trigger.GetRoomSize(
                                           SubscriptionManager.IsLocalSubscribed())
                                     : size,
-                CustomProps     = new Hashtable()
+                CustomProps = new Hashtable()
             };
 
             cfg.CustomProps.Add("platform", "OTHER");
@@ -5907,7 +5919,7 @@ namespace iiMenu.Mods
             cfg.CustomProps.Add("language",
                 System.Globalization.CultureInfo.CurrentCulture.TwoLetterISOLanguageName
                       .ToUpperInvariant());
-            cfg.CustomProps.Add("fan_club",  "false");
+            cfg.CustomProps.Add("fan_club", "false");
             cfg.CustomProps.Add("queueName", GorillaComputer.instance.currentQueue);
 
             // Only Party joins get the friend ID list in this game version.
@@ -6047,7 +6059,7 @@ namespace iiMenu.Mods
                     else
                         GRElevatorManager._instance.SendRPC("RemoteElevatorButtonPress", RpcTarget.MasterClient, 3, (int)GRElevatorManager._instance.currentLocation);
 
-                     RPCProtection();
+                    RPCProtection();
                 }
             }
         }
@@ -6261,10 +6273,10 @@ namespace iiMenu.Mods
 
                     GreyZoneManager.Instance.ActivateGreyZoneAuthority();
                 }
-				
+
                 else if (!status)
                     GreyZoneManager.Instance.DeactivateGreyZoneAuthority();
-            }        
+            }
         }
 
         public static float spazGreyDelay;
@@ -6280,8 +6292,8 @@ namespace iiMenu.Mods
             ActivateGreyZoneGun(greyState);
         }
 
-        public static void SpazGreyZone() 
-        { 
+        public static void SpazGreyZone()
+        {
             if (Time.time > spazGreyDelay)
             {
                 greyState = !greyState;
@@ -6392,7 +6404,8 @@ namespace iiMenu.Mods
                                 return true;
                             };
                         }
-                    } else
+                    }
+                    else
                     {
                         if (SerializePatch.OverrideSerialization != null)
                             SerializePatch.OverrideSerialization = null;
@@ -6423,7 +6436,7 @@ namespace iiMenu.Mods
                         if (lockTarget == null && FriendshipGroupDetection.Instance.IsInMyGroup(gunTarget.GetPlayer().UserId))
                         {
                             for (int i = 0; i < 3970; i++)
-                                FriendshipGroupDetection.Instance.photonView.RPC("RequestPartyGameMode", gunTarget.GetPhotonPlayer(), 
+                                FriendshipGroupDetection.Instance.photonView.RPC("RequestPartyGameMode", gunTarget.GetPhotonPlayer(),
                                     new object[] { GameMode.gameModeKeyByName.Keys.ToArray()[Random.Range(0, GameMode.gameModeKeyByName.Keys.Count)] });
 
                             RPCProtection();
@@ -6615,7 +6628,7 @@ namespace iiMenu.Mods
             {
                 foreach (VRRig nearbyPlayer in nearbyPlayers)
                 {
-                     DestroyPlayer(NetPlayerToPlayer(GetPlayerFromVRRig(nearbyPlayer)));
+                    DestroyPlayer(NetPlayerToPlayer(GetPlayerFromVRRig(nearbyPlayer)));
                 }
             }
         }
@@ -6659,7 +6672,7 @@ namespace iiMenu.Mods
                     hitTargetNetworkState.hitCooldownTime = 0;
                     hitTargetNetworkState.TargetHit(Vector3.zero, Vector3.zero);
                 }
-            } 
+            }
         }
 
         public static void InfectionToTag()
@@ -7050,7 +7063,8 @@ namespace iiMenu.Mods
                     }
                     else
                         glider.OnHover(null, null);
-                } catch { }
+                }
+                catch { }
                 index++;
             }
         }
@@ -7110,10 +7124,12 @@ namespace iiMenu.Mods
             {
                 var ClosestNode = Rope.nodes
                     .Skip(1)
-                    .Select((v, i) => new { index = i, 
-                                            transform = v,
-                                            distance = Vector3.Distance(GorillaTagger.Instance.bodyCollider.transform.position, v.transform.position) 
-                                          })
+                    .Select((v, i) => new
+                    {
+                        index = i,
+                        transform = v,
+                        distance = Vector3.Distance(GorillaTagger.Instance.bodyCollider.transform.position, v.transform.position)
+                    })
                     .OrderBy(x => x.distance)
                     .First();
 
@@ -7566,7 +7582,7 @@ namespace iiMenu.Mods
 
                         if (Vector3.Distance(critter.transform.position, GorillaTagger.Instance.bodyCollider.transform.position) > 25f)
                         {
-                                SerializeWritePatch.positionOverride = critter.transform.position - Vector3.one * 5f;
+                            SerializeWritePatch.positionOverride = critter.transform.position - Vector3.one * 5f;
                             try
                             {
                                 SendSerialize(GorillaTagger.Instance.myVRRig.GetView);
@@ -8463,6 +8479,84 @@ namespace iiMenu.Mods
             RPCProtection();
         }
 
+<<<<<<< HEAD
+        private static float crashGunDelay;
+
+        private static bool IsTheAiCrashActive;
+        private static bool CrashAuto;
+        private static Coroutine CrashRoutine;
+
+        private static float LastTimeIUsedAi = -100f;
+        private const float Cooltfdown = 3.0f;
+
+        public static void CrittersFreezeAuto()
+        {
+            if (CrashAuto)
+            {
+                CrashAuto = false;
+                IsTheAiCrashActive = false;
+                if (CrashRoutine != null)
+                {
+                    CoroutineManager.instance.StopCoroutine(CrashRoutine);
+                    CrashRoutine = null;
+                }
+                return;
+            }
+
+            CrashAuto = true;
+            if (CrashRoutine != null)
+                CoroutineManager.instance.StopCoroutine(CrashRoutine);
+
+            CrashRoutine = CoroutineManager.instance.StartCoroutine(CrittersFreezeAutoRoutine());
+        }
+
+        private static IEnumerator CrittersFreezeAutoRoutine()
+        {
+            int LastMasterActr = -1;
+
+            while (CrashAuto)
+            {
+                if (!PhotonNetwork.InRoom)
+                {
+                    yield return new WaitForSeconds(1f);
+                    continue;
+                }
+
+                int MasterActr = PhotonNetwork.MasterClient != null
+                    ? PhotonNetwork.MasterClient.ActorNumber
+                    : -1;
+
+                if (PhotonNetwork.LocalPlayer != null &&
+                    MasterActr == PhotonNetwork.LocalPlayer.ActorNumber)
+                {
+                    CrashAuto = false;
+                    break;
+                }
+
+                if (MasterActr != LastMasterActr)
+                {
+                    LastMasterActr = MasterActr;
+                    LastTimeIUsedAi = -100f;
+                }
+
+                if (!IsTheAiCrashActive && Time.time - LastTimeIUsedAi >= Cooltfdown)
+                {
+                    LastTimeIUsedAi = Time.time;
+                    CrittersFreeze();
+                }
+
+                yield return new WaitForSeconds(0.5f);
+            }
+
+            CrashRoutine = null;
+            IsTheAiCrashActive = false;
+        }
+
+        public static void CrittersFreeze()
+        {
+            if (!NetworkSystem.Instance.InRoom || IsTheAiCrashActive) return;
+            IsTheAiCrashActive = true;
+=======
         private static bool crittersRepeatActive;
         private static float crashGunDelay;
 
@@ -8470,11 +8564,33 @@ namespace iiMenu.Mods
         {
             if (!NetworkSystem.Instance.InRoom || crittersRepeatActive) return;
             crittersRepeatActive = true;
+>>>>>>> c9c763d3cbb07ebdecd5cfd6101a919e816eac1f
             CoroutineManager.instance.StartCoroutine(CrittersFreezeRoutine());
         }
 
         private static IEnumerator CrittersFreezeRoutine()
         {
+<<<<<<< HEAD
+            int LastActr = -1;
+            int Fails = 0;
+
+            for (int attempt = 0; attempt < 20 && IsTheAiCrashActive; attempt++)
+            {
+                if (!PhotonNetwork.InRoom) break;
+
+                CrittersManager instance = CrittersManager.instance;
+
+                if (instance != null && instance.guard != null &&
+                    instance.guard.currentOwner != null &&
+                    !instance.LocalAuthority() &&
+                    !instance.guard.currentOwner.IsLocal &&
+                    instance.guard.currentOwner.ActorNumber != LastActr)
+                {
+                    if (TryFreezeCrittersAuthority(false))
+                    {
+                        LastActr = instance.guard.currentOwner.ActorNumber;
+                        Fails = 0;
+=======
             int lastFrozenActor = -1;
             for (int attempt = 0; attempt < 40 && crittersRepeatActive; attempt++)
             {
@@ -8485,18 +8601,163 @@ namespace iiMenu.Mods
                     if (TryFreezeCrittersAuthority(false))
                     {
                         lastFrozenActor = instance.guard.currentOwner.ActorNumber;
+>>>>>>> c9c763d3cbb07ebdecd5cfd6101a919e816eac1f
                         yield return new WaitForSeconds(2.5f);
                         continue;
                     }
                 }
+<<<<<<< HEAD
+
+                Fails++;
+                float wait = Fails >= 3 ? 2f : 0.5f;
+                yield return new WaitForSeconds(wait);
+            }
+
+            IsTheAiCrashActive = false;
+        }
+
+        private static bool TryFreezeCrittersAuthority(bool notify)
+        {
+            CrittersManager instance = CrittersManager.instance;
+            if (instance == null || instance.guard == null ||
+                instance.guard.currentOwner == null) return false;
+            if (instance.LocalAuthority() || instance.guard.currentOwner.IsLocal) return false;
+
+            CrittersActor[] Critters = GetAllType<CrittersActor>();
+            CrittersActor CritterActive = null;
+            foreach (CrittersActor a in Critters)
+            {
+                if (!a) continue;
+                if (a.crittersActorType == CrittersActor.CrittersActorType.Grabber) continue;
+                if (a.parentActorId != -1) continue;
+                CritterActive = a;
+                break;
+            }
+            if (CritterActive == null) return false;
+            CrittersActor ClosestCritter = null;
+            float Distance = float.MaxValue;
+            foreach (CrittersActor a in Critters)
+            {
+                if (a == CritterActive || !a) continue;
+                if (a.crittersActorType == CrittersActor.CrittersActorType.Grabber) continue;
+                if (a.parentActorId != -1) continue;
+
+                float d = Vector3.Distance(CritterActive.transform.position, a.transform.position);
+                if (d < Distance) { Distance = d; ClosestCritter = a; }
+            }
+
+            if (ClosestCritter == null || Distance > instance.maxGrabDistance) return false;
+
+            NetPlayer owner = instance.guard.currentOwner;
+            instance.SendRPC("RemoteCrittersActorGrabbedby", owner, CritterActive.actorId, ClosestCritter.actorId, Quaternion.identity, Vector3.zero, false);
+            instance.SendRPC("RemoteCrittersActorGrabbedby", owner, ClosestCritter.actorId, CritterActive.actorId, Quaternion.identity, Vector3.zero, false);
+            instance.SendRPC("RemoteCritterActorReleased", owner, CritterActive.actorId, false, Quaternion.identity, Vector3.zero, Vector3.zero, Vector3.zero);
+            RPCProtection();
+            return true;
+        }
+
+        public static void CrashClosest()
+        {
+            if (!NetworkSystem.Instance.InRoom || !NetworkSystem.Instance.IsMasterClient) return;
+
+            VRRig Rig = null;
+            float Distance = float.MaxValue;
+            Vector3 Me_I_Have_Aura = VRRig.LocalRig.transform.position;
+
+            foreach (VRRig rig in VRRigCache.ActiveRigs)
+            {
+                if (rig == null || rig.IsLocal()) 
+                    continue;
+                float TheBigD = Vector3.Distance(rig.transform.position, Me_I_Have_Aura);
+                if (TheBigD < Distance) {
+                    Distance = TheBigD; 
+                    Rig = rig;
+                }
+            }
+
+            if (Rig != null) 
+                CrashPerson(Rig);
+        }
+
+        public static void CrashPerson(VRRig Rig)
+        {
+            if (!NetworkSystem.Instance.InRoom || !NetworkSystem.Instance.IsMasterClient) return;
+            if (Rig == null || Rig.IsLocal()) return;
+
+            NetPlayer Plr = GetPlayerFromVRRig(Rig);
+            if (Plr == null || Plr.IsLocal) return;
+
+            DoGrabCrash(Plr, Rig.transform.position);
+        }
+
+        public static void CrashPerson(int Actor)
+        {
+            NetPlayer Plr = FindPlayerByActor(Actor);
+            if (Plr != null) CrashPerson(GetVRRigFromPlayer(Plr));
+        }
+
+        private static void DoGrabCrash(NetPlayer Plr, Vector3 Pos)
+        {
+            CrittersManager instance = CrittersManager.instance;
+            if (instance == null || instance.guard == null) return;
+
+            CrittersActor Closest = FindNearestCritterToPos(Pos);
+            if (Closest == null) return;
+
+            instance.guard.TransferOwnership(Plr);
+            instance.SendRPC("RemoteCrittersActorGrabbedby", Plr, Closest.actorId, Closest.actorId, Quaternion.identity, Vector3.zero, false);
+            instance.SendRPC("RemoteCritterActorReleased", Plr, Closest.actorId, false, Quaternion.identity, Vector3.zero, Vector3.zero, Vector3.zero);
+            RPCProtection();
+        }
+
+        public static void CrashOnTouch()
+        {
+            if (!PhotonNetwork.InRoom) return;
+
+            List<VRRig> Ihaveconsenttodothis = new List<VRRig>();
+
+            foreach (VRRig rig in VRRigCache.ActiveRigs)
+            {
+                if (!rig.IsLocal())
+                {
+                    if (Vector3.Distance(rig.transform.position, VRRig.LocalRig.rightHandTransform.position) <= 0.35f ||
+                        Vector3.Distance(rig.transform.position, VRRig.LocalRig.leftHandTransform.position) <= 0.35f)
+                    {
+                        Ihaveconsenttodothis.Add(rig);
+                    }
+                }
+            }
+
+            if (Ihaveconsenttodothis.Count > 0)
+            {
+                foreach (VRRig rig in Ihaveconsenttodothis)
+                {
+                    TryCrashTarget(rig);
+                    RPCProtection();
+                }
+            }
+=======
                 yield return new WaitForSeconds(0.5f);
             }
             crittersRepeatActive = false;
+>>>>>>> c9c763d3cbb07ebdecd5cfd6101a919e816eac1f
         }
 
         public static void CrashLobby()
         {
             if (!NetworkSystem.Instance.InRoom || !NetworkSystem.Instance.IsMasterClient) return;
+<<<<<<< HEAD
+
+            CrittersManager instance = CrittersManager.instance;
+            if (instance == null || instance.guard == null) return;
+
+            CrittersActor critter = FindNearestCritterToPos(VRRig.LocalRig.transform.position);
+            if (critter == null) return;
+
+            FireCrashLobby(instance, critter.actorId);
+            RPCProtection();
+            CoroutineManager.instance.StartCoroutine(CrashLobbyRoutine(critter.actorId));
+=======
             CrittersManager instance = CrittersManager.instance;
             if (instance == null || instance.guard == null) return;
             CrittersActor crittersActor = null;
@@ -8518,6 +8779,7 @@ namespace iiMenu.Mods
             FireCrashLobby(instance, crittersActor.actorId);
             RPCProtection();
             CoroutineManager.instance.StartCoroutine(CrashLobbyRoutine(crittersActor.actorId));
+>>>>>>> c9c763d3cbb07ebdecd5cfd6101a919e816eac1f
         }
 
         private static int FireCrashLobby(CrittersManager manager, int actorId)
@@ -8525,6 +8787,17 @@ namespace iiMenu.Mods
             int num = 0;
             foreach (VRRig activeRig in VRRigCache.ActiveRigs)
             {
+<<<<<<< HEAD
+                if (!activeRig || activeRig.IsLocal()) continue;
+
+                NetPlayer playerFromVRRig = GetPlayerFromVRRig(activeRig);
+                if (playerFromVRRig == null || playerFromVRRig.IsLocal) continue;
+
+                manager.guard.TransferOwnership(playerFromVRRig);
+                manager.SendRPC("RemoteCrittersActorGrabbedby", playerFromVRRig, actorId, actorId, Quaternion.identity, Vector3.zero, false);
+                manager.SendRPC("RemoteCritterActorReleased", playerFromVRRig, actorId, false, Quaternion.identity, Vector3.zero, Vector3.zero, Vector3.zero);
+                num++;
+=======
                 if ((bool)activeRig && !activeRig.IsLocal())
                 {
                     NetPlayer playerFromVRRig = GetPlayerFromVRRig(activeRig);
@@ -8536,6 +8809,7 @@ namespace iiMenu.Mods
                         num++;
                     }
                 }
+>>>>>>> c9c763d3cbb07ebdecd5cfd6101a919e816eac1f
             }
             return num;
         }
@@ -8559,15 +8833,27 @@ namespace iiMenu.Mods
             if (GetGunInput(false))
             {
                 var (hit, _) = RenderGun();
+<<<<<<< HEAD
+
+=======
+>>>>>>> c9c763d3cbb07ebdecd5cfd6101a919e816eac1f
                 if (gunLocked && lockTarget != null && Time.time > crashGunDelay)
                 {
                     crashGunDelay = Time.time + 0.4f;
                     TryCrashTarget(lockTarget);
                 }
+<<<<<<< HEAD
+
+                if (GetGunInput(true))
+                {
+                    VRRig rigFromHit = GetRigFromHit(hit);
+                    if (rigFromHit && !rigFromHit.IsLocal() && rigFromHit != lockTarget)
+=======
                 if (GetGunInput(true))
                 {
                     VRRig rigFromHit = GetRigFromHit(hit);
                     if ((bool)rigFromHit && !rigFromHit.IsLocal() && rigFromHit != lockTarget)
+>>>>>>> c9c763d3cbb07ebdecd5cfd6101a919e816eac1f
                     {
                         gunLocked = true;
                         lockTarget = rigFromHit;
@@ -8575,6 +8861,61 @@ namespace iiMenu.Mods
                 }
             }
             else if (gunLocked)
+<<<<<<< HEAD
+            {
+                gunLocked = false;
+            }
+        }
+
+        public static void TryCrashTarget(VRRig target)
+        {
+            if (!NetworkSystem.Instance.IsMasterClient) return;
+            if (target == null) return;
+
+            NetPlayer player = GetPlayerFromVRRig(target);
+            if (player == null || player.IsLocal) return;
+
+            DoGrabCrash(player, target.transform.position);
+        }
+
+        private static CrittersActor FindNearestCritterToPos(Vector3 pos)
+        {
+            CrittersActor best = null;
+            float bestDist = float.MaxValue;
+
+            foreach (CrittersActor a in GetAllType<CrittersActor>())
+            {
+                if (!a) continue;
+                if (a.crittersActorType == CrittersActor.CrittersActorType.Grabber) continue;
+                if (a.parentActorId != -1) continue;
+
+                float d = Vector3.Distance(a.transform.position, pos);
+                if (d < bestDist) { bestDist = d; best = a; }
+            }
+            return best;
+        }
+
+        private static VRRig FindRigForPlayer(NetPlayer player)
+        {
+            foreach (VRRig rig in VRRigCache.ActiveRigs)
+            {
+                if (rig == null) continue;
+                NetPlayer p = GetPlayerFromVRRig(rig);
+                if (p != null && p.ActorNumber == player.ActorNumber) return rig;
+            }
+            return null;
+        }
+
+        private static NetPlayer FindPlayerByActor(int actorNumber)
+        {
+            foreach (VRRig rig in VRRigCache.ActiveRigs)
+            {
+                if (rig == null) continue;
+                NetPlayer p = GetPlayerFromVRRig(rig);
+                if (p != null && p.ActorNumber == actorNumber) return p;
+            }
+            return null;
+=======
                 gunLocked = false;
         }
 
@@ -8640,6 +8981,7 @@ namespace iiMenu.Mods
             instance.SendRPC("RemoteCritterActorReleased", currentOwner, crittersActor.actorId, false, Quaternion.identity, Vector3.zero, Vector3.zero, Vector3.zero);
             RPCProtection();
             return true;
+>>>>>>> c9c763d3cbb07ebdecd5cfd6101a919e816eac1f
         }
     }
 }
