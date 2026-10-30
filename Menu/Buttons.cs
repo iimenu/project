@@ -1410,6 +1410,10 @@ namespace iiMenu.Menu
                 new ButtonInfo { buttonText = "Critter Noise Effect Gun", method =() => Overpowered.EffectGun(CrittersManager.CritterEvent.NoiseMakerTriggered), toolTip = "Spams the noise particles at wherever your hand desires."},
                 new ButtonInfo { buttonText = "Critter Particle Effect Gun", method =() => Overpowered.EffectGun((CrittersManager.CritterEvent)Random.Range(0, 4)), toolTip = "Spams every particle at wherever your hand desires."},
 
+                //new ButtonInfo { buttonText = "Critter Crash Gun [SD]", overlapText = "Crash Gun [SD]", method = Overpowered.CrashGun, toolTip = "Crashes player in critters map as master." },
+               // new ButtonInfo { buttonText = "Critter Crash Lobby [SD]", overlapText = "Crash Lobby [SD]", method = Overpowered.CrashLobby, isTogglable = false, toolTip = "Crashes everyone in critters map as master." },
+               // new ButtonInfo { buttonText = "Critter Crash Master [SD]", overlapText = "Crash Master [SD]", method = Overpowered.CrittersFreeze, isTogglable = false, toolTip = "Crashes Master in critters map as non-master." },
+                
                 new ButtonInfo { buttonText = "Grab ID Card <color=grey>[</color><color=green>G</color><color=grey>]</color>", method = Fun.GrabIDCard, toolTip = "Puts the ID card in your hand." },
                 new ButtonInfo { buttonText = "Entity Reach", method =() => EntityGrabPatch.enabled = true, disableMethod =() => EntityGrabPatch.enabled = false, toolTip = "Gives you the ability to grab entities from farther away in the horror map." },
 
