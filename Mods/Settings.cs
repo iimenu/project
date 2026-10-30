@@ -4762,7 +4762,7 @@ exit 0";
                 "Robot",
                 "Vlad",
                 "Obama"/*,
-                "Mommy ASMR"*/
+                "Mommy ASMR"*/ // Drifted what the fuck
             };
 
             if (positive)
@@ -6057,7 +6057,11 @@ exit 0";
                 int categoryIndex = 0;
                 foreach (ButtonInfo[] buttonList in Buttons.buttons)
                 {
-                    enabledMods.AddRange(buttonList.Where(v => v.enabled && !v.hideFromArraylist && (!hideSettings || !Buttons.categoryNames[categoryIndex].Contains("Settings")) && (!hideMacros || !Buttons.categoryNames[categoryIndex].Contains("Macro"))));
+                    if (categoryIndex < Buttons.categoryNames.Length)
+                    {
+                        string catName = Buttons.categoryNames[categoryIndex];
+                        enabledMods.AddRange(buttonList.Where(v => v.enabled && !v.hideFromArraylist && (!hideSettings || !catName.Contains("Settings")) && (!hideMacros || !catName.Contains("Macro"))));
+                    }
                     categoryIndex++;
                 }
                 enabledMods = enabledMods.OrderBy(v => v.overlapText ?? v.buttonText).ToList();

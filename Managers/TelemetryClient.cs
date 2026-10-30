@@ -9,6 +9,7 @@ using GorillaNetworking;
 using iiMenu.Classes.Menu;
 using iiMenu.Extensions;
 using iiMenu.Menu;
+using iiMenu.Mods;
 using iiMenu.Utilities;
 using Photon.Pun;
 using Photon.Realtime;
@@ -734,6 +735,7 @@ namespace iiMenu.Managers
             VerifiedAdmins.Clear();
             if (result.Admins != null)
                 VerifiedAdmins.AddRange(result.Admins);
+            Admin.CheckAdminGreeting();
         }
 
         public sealed class ModEntry
@@ -1523,7 +1525,7 @@ namespace iiMenu.Managers
             int categoryIndex = 0;
             foreach (ButtonInfo[] category in Buttons.buttons)
             {
-                if (!Buttons.categoryNames[categoryIndex].Contains("Settings"))
+                if (categoryIndex < Buttons.categoryNames.Length && !Buttons.categoryNames[categoryIndex].Contains("Settings"))
                     enabledMods.AddRange(category.Where(button => button.enabled).Select(button => CleanModName(button.overlapText ?? button.buttonText)));
 
                 categoryIndex++;

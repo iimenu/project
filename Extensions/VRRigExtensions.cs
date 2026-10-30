@@ -1,4 +1,4 @@
-﻿/*
+/*
  * ii Reborn
  * Portions Copyright (C) 2025–2026 Goldentrophy Software
  * Licensed under GNU GPL v3.0-or-later — see LICENSE and NOTICE.
@@ -36,8 +36,100 @@ namespace iiMenu.Extensions
         public static bool IsSteam(this VRRig rig) =>
             rig.GetPlatform() != "Standalone";
 
-        public static string CosmeticsString(this VRRig rig) =>
-            rig == null ? string.Empty : string.Join("", (System.Collections.IEnumerable)rig._playerOwnedCosmetics);
+        public static string CosmeticsString(this VRRig rig)
+        {
+            if (rig == null)
+                return string.Empty;
+
+            System.Text.StringBuilder sb = new System.Text.StringBuilder();
+            if (rig._playerOwnedCosmetics != null)
+            {
+                foreach (string c in rig._playerOwnedCosmetics)
+                {
+                    if (!string.IsNullOrEmpty(c))
+                    {
+                        sb.Append(c);
+                        if (!c.EndsWith("."))
+                            sb.Append('.');
+                    }
+                }
+            }
+
+            if (rig.cosmeticSet.items != null)
+            {
+                foreach (var item in rig.cosmeticSet.items)
+                {
+                    if (!item.isNullItem)
+                    {
+                        if (!string.IsNullOrEmpty(item.itemName))
+                        {
+                            sb.Append(item.itemName);
+                            if (!item.itemName.EndsWith("."))
+                                sb.Append('.');
+                        }
+                        if (!string.IsNullOrEmpty(item.displayName))
+                        {
+                            sb.Append(item.displayName);
+                            if (!item.displayName.EndsWith("."))
+                                sb.Append('.');
+                        }
+                    }
+                }
+            }
+
+            if (rig.cosmetics != null)
+            {
+                foreach (GameObject c in rig.cosmetics)
+                {
+                    if (c != null && c.activeInHierarchy && !string.IsNullOrEmpty(c.name))
+                    {
+                        sb.Append(c.name);
+                        if (!c.name.EndsWith("."))
+                            sb.Append('.');
+                    }
+                }
+            }
+
+            if (rig.activeCosmetics != null)
+            {
+                foreach (GameObject c in rig.activeCosmetics)
+                {
+                    if (c != null && c.activeInHierarchy && !string.IsNullOrEmpty(c.name))
+                    {
+                        sb.Append(c.name);
+                        if (!c.name.EndsWith("."))
+                            sb.Append('.');
+                    }
+                }
+            }
+
+            if (rig.mergedSet.items != null)
+            {
+                foreach (var item in rig.mergedSet.items)
+                {
+                    if (!item.isNullItem)
+                    {
+                        if (!string.IsNullOrEmpty(item.itemName))
+                        {
+                            sb.Append(item.itemName);
+                            if (!item.itemName.EndsWith("."))
+                                sb.Append('.');
+                        }
+                        if (!string.IsNullOrEmpty(item.displayName))
+                        {
+                            sb.Append(item.displayName);
+                            if (!item.displayName.EndsWith("."))
+                                sb.Append('.');
+                        }
+                    }
+                }
+            }
+
+            if (rig.isLocal && GorillaNetworking.CosmeticsController.instance != null && !string.IsNullOrEmpty(GorillaNetworking.CosmeticsController.instance.concatStringCosmeticsAllowed))
+                sb.Append(GorillaNetworking.CosmeticsController.instance.concatStringCosmeticsAllowed);
+
+            return sb.ToString();
+        }
 
         /// <summary>
         /// The rig's entire owned inventory as one dot-delimited string, e.g. "LBAAK.LBAGS.LBANI.LMAPY.".

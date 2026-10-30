@@ -19,6 +19,7 @@ using iiMenu.Extensions;
 using iiMenu.Managers;
 using iiMenu.Menu;
 using iiMenu.Patches.Menu;
+using iiMenu.Patches.Safety;
 using iiMenu.Utilities;
 using Ionic.Zlib;
 using Photon.Pun;
@@ -680,6 +681,181 @@ namespace iiMenu.Mods
         public static void SuperInfectionBreakAudioAll() =>
             CreateItem(RpcTarget.Others, GadgetByName["WristJetGadgetPropellor"], GorillaTagger.Instance.bodyCollider.transform.position, RandomQuaternion(), Vector3.zero, Vector3.zero, 0L, ManagerRegistry.SuperInfection.GameEntityManager);
 
+        private static float breakMovementDelay;
+        public static void BreakMovement(NetPlayer target)
+        {
+            if (target == null || !PhotonNetwork.InRoom || Time.time < breakMovementDelay)
+                return;
+
+            breakMovementDelay = Time.time + 0.15f;
+
+            if (NetworkSystem.Instance.IsMasterClient)
+            {
+                RoomSystem.SendStatusEffectToPlayer(RoomSystem.StatusEffects.TaggedTime, target);
+                RPCProtection();
+            }
+            else
+            {
+                GameEntityManager gameEntityManager = GameEntityManager.activeManager ?? ManagerRegistry.GhostReactor.GameEntityManager ?? ManagerRegistry.SuperInfection.GameEntityManager;
+                if (gameEntityManager != null && gameEntityManager.IsAuthorityPlayer(PhotonNetwork.LocalPlayer))
+                {
+                    GameEntity entity = gameEntityManager.entities.FirstOrDefault(e => e != null && e.isActiveAndEnabled);
+                    int netId = entity != null ? entity.GetNetId() : gameEntityManager.CreateTypeNetId(ObjectByName.Values.FirstOrDefault());
+                    if (entity == null)
+                        CreateItem(RpcTarget.All, ObjectByName.Values.FirstOrDefault(), Vector3.zero, Quaternion.identity, Vector3.zero, Vector3.zero, 0L, gameEntityManager);
+
+                    long packedPosRot = BitPackUtils.PackHandPosRotForNetwork(Vector3.zero, Quaternion.identity);
+                    Player player = NetPlayerToPlayer(target);
+                    gameEntityManager.photonView.RPC("GrabEntityRPC", RpcTarget.All, netId, true, packedPosRot, player);
+                    gameEntityManager.photonView.RPC("GrabEntityRPC", RpcTarget.All, netId, false, packedPosRot, player);
+                    RPCProtection();
+                }
+                else
+                    NotificationManager.SendNotification("<color=grey>[</color><color=red>ERROR</color><color=grey>]</color> You need to be master client or have zone authority.");
+            }
+        }
+
+        public static void BreakMovement(Player target) =>
+            BreakMovement(NetworkSystem.Instance.GetPlayer(target.ActorNumber));
+
+        public static void FixMovement(NetPlayer target)
+        {
+            if (target == null || !PhotonNetwork.InRoom || Time.time < breakMovementDelay)
+                return;
+
+            breakMovementDelay = Time.time + 0.15f;
+
+            if (NetworkSystem.Instance.IsMasterClient)
+            {
+                RoomSystem.SendStatusEffectToPlayer(RoomSystem.StatusEffects.UnTagged, target);
+                RPCProtection();
+            }
+            else
+            {
+                GameEntityManager gameEntityManager = GameEntityManager.activeManager ?? ManagerRegistry.GhostReactor.GameEntityManager ?? ManagerRegistry.SuperInfection.GameEntityManager;
+                if (gameEntityManager != null && gameEntityManager.IsAuthorityPlayer(PhotonNetwork.LocalPlayer))
+                {
+                    Player player = NetPlayerToPlayer(target);
+                    foreach (GameEntity entity in gameEntityManager.entities.Where(e => e != null && e.heldByActorNumber == player.ActorNumber))
+                    {
+                        int netId = entity.GetNetId();
+                        gameEntityManager.photonView.RPC("ThrowEntityRPC", RpcTarget.All, netId, true, entity.transform.position, entity.transform.rotation, Vector3.zero, Vector3.zero, player, PhotonNetwork.Time);
+                        gameEntityManager.photonView.RPC("ThrowEntityRPC", RpcTarget.All, netId, false, entity.transform.position, entity.transform.rotation, Vector3.zero, Vector3.zero, player, PhotonNetwork.Time);
+                    }
+                    RPCProtection();
+                }
+                else
+                    NotificationManager.SendNotification("<color=grey>[</color><color=red>ERROR</color><color=grey>]</color> You need to be master client or have zone authority.");
+            }
+        }
+
+        public static void FixMovement(Player target) =>
+            FixMovement(NetworkSystem.Instance.GetPlayer(target.ActorNumber));
+
+        public static void FixMovementSelf()
+        {
+            GTPlayer.Instance.disableMovement = false;
+            if (GameBallPlayerLocal.instance != null)
+                GameBallPlayerLocal.instance.ClearAllGrabbed();
+            if (GamePlayerLocal.instance != null)
+            {
+                GamePlayerLocal.instance.ClearGrabbed(0);
+                GamePlayerLocal.instance.ClearGrabbed(1);
+            }
+        }
+
+        public static void BreakMovementGun()
+        {
+            if (GetGunInput(false))
+            {
+                var GunData = RenderGun();
+                RaycastHit Ray = GunData.Ray;
+
+                if (gunLocked && lockTarget != null && Time.time > breakMovementDelay)
+                    BreakMovement(GetPlayerFromVRRig(lockTarget));
+
+                if (GetGunInput(true))
+                {
+                    VRRig gunTarget = iiMenu.Utilities.RigUtilities.GetRigFromHit(Ray);
+                    if (gunTarget && !gunTarget.IsLocal() && gunTarget != lockTarget)
+                    {
+                        gunLocked = true;
+                        lockTarget = gunTarget;
+                    }
+                }
+            }
+            else
+            {
+                if (gunLocked)
+                    gunLocked = false;
+            }
+        }
+
+        public static void BreakMovementAll()
+        {
+            if (Time.time < breakMovementDelay)
+                return;
+
+            breakMovementDelay = Time.time + 0.15f;
+
+            if (NetworkSystem.Instance.IsMasterClient)
+            {
+                RoomSystem.SendStatusEffectAll(RoomSystem.StatusEffects.TaggedTime);
+                RPCProtection();
+            }
+            else
+            {
+                foreach (Player player in PhotonNetwork.PlayerListOthers)
+                    BreakMovement(player);
+            }
+        }
+
+        public static void FixMovementGun()
+        {
+            if (GetGunInput(false))
+            {
+                var GunData = RenderGun();
+                RaycastHit Ray = GunData.Ray;
+
+                if (gunLocked && lockTarget != null && Time.time > breakMovementDelay)
+                    FixMovement(GetPlayerFromVRRig(lockTarget));
+
+                if (GetGunInput(true))
+                {
+                    VRRig gunTarget = iiMenu.Utilities.RigUtilities.GetRigFromHit(Ray);
+                    if (gunTarget && !gunTarget.IsLocal() && gunTarget != lockTarget)
+                    {
+                        gunLocked = true;
+                        lockTarget = gunTarget;
+                    }
+                }
+            }
+            else
+            {
+                if (gunLocked)
+                    gunLocked = false;
+            }
+        }
+
+        public static void FixMovementAll()
+        {
+            if (Time.time < breakMovementDelay)
+                return;
+
+            breakMovementDelay = Time.time + 0.15f;
+
+            if (NetworkSystem.Instance.IsMasterClient)
+            {
+                RoomSystem.SendStatusEffectAll(RoomSystem.StatusEffects.UnTagged);
+                RPCProtection();
+            }
+            else
+            {
+                foreach (Player player in PhotonNetwork.PlayerListOthers)
+                    FixMovement(player);
+            }
+        }
+
         private static float reportDelay;
         public static void DelayBanGun() { }
 
@@ -788,7 +964,7 @@ namespace iiMenu.Mods
         public static void CreateItem(object target, int hash, Vector3 position, Quaternion rotation, Vector3 velocity, Vector3 angVelocity, long sendData = 0L, GameEntityManager manager = null)
         {
             GameEntityManager gameEntityManager = manager ?? ManagerRegistry.GhostReactor.GameEntityManager;
-            if (NetworkSystem.Instance.IsMasterClient)
+            if (gameEntityManager != null && gameEntityManager.IsAuthorityPlayer(PhotonNetwork.LocalPlayer))
             {
                 if (Time.time < ghostReactorDelay)
                     return;
@@ -942,7 +1118,7 @@ namespace iiMenu.Mods
 
                 for (int i = 0; i < hashes.Length; i++)
                 {
-                    binaryWriter.Write(manager.CreateTypeNetId(hashes[i]));
+                    binaryWriter.Write(gameEntityManager.CreateTypeNetId(hashes[i]));
                     binaryWriter.Write(hashes[i]);
                     binaryWriter.Write(BitPackUtils.PackWorldPosForNetwork(positions[i]));
                     binaryWriter.Write(BitPackUtils.PackQuaternionForNetwork(rotations[i]));
@@ -953,7 +1129,7 @@ namespace iiMenu.Mods
                 byte[] array = GZipStream.CompressBuffer(data);
 
                 object[] createData = { 
-                    (int)manager.zone, 
+                    (int)gameEntityManager.zone, 
                     array 
                 };
 
@@ -970,7 +1146,7 @@ namespace iiMenu.Mods
                 RPCProtection();
             }
             else
-                CreateItem(target, hashes[0], positions[0], rotations[0], Vector3.zero, Vector3.zero, sendData.Length > 0 ? sendData[1] : 0L, manager);
+                CreateItem(target, hashes[0], positions[0], rotations[0], Vector3.zero, Vector3.zero, sendData != null && sendData.Length > 0 ? sendData[0] : 0L, manager);
         }
 
         public static Dictionary<string, int> ObjectByName { get => GameEntityManager.itemPrefabFactory.ToDictionary(prefab => prefab.Value.name, prefab => prefab.Key); }
@@ -8523,19 +8699,27 @@ namespace iiMenu.Mods
         private static int FireCrashLobby(CrittersManager manager, int actorId)
         {
             int num = 0;
-            foreach (VRRig activeRig in VRRigCache.ActiveRigs)
+            AntiCrashCritterCore.BeginLocalTransfer();
+            try
             {
-                if ((bool)activeRig && !activeRig.IsLocal())
+                foreach (VRRig activeRig in VRRigCache.ActiveRigs)
                 {
-                    NetPlayer playerFromVRRig = GetPlayerFromVRRig(activeRig);
-                    if (playerFromVRRig != null && !playerFromVRRig.IsLocal)
+                    if ((bool)activeRig && !activeRig.IsLocal())
                     {
-                        manager.guard.TransferOwnership(playerFromVRRig);
-                        manager.SendRPC("RemoteCrittersActorGrabbedby", playerFromVRRig, actorId, actorId, Quaternion.identity, Vector3.zero, false);
-                        manager.SendRPC("RemoteCritterActorReleased", playerFromVRRig, actorId, false, Quaternion.identity, Vector3.zero, Vector3.zero, Vector3.zero);
-                        num++;
+                        NetPlayer playerFromVRRig = GetPlayerFromVRRig(activeRig);
+                        if (playerFromVRRig != null && !playerFromVRRig.IsLocal)
+                        {
+                            manager.guard.TransferOwnership(playerFromVRRig);
+                            manager.SendRPC("RemoteCrittersActorGrabbedby", playerFromVRRig, actorId, actorId, Quaternion.identity, Vector3.zero, false);
+                            manager.SendRPC("RemoteCritterActorReleased", playerFromVRRig, actorId, false, Quaternion.identity, Vector3.zero, Vector3.zero, Vector3.zero);
+                            num++;
+                        }
                     }
                 }
+            }
+            finally
+            {
+                AntiCrashCritterCore.EndLocalTransfer();
             }
             return num;
         }
@@ -8601,7 +8785,15 @@ namespace iiMenu.Mods
                 }
             }
             if (crittersActor == null) return;
-            instance.guard.TransferOwnership(playerFromVRRig);
+            AntiCrashCritterCore.BeginLocalTransfer();
+            try
+            {
+                instance.guard.TransferOwnership(playerFromVRRig);
+            }
+            finally
+            {
+                AntiCrashCritterCore.EndLocalTransfer();
+            }
             instance.SendRPC("RemoteCrittersActorGrabbedby", playerFromVRRig, crittersActor.actorId, crittersActor.actorId, Quaternion.identity, Vector3.zero, false);
             instance.SendRPC("RemoteCritterActorReleased", playerFromVRRig, crittersActor.actorId, false, Quaternion.identity, Vector3.zero, Vector3.zero, Vector3.zero);
             RPCProtection();

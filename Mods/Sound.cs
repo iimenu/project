@@ -75,19 +75,23 @@ namespace iiMenu.Mods
         public static bool oldOst;
         private static AudioSource ostSource;
         private static string ostRoom;
+        private static string currentOstZone = "";
         private static float ostMusicMuteScan;
+        private static bool isLoadingOst;
         private static readonly List<AudioSource> mutedMusicSources = new List<AudioSource>();
 
         public static void EnableOldOst()
         {
             oldOst = true;
             ostRoom = null;
-            NotificationManager.SendNotification("<color=grey>[</color><color=purple>OLD OST</color><color=grey>]</color> Drop files named OG<map>OST.mp3 (e.g. OGForestOST.mp3, OGCanyonOST.mp3) into your iiReborn folder to use them.");
+            currentOstZone = "";
+            UpdateOldOst();
         }
 
         public static void DisableOldOst()
         {
             oldOst = false;
+            currentOstZone = "";
             StopOldOst();
         }
 
@@ -97,13 +101,15 @@ namespace iiMenu.Mods
 
             try
             {
-                string room = NetworkSystem.Instance.RoomName;
-                if (room != ostRoom)
+                string zone = GetCurrentZoneName();
+                string room = NetworkSystem.Instance != null ? NetworkSystem.Instance.RoomName : "";
+
+                if (zone != currentOstZone || room != ostRoom)
                 {
+                    currentOstZone = zone;
                     ostRoom = room;
                     StopOldOst();
-                    if (NetworkSystem.Instance.InRoom)
-                        CoroutineManager.instance.StartCoroutine(LoadOldOst());
+                    CoroutineManager.instance.StartCoroutine(LoadOldOst(zone));
                 }
 
                 if (Time.time > ostMusicMuteScan)
@@ -115,16 +121,25 @@ namespace iiMenu.Mods
             catch { }
         }
 
-        private static string GetOldOstMapName()
+        private static string GetCurrentZoneName()
         {
             try
             {
-                for (int i = 0; i < SceneManager.sceneCount; i++)
+                GTZone zone = Important.GetCurrentZone();
+                if (zone != GTZone.none)
                 {
-                    Scene scene = SceneManager.GetSceneAt(i);
-                    if (!scene.isLoaded) continue;
-                    if (scene.name == "GTSystem" || scene.name == "Untitled" || scene.name == "Forest") continue;
-                    return scene.name;
+                    string zn = zone.ToString();
+                    return char.ToUpper(zn[0]) + zn.Substring(1);
+                }
+            }
+            catch { }
+
+            try
+            {
+                if (ZoneManagement.instance != null && ZoneManagement.instance.activeZones != null && ZoneManagement.instance.activeZones.Count > 0)
+                {
+                    string zn = ZoneManagement.instance.activeZones[ZoneManagement.instance.activeZones.Count - 1].ToString();
+                    return char.ToUpper(zn[0]) + zn.Substring(1);
                 }
             }
             catch { }
@@ -132,32 +147,175 @@ namespace iiMenu.Mods
             return "Forest";
         }
 
-        private static IEnumerator LoadOldOst()
+        private static string FindOstFile(string zoneName)
         {
-            string mapName = GetOldOstMapName();
-            string path = Path.Combine(PluginInfo.BaseDirectory, $"OG{mapName}OST.mp3");
-            if (!File.Exists(path))
+            if (string.IsNullOrEmpty(zoneName))
+                return null;
+
+            string clean = zoneName.ToLower().Trim();
+            string cleanNoS = clean.TrimEnd('s');
+
+            List<string> dirs = new List<string>();
+            try
+            {
+                string gamePath = GetGamePath();
+                if (!string.IsNullOrEmpty(gamePath))
+                {
+                    dirs.Add(Path.Combine(gamePath, PluginInfo.BaseDirectory));
+                    dirs.Add(Path.Combine(gamePath, "iiReborn"));
+                    dirs.Add(Path.Combine(gamePath, "BepInEx", "plugins", PluginInfo.BaseDirectory));
+                    dirs.Add(Path.Combine(gamePath, "BepInEx", "plugins"));
+                    dirs.Add(gamePath);
+
+                    string parent = Directory.GetParent(gamePath)?.FullName;
+                    if (!string.IsNullOrEmpty(parent))
+                    {
+                        dirs.Add(Path.Combine(parent, "Gorilla Tag", "iiReborn"));
+                        dirs.Add(Path.Combine(parent, "GorillaTag", "iiReborn"));
+                    }
+                }
+            }
+            catch { }
+
+            dirs.Add(PluginInfo.BaseDirectory);
+            dirs.Add(Path.Combine("BepInEx", "plugins", PluginInfo.BaseDirectory));
+            dirs.Add(Path.Combine("BepInEx", "plugins"));
+
+            string[] candidates = new[]
+            {
+                $"OG{zoneName}OST.mp3",
+                $"OG{clean}OST.mp3",
+                $"OG{cleanNoS}OST.mp3",
+                $"OG{clean}sOST.mp3",
+                $"OG{char.ToUpper(clean[0]) + clean.Substring(1)}OST.mp3",
+                $"OG{char.ToUpper(cleanNoS[0]) + cleanNoS.Substring(1)}OST.mp3",
+                $"OG{char.ToUpper(cleanNoS[0]) + cleanNoS.Substring(1)}sOST.mp3",
+                $"OG{zoneName}OST.ogg",
+                $"OG{clean}OST.ogg",
+                $"OG{cleanNoS}OST.ogg",
+                $"OG{zoneName}OST.wav",
+                $"OG{clean}OST.wav",
+                $"OG{cleanNoS}OST.wav",
+                $"{clean}.mp3"
+            };
+
+            foreach (string dir in dirs.Distinct())
+            {
+                if (!Directory.Exists(dir)) continue;
+
+                foreach (string name in candidates)
+                {
+                    string p = Path.Combine(dir, name);
+                    if (File.Exists(p)) return p;
+                }
+
+                try
+                {
+                    foreach (string file in Directory.GetFiles(dir))
+                    {
+                        string fName = Path.GetFileName(file).ToLower();
+                        if ((fName.Contains(clean) || fName.Contains(cleanNoS)) &&
+                            (fName.EndsWith(".mp3") || fName.EndsWith(".ogg") || fName.EndsWith(".wav")))
+                            return file;
+                    }
+                }
+                catch { }
+            }
+
+            return null;
+        }
+
+        private static Transform FindMapSpeaker()
+        {
+            try
+            {
+                foreach (AudioSource source in UnityEngine.Object.FindObjectsOfType<AudioSource>())
+                {
+                    if (source == null || source == ostSource || !source.gameObject.activeInHierarchy) continue;
+                    if (source.GetComponent<VRRig>() != null || source.GetComponentInParent<VRRig>() != null) continue;
+
+                    if (source.outputAudioMixerGroup != null && source.outputAudioMixerGroup.name.ToLower().Contains("music"))
+                        return source.transform;
+                }
+
+                GorillaSpeakerLoudness gsl = UnityEngine.Object.FindObjectsOfType<GorillaSpeakerLoudness>()
+                    .FirstOrDefault(s => s != null && s.GetComponent<VRRig>() == null && s.gameObject.activeInHierarchy && s.speaker != null);
+                if (gsl != null)
+                    return gsl.transform;
+
+                foreach (GameObject go in UnityEngine.Object.FindObjectsOfType<GameObject>())
+                {
+                    if (go == null || !go.activeInHierarchy || go.GetComponent<VRRig>() != null) continue;
+                    string n = go.name.ToLower();
+                    if (n.Contains("speaker") || n.Contains("radio") || n.Contains("jukebox"))
+                        return go.transform;
+                }
+            }
+            catch { }
+            return null;
+        }
+
+        private static IEnumerator LoadOldOst(string zone)
+        {
+            if (isLoadingOst)
                 yield break;
 
-            using (UnityWebRequest request = UnityWebRequestMultimedia.GetAudioClip("file://" + path, AudioType.MPEG))
+            isLoadingOst = true;
+            string path = FindOstFile(zone);
+            if (string.IsNullOrEmpty(path) || !File.Exists(path))
+            {
+                NotificationManager.SendNotification($"<color=grey>[</color><color=purple>OLD OST</color><color=grey>]</color> Missing {zone} OST (place OG{zone}OST.mp3 in iiReborn)", 4000);
+                isLoadingOst = false;
+                yield break;
+            }
+
+            AudioType audioType = AudioType.MPEG;
+            if (path.EndsWith(".ogg", StringComparison.OrdinalIgnoreCase)) audioType = AudioType.OGGVORBIS;
+            else if (path.EndsWith(".wav", StringComparison.OrdinalIgnoreCase)) audioType = AudioType.WAV;
+
+            using (UnityWebRequest request = UnityWebRequestMultimedia.GetAudioClip("file://" + path, audioType))
             {
                 yield return request.SendWebRequest();
                 if (request.result != UnityWebRequest.Result.Success)
+                {
+                    isLoadingOst = false;
                     yield break;
+                }
 
                 AudioClip clip = DownloadHandlerAudioClip.GetContent(request);
                 if (clip == null)
+                {
+                    isLoadingOst = false;
                     yield break;
+                }
 
                 GameObject host = new GameObject("iiMenu OldOST");
                 UnityEngine.Object.DontDestroyOnLoad(host);
                 ostSource = host.AddComponent<AudioSource>();
                 ostSource.clip = clip;
                 ostSource.loop = true;
-                ostSource.volume = 0.5f;
-                ostSource.spatialBlend = 0f;
+                ostSource.volume = 0.6f;
+
+                Transform speakerTr = FindMapSpeaker();
+                if (speakerTr != null)
+                {
+                    ostSource.transform.position = speakerTr.position;
+                    ostSource.transform.SetParent(speakerTr, true);
+                    ostSource.spatialBlend = 1f;
+                    ostSource.minDistance = 4f;
+                    ostSource.maxDistance = 55f;
+                    ostSource.rolloffMode = AudioRolloffMode.Logarithmic;
+                    ostSource.dopplerLevel = 0f;
+                }
+                else
+                {
+                    ostSource.spatialBlend = 0f;
+                }
+
                 ostSource.Play();
+                NotificationManager.SendNotification($"<color=grey>[</color><color=purple>OLD OST</color><color=grey>]</color> Playing {zone} OST ({Path.GetFileName(path)})", 4000);
             }
+            isLoadingOst = false;
         }
 
         private static void StopOldOst()

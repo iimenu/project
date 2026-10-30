@@ -248,7 +248,7 @@ namespace iiMenu.Managers
                             {
                                 try
                                 {
-                                    if (!button.enabled || button.hideFromArraylist || (hideSettings && (!hideSettings ||
+                                    if (!button.enabled || button.hideFromArraylist || (hideSettings && (categoryIndex >= Buttons.categoryNames.Length ||
                                                                              Buttons.categoryNames[categoryIndex]
                                                                                  .Contains("Settings")))) continue;
                                     string buttonText = button.overlapText ?? button.buttonText;

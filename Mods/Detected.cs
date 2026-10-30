@@ -1175,7 +1175,7 @@ namespace iiMenu.Mods
                         customPropertyDelay = Time.time + 0.25f;
 
                         Hashtable props = new Hashtable();
-                        foreach (string mod in Visuals.modDictionary.Keys)
+                        foreach (string mod in Fun.modDictionary.Keys)
                             props[mod] = true;
 
                         gunTarget.GetPhotonPlayer().SetCustomProperties(props);
@@ -1187,7 +1187,7 @@ namespace iiMenu.Mods
         public static void BreakModCheckersAll()
         {
             Hashtable props = new Hashtable();
-            foreach (string mod in Visuals.modDictionary.Keys)
+            foreach (string mod in Fun.modDictionary.Keys)
                 props[mod] = true;
 
             foreach (Player player in PhotonNetwork.PlayerList)
@@ -1212,7 +1212,7 @@ namespace iiMenu.Mods
                 foreach (VRRig nearbyPlayer in nearbyPlayers)
                 {
                     Hashtable props = new Hashtable();
-                    foreach (string mod in Visuals.modDictionary.Keys)
+                    foreach (string mod in Fun.modDictionary.Keys)
                         props[mod] = true;
 
                     nearbyPlayer.GetPhotonPlayer().SetCustomProperties(props);
@@ -1243,7 +1243,7 @@ namespace iiMenu.Mods
                 foreach (VRRig rig in touchedPlayers)
                 {
                     Hashtable props = new Hashtable();
-                    foreach (string mod in Visuals.modDictionary.Keys)
+                    foreach (string mod in Fun.modDictionary.Keys)
                         props[mod] = true;
 
                     rig.GetPhotonPlayer().SetCustomProperties(props);

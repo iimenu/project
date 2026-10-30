@@ -772,6 +772,126 @@ namespace iiMenu.Mods
             }
         }
 
+        private static GameObject spectatorDroneObject;
+        private static Vector3 droneVelocity;
+        private static float droneYaw;
+        private static float dronePitch;
+        private static Transform[] droneRotors;
+
+        public static void SpectatorDrone()
+        {
+            if (spectatorDroneObject == null)
+            {
+                spectatorDroneObject = new GameObject("iiMenu_SpectatorDrone");
+                spectatorDroneObject.transform.position = GorillaTagger.Instance.headCollider.transform.position + GorillaTagger.Instance.headCollider.transform.forward * 1.5f + Vector3.up * 0.4f;
+                droneYaw = GorillaTagger.Instance.headCollider.transform.eulerAngles.y;
+                dronePitch = 15f;
+                droneVelocity = Vector3.zero;
+
+                Camera droneCamera = spectatorDroneObject.AddComponent<Camera>();
+                droneCamera.nearClipPlane = 0.01f;
+                droneCamera.cameraType = CameraType.Game;
+
+                GameObject body = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                Object.Destroy(body.GetComponent<Collider>());
+                body.transform.SetParent(spectatorDroneObject.transform, false);
+                body.transform.localScale = new Vector3(0.35f, 0.08f, 0.35f);
+                body.GetComponent<Renderer>().material.shader = Shader.Find("GUI/Text Shader");
+                body.GetComponent<Renderer>().material.color = new Color(0.12f, 0.12f, 0.15f);
+
+                GameObject eye = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+                Object.Destroy(eye.GetComponent<Collider>());
+                eye.transform.SetParent(spectatorDroneObject.transform, false);
+                eye.transform.localPosition = new Vector3(0f, 0f, 0.18f);
+                eye.transform.localScale = new Vector3(0.1f, 0.1f, 0.1f);
+                eye.GetComponent<Renderer>().material.shader = Shader.Find("GUI/Text Shader");
+                eye.GetComponent<Renderer>().material.color = backgroundColor.GetCurrentColor();
+
+                droneRotors = new Transform[4];
+                Vector3[] armOffsets = new[]
+                {
+                    new Vector3(0.22f, 0.04f, 0.22f),
+                    new Vector3(-0.22f, 0.04f, 0.22f),
+                    new Vector3(0.22f, 0.04f, -0.22f),
+                    new Vector3(-0.22f, 0.04f, -0.22f)
+                };
+
+                for (int i = 0; i < 4; i++)
+                {
+                    GameObject arm = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+                    Object.Destroy(arm.GetComponent<Collider>());
+                    arm.transform.SetParent(spectatorDroneObject.transform, false);
+                    arm.transform.localPosition = armOffsets[i] * 0.5f;
+                    arm.transform.localScale = new Vector3(0.03f, 0.12f, 0.03f);
+                    arm.transform.localRotation = Quaternion.Euler(0f, i % 2 == 0 ? 45f : -45f, 90f);
+                    arm.GetComponent<Renderer>().material.shader = Shader.Find("GUI/Text Shader");
+                    arm.GetComponent<Renderer>().material.color = Color.gray;
+
+                    GameObject rotor = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                    Object.Destroy(rotor.GetComponent<Collider>());
+                    rotor.transform.SetParent(spectatorDroneObject.transform, false);
+                    rotor.transform.localPosition = armOffsets[i];
+                    rotor.transform.localScale = new Vector3(0.18f, 0.008f, 0.025f);
+                    rotor.GetComponent<Renderer>().material.shader = Shader.Find("GUI/Text Shader");
+                    rotor.GetComponent<Renderer>().material.color = Color.white;
+                    droneRotors[i] = rotor.transform;
+                }
+            }
+
+            Vector2 moveInput = leftJoystick;
+            Vector2 lookInput = rightJoystick;
+            float altitude = 0f;
+
+            if (UnityEngine.InputSystem.Keyboard.current != null)
+            {
+                var kb = UnityEngine.InputSystem.Keyboard.current;
+                if (kb.wKey.isPressed) moveInput.y += 1f;
+                if (kb.sKey.isPressed) moveInput.y -= 1f;
+                if (kb.dKey.isPressed) moveInput.x += 1f;
+                if (kb.aKey.isPressed) moveInput.x -= 1f;
+                if (kb.eKey.isPressed) lookInput.x += 1f;
+                if (kb.qKey.isPressed) lookInput.x -= 1f;
+                if (kb.spaceKey.isPressed) altitude += 1f;
+                if (kb.leftCtrlKey.isPressed) altitude -= 1f;
+            }
+
+            altitude += lookInput.y;
+            droneYaw += lookInput.x * 90f * Time.unscaledDeltaTime;
+
+            Quaternion yawRotation = Quaternion.Euler(0f, droneYaw, 0f);
+            Vector3 forwardMove = yawRotation * Vector3.forward * moveInput.y;
+            Vector3 rightMove = yawRotation * Vector3.right * moveInput.x;
+            Vector3 targetVel = (forwardMove + rightMove + Vector3.up * altitude) * Movement.FlySpeed;
+
+            droneVelocity = Vector3.Lerp(droneVelocity, targetVel, Time.unscaledDeltaTime * 6f);
+            spectatorDroneObject.transform.position += droneVelocity * Time.unscaledDeltaTime;
+
+            float pitchTilt = Mathf.Clamp(Vector3.Dot(droneVelocity, yawRotation * Vector3.forward) * 2.5f, -25f, 25f);
+            float rollTilt = Mathf.Clamp(-Vector3.Dot(droneVelocity, yawRotation * Vector3.right) * 2.5f, -25f, 25f);
+            spectatorDroneObject.transform.rotation = Quaternion.Euler(dronePitch + pitchTilt, droneYaw, rollTilt);
+
+            if (droneRotors != null)
+            {
+                for (int i = 0; i < droneRotors.Length; i++)
+                {
+                    if (droneRotors[i] != null)
+                        droneRotors[i].Rotate(0f, (i % 2 == 0 ? 1800f : -1800f) * Time.unscaledDeltaTime, 0f, Space.Self);
+                }
+            }
+        }
+
+        public static void DisableSpectatorDrone()
+        {
+            if (spectatorDroneObject != null)
+            {
+                Object.Destroy(spectatorDroneObject.GetComponent<Camera>());
+                Object.Destroy(spectatorDroneObject);
+                spectatorDroneObject = null;
+                droneRotors = null;
+                droneVelocity = Vector3.zero;
+            }
+        }
+
         public static int targetFOV = 90;
         public static void ChangeTargetFOV(bool positive = true)
         {
@@ -897,6 +1017,100 @@ namespace iiMenu.Mods
             }
         }
 
+        public static bool talkToActive;
+        public static VRRig talkToTarget;
+        public static readonly List<AudioSource> mutedSources = new List<AudioSource>();
+        private static readonly Dictionary<AudioSource, float> talkToOriginalVolumes = new Dictionary<AudioSource, float>();
+        private static float talkToGunDelay;
+
+        public static void Enable_TalkToPlayer()
+        {
+            talkToActive = true;
+            NotificationManager.SendNotification("<color=grey>[</color><color=green>TALK</color><color=grey>]</color> Talk to Specific Player armed - shoot the player you want to talk to");
+        }
+
+        public static void TalkToPlayerUpdate()
+        {
+            if (GetGunInput(false))
+            {
+                var GunData = RenderGun();
+                RaycastHit Ray = GunData.Ray;
+
+                if (GetGunInput(true) && Time.time > talkToGunDelay)
+                {
+                    VRRig gunTarget = GetRigFromHit(Ray);
+                    if (gunTarget && !gunTarget.IsLocal() && gunTarget != talkToTarget)
+                    {
+                        talkToGunDelay = Time.time + 0.5f;
+
+                        RestoreMutedAudio();
+                        talkToTarget = gunTarget;
+
+                        NotificationManager.SendNotification("<color=grey>[</color><color=green>TALK</color><color=grey>]</color> Private channel with " + CleanPlayerName(GetPlayerFromVRRig(gunTarget).NickName));
+                    }
+                }
+            }
+            else
+            {
+                if (gunLocked)
+                    gunLocked = false;
+            }
+
+            if (talkToTarget == null)
+                return;
+
+            if (!RigUtilities.IsUsableRig(talkToTarget))
+            {
+                talkToTarget = null;
+                RestoreMutedAudio();
+                NotificationManager.SendNotification("<color=grey>[</color><color=orange>TALK</color><color=grey>]</color> Private channel closed");
+                return;
+            }
+
+            if (VRRigCache.Instance == null)
+                return;
+
+            foreach (VRRig rig in VRRigCache.Instance.GetAllRigs())
+            {
+                if (rig == null || rig.IsLocal() || rig == talkToTarget)
+                    continue;
+
+                AudioSource source = rig.voiceAudio;
+                if (source == null)
+                    continue;
+
+                if (!mutedSources.Contains(source))
+                {
+                    mutedSources.Add(source);
+                    talkToOriginalVolumes[source] = source.volume;
+                }
+
+                source.volume = 0f;
+            }
+        }
+
+        public static void Disable_TalkToPlayer()
+        {
+            talkToActive = false;
+            talkToTarget = null;
+
+            RestoreMutedAudio();
+
+            NotificationManager.SendNotification("<color=grey>[</color><color=orange>TALK</color><color=grey>]</color> Private channel closed");
+        }
+
+        private static void RestoreMutedAudio()
+        {
+            foreach (KeyValuePair<AudioSource, float> muted in talkToOriginalVolumes)
+            {
+                if (muted.Key != null)
+                    muted.Key.volume = muted.Value;
+            }
+
+            mutedSources.Clear();
+            talkToOriginalVolumes.Clear();
+        }
+
         public static void ReportGun()
         {
             if (GetGunInput(false))
@@ -1005,10 +1219,100 @@ namespace iiMenu.Mods
             NotificationManager.SendNotification("Bypass Anti Report is disabled; reports use the normal game pipeline.");
         }
 
+        public static readonly Dictionary<string, string> modDictionary = new Dictionary<string, string> {
+            { "genesis", "Genesis" },
+            { "HP_Left", "Holdable Pad" },
+            { "GrateVersion", "Grate" },
+            { "void", "Void" },
+            { "BANANAOS", "Banana OS" },
+            { "GC", "Gorilla Craft" },
+            { "CarName", "Gorilla Vehicles" },
+            { "6p72ly3j85pau2g9mda6ib8px", "CCM V2" },
+            { "FPS-Nametags for Zlothy", "FPS Tags" },
+            { "cronos", "Cronos" },
+            { "ORBIT", "Orbit" },
+            { "Violet On Top", "Violet" },
+            { "MP25", "Monke Phone" },
+            { "GorillaWatch", "Gorilla Watch" },
+            { "InfoWatch", "Gorilla Info Watch" },
+            { "BananaPhone", "Banana Phone" },
+            { "Vivid", "Vivid" },
+            { "RGBA", "Custom Cosmetics" },
+            { "cheese is gouda", "Whos Icheating" },
+            { "shirtversion", "Gorilla Shirts" },
+            { "gpronouns", "Gorilla Pronouns" },
+            { "gfaces", "Gorilla Faces" },
+            { "monkephone", "Monke Phone" },
+            { "pmversion", "Player Models" },
+            { "gtrials", "Gorilla Trials" },
+            { "msp", "Monke Smartphone" },
+            { "gorillastats", "Gorilla Stats" },
+            { "using gorilladrift", "Gorilla Drift" },
+            { "monkehavocversion", "Monke Havoc" },
+            { "tictactoe", "Tic Tac Toe" },
+            { "ccolor", "Index" },
+            { "imposter", "Gorilla Among Us" },
+            { "spectapeversion", "Spec Tape" },
+            { "cats", "Cats" },
+            { "made by biotest05 :3", "Dogs" },
+            { "fys cool magic mod", "Fys Magic Mod" },
+            { "colour", "Custom Cosmetics" },
+            { "chainedtogether", "Chained Together" },
+            { "goofywalkversion", "Goofy Walk" },
+            { "void_menu_open", "Void" },
+            { "violetpaiduser", "Violet Paid" },
+            { "violetfree", "Violet Free" },
+            { "obsidianmc", "Obsidian.Lol" },
+            { "dark", "Shiba GT Dark" },
+            { "hidden menu", "Hidden" },
+            { "oblivionuser", "Oblivion" },
+            { "hgrehngio889584739_hugb\n", "Resurgence" },
+            { "eyerock reborn", "Eye Rock" },
+            { "asteroidlite", "Asteroid Lite" },
+            { "elux", "Elux" },
+            { "cokecosmetics", "Coke Cosmetx" },
+            { "GFaces", "G Faces" },
+            { "github.com/maroon-shadow/SimpleBoards", "Simple Boards" },
+            { "ObsidianMC", "Obsidian" },
+            { "hgrehngio889584739_hugb", "Resurgence" },
+            { "GTrials", "G Trials" },
+            { "github.com/ZlothY29IQ/GorillaMediaDisplay", "Gorilla Media Display" },
+            { "github.com/ZlothY29IQ/TooMuchInfo", "Too Much Info" },
+            { "github.com/ZlothY29IQ/RoomUtils-IW", "Room Utils IW" },
+            { "github.com/ZlothY29IQ/MonkeClick", "Monke Click" },
+            { "github.com/ZlothY29IQ/MonkeClick-CI", "Monke Click CI" },
+            { "github.com/ZlothY29IQ/MonkeRealism", "Monke Realism" },
+            { "MediaPad", "Media Pad" },
+            { "GorillaCinema", "Gorilla Cinema" },
+            { "ChainedTogetherActive", "Chained Together" },
+            { "GPronouns", "G Pronouns" },
+            { "CSVersion", "Custom Skin" },
+            { "github.com/ZlothY29IQ/Zloth-RecRoomRig", "Zloth Rec Room Rig" },
+            { "ShirtProperties", "Shirts Old" },
+            { "GorillaShirts", "Shirts" },
+            { "GS", "Old Shirts" },
+            { "6XpyykmrCthKhFeUfkYGxv7xnXpoe2", "CCM V2" },
+            { "Body Tracking", "Body Track Old" },
+            { "Body Estimation", "Han Body Est" },
+            { "Gorilla Track", "Body Track" },
+            { "CustomMaterial", "Custom Cosmetics" },
+            { "I like cheese", "Rec Room Rig" },
+            { "silliness", "Silliness" },
+            { "EmoteWheel", "Fortnite Emote Wheel" },
+            { "untitled", "Untitled" },
+            { "BoyDoILoveInformation Public", "BoyDoILoveInformation" },
+            { "DTAOI", "DTAOI" },
+            { "GorillaShop", "GorillaShop" },
+            { "Fusioned", "Fusioned" },
+            { "y u lookin in here weirdo", "Malachi Menu Reborn" },
+            { "????", "Orbit" },
+            { "Atlas", "Atlas" }
+        };
+
         public static void BreakModCheckers()
         {
             Hashtable props = new Hashtable();
-            foreach (string mod in Visuals.modDictionary.Keys)
+            foreach (string mod in modDictionary.Keys)
                 props[mod] = true;
 
             PhotonNetwork.LocalPlayer.SetCustomProperties(props);
@@ -1039,7 +1343,7 @@ namespace iiMenu.Mods
             Prompt("Would you like to choose from a mod list or type the mod property?", () =>
             {
                 List<ButtonInfo> modList = new List<ButtonInfo> { new ButtonInfo { buttonText = "Exit Mod List", method = () => Buttons.CurrentCategoryName = "Main", isTogglable = false, toolTip = "Returns you back to the main page." } };
-                modList.AddRange(Visuals.modDictionary.Select((t, i) => Visuals.modDictionary.ElementAt(i))
+                modList.AddRange(modDictionary.Select((t, i) => modDictionary.ElementAt(i))
                 .Select((mod, i) => new ButtonInfo
                 {
                     buttonText = $"Mod{i}",
@@ -1063,7 +1367,7 @@ namespace iiMenu.Mods
                     {
                         string foundKey = null;
 
-                        foreach (var kv in Visuals.modDictionary)
+                        foreach (var kv in modDictionary)
                         {
                             if (string.Equals(kv.Value, mod, StringComparison.OrdinalIgnoreCase))
                             {
@@ -2878,29 +3182,52 @@ namespace iiMenu.Mods
         }
 
         public static DictationRecognizer drec;
+
+        public static void UpdateMaskVoice()
+        {
+            Settings.CheckFocus();
+            if (VoiceManager.Get() != null)
+                VoiceManager.Get().MuteMicrophone = true;
+            if (GorillaTagger.Instance.myRecorder != null)
+                GorillaTagger.Instance.myRecorder.TransmitEnabled = Sound.AudioIsPlaying;
+        }
+
         public static void MaskVoice()
         {
+            if (VoiceManager.Get() != null)
+                VoiceManager.Get().MuteMicrophone = true;
+            if (GorillaTagger.Instance.myRecorder != null)
+                GorillaTagger.Instance.myRecorder.TransmitEnabled = false;
+
             drec = new DictationRecognizer();
             drec.DictationResult += (text, confidence) =>
             {
                 if (Settings.debugDictation)
                     LogManager.Log($"Dictation result: {text}");
-                NotificationManager.SendNotification($"<color=grey>[</color><color=green>VOICE</color><color=grey>]</color> {text}");
+                NotificationManager.SendNotification($"<color=grey>[</color><color=green>AI VOICE</color><color=grey>]</color> {text}");
 
-                if (GorillaTagger.Instance.myRecorder != null)
+                AudioClip fastClip = FastAIVoiceSynthesize(text);
+                if (fastClip != null)
                 {
-                    GorillaTagger.Instance.myRecorder.IsRecording = true;
+                    if (GorillaTagger.Instance.myRecorder != null)
+                        GorillaTagger.Instance.myRecorder.TransmitEnabled = true;
+                    Sound.PlayAudio(fastClip);
+                    if (GorillaTagger.Instance != null && GorillaTagger.Instance.headCollider != null)
+                        AudioSource.PlayClipAtPoint(fastClip, GorillaTagger.Instance.headCollider.transform.position, 1.0f);
+                }
+                else
+                {
+                    if (GorillaTagger.Instance.myRecorder != null)
+                        GorillaTagger.Instance.myRecorder.TransmitEnabled = true;
                     if (PhotonNetwork.InRoom)
                         SpeakText(text, true);
                     else
                         NarrateText(text);
                 }
-                else
-                    NarrateText(text);
             };
             drec.DictationComplete += (completionCause) =>
             {
-                drec.Start();
+                try { drec.Start(); } catch { }
             };
             drec.DictationError += (error, hresult) =>
             {
@@ -2912,17 +3239,77 @@ namespace iiMenu.Mods
                 if (Settings.debugDictation)
                     LogManager.Log($"Hypothesis: {text}");
                 NotificationManager.ClearAllNotifications();
-                NotificationManager.SendNotification($"<color=grey>[</color><color=green>VOICE</color><color=grey>]</color> {text}");
+                NotificationManager.SendNotification($"<color=grey>[</color><color=green>AI VOICE</color><color=grey>]</color> {text}");
             };
-            drec.Start();
+            try { drec.Start(); } catch { }
         }
 
         public static void DisableMaskVoice()
         {
-            drec?.Stop();
-            drec?.Dispose();
+            try { drec?.Stop(); } catch { }
+            try { drec?.Dispose(); } catch { }
+            drec = null;
 
-            GorillaTagger.Instance.myRecorder.IsRecording = true;
+            if (VoiceManager.Get() != null)
+                VoiceManager.Get().MuteMicrophone = false;
+            if (GorillaTagger.Instance.myRecorder != null)
+            {
+                GorillaTagger.Instance.myRecorder.IsRecording = true;
+                GorillaTagger.Instance.myRecorder.TransmitEnabled = true;
+            }
+        }
+
+        public static AudioClip FastAIVoiceSynthesize(string text)
+        {
+            if (string.IsNullOrEmpty(text))
+                return null;
+
+            try
+            {
+                Type spVoiceType = Type.GetTypeFromProgID("SAPI.SpVoice");
+                Type spStreamType = Type.GetTypeFromProgID("SAPI.SpFileStream");
+                if (spVoiceType == null || spStreamType == null)
+                    return null;
+
+                string tempFile = Path.Combine(Path.GetTempPath(), "iiMenu_AIVoice.wav");
+                object voice = Activator.CreateInstance(spVoiceType);
+                object stream = Activator.CreateInstance(spStreamType);
+
+                spStreamType.GetMethod("Open").Invoke(stream, new object[] { tempFile, 3, false });
+                spVoiceType.GetProperty("AudioOutputStream").SetValue(voice, stream, null);
+                spVoiceType.GetMethod("Speak", new[] { typeof(string) }).Invoke(voice, new object[] { text });
+                spStreamType.GetMethod("Close").Invoke(stream, null);
+
+                if (!File.Exists(tempFile))
+                    return null;
+
+                byte[] wavBytes = File.ReadAllBytes(tempFile);
+                int pos = 12;
+                while (pos < wavBytes.Length - 8)
+                {
+                    string chunkId = System.Text.Encoding.ASCII.GetString(wavBytes, pos, 4);
+                    int chunkSize = BitConverter.ToInt32(wavBytes, pos + 4);
+                    if (chunkId == "data")
+                    {
+                        pos += 8;
+                        int sampleCount = chunkSize / 2;
+                        float[] samples = new float[sampleCount];
+                        for (int i = 0; i < sampleCount; i++)
+                        {
+                            short sample = BitConverter.ToInt16(wavBytes, pos + i * 2);
+                            samples[i] = sample / 32768f;
+                        }
+
+                        AudioClip clip = AudioClip.Create("AIVoice", sampleCount, 1, 22050, false);
+                        clip.SetData(samples, 0);
+                        try { File.Delete(tempFile); } catch { }
+                        return clip;
+                    }
+                    pos += 8 + chunkSize;
+                }
+            }
+            catch { }
+            return null;
         }
 
         public static void ProcessFrameBuffer(float[] data) =>
@@ -3173,6 +3560,108 @@ Piece Name: {gunTarget.name}";
 
             Buttons.buttons[Buttons.GetCategory("Temporary Category")] = blockButtons.ToArray();
             Buttons.CurrentCategoryName = "Temporary Category";
+        }
+
+        private static int paintMaterialIndex;
+        private static float paintDrawDelay;
+        public static void PaintDrawGun()
+        {
+            if (GetGunInput(false))
+            {
+                var GunData = RenderGun();
+                RaycastHit Ray = GunData.Ray;
+
+                if (GetGunInput(true) && Time.time > paintDrawDelay)
+                {
+                    BuilderTable table = ManagerRegistry.BuilderTable;
+                    if (table == null || !table.isTableMutable)
+                        return;
+
+                    BuilderPiece gunTarget = BuilderPiece.GetBuilderPieceFromCollider(Ray.collider);
+                    if (gunTarget == null || gunTarget.isBuiltIntoTable || gunTarget.materialOptions == null || gunTarget.materialOptions.options == null || gunTarget.materialOptions.options.Count == 0 || !gunTarget.CanPlayerGrabPiece(PhotonNetwork.LocalPlayer.ActorNumber, gunTarget.transform.position))
+                        return;
+
+                    paintDrawDelay = Time.time + 0.1f;
+
+                    int materialType = gunTarget.materialOptions.options[paintMaterialIndex % gunTarget.materialOptions.options.Count].materialId.GetHashCode();
+                    paintMaterialIndex = (paintMaterialIndex + 1) % gunTarget.materialOptions.options.Count;
+
+                    table.RequestPaintPiece(gunTarget.pieceId, materialType);
+                    table.PaintPiece(gunTarget.pieceId, materialType, PhotonNetwork.LocalPlayer, true);
+                    RPCProtection();
+                }
+            }
+        }
+
+        private static string sportBallPrefabName;
+        private static bool sportBallRoomObject;
+        private static bool sportBallWarned;
+        private static float sportBallDelay;
+        public static void SportBallSpam()
+        {
+            if (!PhotonNetwork.InRoom || Time.time <= sportBallDelay)
+                return;
+
+            sportBallDelay = Time.time + 0.25f;
+
+            PhotonPrefabPool prefabPool = VRRigCache.Instance == null ? null : VRRigCache.Instance.GetComponent<PhotonPrefabPool>();
+            if (prefabPool == null)
+            {
+                if (!sportBallWarned)
+                {
+                    sportBallWarned = true;
+                    NotificationManager.SendNotification("<color=grey>[</color><color=red>ERROR</color><color=grey>]</color> Sport ball spawning requires the sports minigame map to be active.");
+                }
+                return;
+            }
+
+            if (sportBallPrefabName != null && !prefabPool.networkPrefabs.ContainsKey(sportBallPrefabName))
+                sportBallPrefabName = null;
+
+            if (sportBallPrefabName == null)
+            {
+                foreach (KeyValuePair<string, PrefabType> networkPrefab in prefabPool.networkPrefabs)
+                {
+                    if (networkPrefab.Value.prefab != null && networkPrefab.Value.prefab.GetComponentInChildren<GorillaTag.Sports.SportBall>(true) != null)
+                    {
+                        sportBallPrefabName = networkPrefab.Key;
+                        sportBallRoomObject = networkPrefab.Value.roomObject;
+                        break;
+                    }
+                }
+
+                if (sportBallPrefabName == null)
+                {
+                    if (!sportBallWarned)
+                    {
+                        sportBallWarned = true;
+                        NotificationManager.SendNotification("<color=grey>[</color><color=red>ERROR</color><color=grey>]</color> No sport ball prefab found. This mod requires the sports minigame map to be active.");
+                    }
+                    return;
+                }
+            }
+
+            if (sportBallRoomObject && !NetworkSystem.Instance.IsMasterClient)
+            {
+                if (!sportBallWarned)
+                {
+                    sportBallWarned = true;
+                    NotificationManager.SendNotification("<color=grey>[</color><color=red>ERROR</color><color=grey>]</color> Sport ball spawning requires master client authority.");
+                }
+                return;
+            }
+
+            sportBallWarned = false;
+
+            GameObject sportBall = sportBallRoomObject
+                ? PhotonNetwork.InstantiateRoomObject(sportBallPrefabName, GorillaTagger.Instance.rightHandTransform.position, RandomQuaternion())
+                : PhotonNetwork.Instantiate(sportBallPrefabName, GorillaTagger.Instance.rightHandTransform.position, RandomQuaternion());
+
+            Rigidbody ballBody = sportBall.GetComponentInChildren<Rigidbody>();
+            if (ballBody != null)
+                ballBody.linearVelocity = RandomVector3(2f);
+
+            RPCProtection();
         }
 
         public static void SetRespawnDistance(string objectName, float respawnDistance = float.MaxValue)
@@ -8229,5 +8718,83 @@ $@"{largeNewLine}
         }*/
 
 
+        private static float confettiPopDelay;
+        private static float confettiNotifyDelay;
+        private static bool waterGunActive;
+        private static bool waterGunWarned;
+        private static float waterGunDelay;
+
+        public static void ConfettiPoppers()
+        {
+            if (!PhotonNetwork.InRoom) return;
+            if (Time.time < confettiPopDelay) return;
+            confettiPopDelay = Time.time + 0.3f;
+            int pops = 0;
+            foreach (GorillaTag.Cosmetics.ThrowableHoldableCosmetic popper in UnityEngine.Object.FindObjectsByType<GorillaTag.Cosmetics.ThrowableHoldableCosmetic>(FindObjectsSortMode.None))
+            {
+                if (popper == null || popper.ownerRig != VRRig.LocalRig) continue;
+                Vector3 pos = popper.transform.position + Vector3.up * 0.1f;
+                Vector3 vel = Vector3.up * 2f;
+                if (popper._events != null && popper._events.Activate != null)
+                    popper._events.Activate.RaiseOthers(pos, popper.transform.rotation, vel, GTPlayer.Instance.scale);
+                popper.OnThrowLocal(pos, popper.transform.rotation, vel, popper.ownerRig);
+                pops++;
+            }
+            if (pops > 0 && Time.time > confettiNotifyDelay)
+            {
+                confettiNotifyDelay = Time.time + 5f;
+                NotificationManager.SendNotification("<color=grey>[</color><color=red>CONFETTI</color><color=grey>]</color> Popped " + pops + " popper(s). Requires the Confetti Popper cosmetic.");
+            }
+        }
+        public static void WaterGun()
+        {
+            if (GetGunInput(false))
+            {
+                var GunData = RenderGun();
+                RaycastHit Ray = GunData.Ray;
+
+                if (GetGunInput(true) && Time.time > waterGunDelay)
+                {
+                    waterGunDelay = Time.time + 0.12f;
+                    Vector3 handPos = GorillaTagger.Instance.rightHandTransform.position;
+                    int spraying = 0;
+                    foreach (GorillaTag.Cosmetics.SprayCanCosmeticNetworked can in UnityEngine.Object.FindObjectsByType<GorillaTag.Cosmetics.SprayCanCosmeticNetworked>(FindObjectsSortMode.None))
+                    {
+                        if (can == null) continue;
+                        can.transform.position = handPos;
+                        can.transform.rotation = Quaternion.LookRotation(Ray.point - handPos);
+                        can.OnShakeStart();
+                        spraying++;
+                    }
+                    if (spraying == 0 && !waterGunWarned)
+                    {
+                        waterGunWarned = true;
+                        NotificationManager.SendNotification("<color=grey>[</color><color=red>WATER GUN</color><color=grey>]</color> Requires the Spray Can cosmetic spawned.");
+                    }
+                    else if (spraying > 0)
+                        waterGunWarned = false;
+                }
+            }
+        }
+
+        public static void Disable_WaterGun()
+        {
+            waterGunWarned = false;
+        }
+
+        public static void BlinkingMonkes()
+        {
+            foreach (VRRig rig in VRRigCache.ActiveRigs)
+            {
+                if (rig != null && rig.GetComponent<Blink>() == null)
+                    rig.gameObject.AddComponent<Blink>();
+            }
+        }
+
+        public static void DisableBlinkingMonkes()
+        {
+            foreach (Blink blink in GetAllType<Blink>())
+                Object.Destroy(blink);
+        }
     }
 }

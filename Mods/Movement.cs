@@ -387,6 +387,26 @@ namespace iiMenu.Mods
             Buttons.GetIndex("Change Fly Speed").overlapText = "Change Fly Speed <color=grey>[</color><color=green>" + speedNames[flySpeedCycle] + "</color><color=grey>]</color>";
         }
 
+        public static int autoBranchSpeedCycle = 1;
+        public static float autoBranchSpeed = 10f;
+        public static void ChangeAutoBranchSpeed(bool positive = true)
+        {
+            float[] speedamounts = { 5f, 10f, 15f, 20f, 30f };
+            string[] speedNames = { "Slow", "Normal", "Fast", "Faster", "Extreme" };
+
+            if (positive)
+                autoBranchSpeedCycle++;
+            else
+                autoBranchSpeedCycle--;
+
+            autoBranchSpeedCycle %= speedamounts.Length;
+            if (autoBranchSpeedCycle < 0)
+                autoBranchSpeedCycle = speedamounts.Length - 1;
+
+            autoBranchSpeed = speedamounts[autoBranchSpeedCycle];
+            Buttons.GetIndex("Change Auto Branch Speed").overlapText = "Change Auto Branch Speed <color=grey>[</color><color=green>" + speedNames[autoBranchSpeedCycle] + "</color><color=grey>]</color>";
+        }
+
         public static int playspaceAbuseIndex;
         public static void ChangePlayspaceAbuseSpeed(bool positive = true)
         {
@@ -443,6 +463,34 @@ namespace iiMenu.Mods
             }
         }
 
+        private static bool alwaysZiplineActive;
+
+        public static void Enable_AlwaysZipline() =>
+            alwaysZiplineActive = true;
+
+        public static void Disable_AlwaysZipline() =>
+            alwaysZiplineActive = false;
+
+        private static void AlwaysZiplineUpdate()
+        {
+            if (!leftGrab)
+                return;
+
+            Vector3 direction = GorillaTagger.Instance.headCollider.transform.forward;
+            direction.y = 0f;
+            direction.Normalize();
+
+            GorillaTagger.Instance.rigidbody.linearVelocity = direction * 15f + Vector3.down * 1f;
+        }
+
+        public static void AlwaysZiplineToggle()
+        {
+            if (!alwaysZiplineActive || GTPlayer.Instance == null)
+                return;
+
+            AlwaysZiplineUpdate();
+        }
+
         public static bool noclip;
         private static bool noclipHeld;
         private static bool noclipFlyHeld;
@@ -462,20 +510,84 @@ namespace iiMenu.Mods
 
             if (shouldNoclip)
             {
-                noclipLocomotionLayers = GTPlayer.Instance.locomotionEnabledLayers;
-                noclipLocomotionLayersSaved = true;
-
+                if (!noclipLocomotionLayersSaved || noclipLocomotionLayers == 0)
+                {
+                    noclipLocomotionLayers = GTPlayer.Instance.locomotionEnabledLayers != 0 ? GTPlayer.Instance.locomotionEnabledLayers : (LayerMask)NoInvisLayerMask();
+                    noclipLocomotionLayersSaved = true;
+                }
                 GTPlayer.Instance.locomotionEnabledLayers = 0;
+                foreach (Collider c in GTPlayer.Instance.GetComponentsInChildren<Collider>())
+                    c.enabled = false;
+                if (GorillaTagger.Instance != null)
+                {
+                    foreach (Collider c in GorillaTagger.Instance.GetComponentsInChildren<Collider>())
+                        c.enabled = false;
+                }
+                UpdateClipColliders(false);
             }
-            else if (noclipLocomotionLayersSaved)
+            else
             {
+                LayerMask restoreMask = noclipLocomotionLayersSaved && noclipLocomotionLayers != 0 ? noclipLocomotionLayers : (LayerMask)NoInvisLayerMask();
                 noclipLocomotionLayersSaved = false;
-                GTPlayer.Instance.locomotionEnabledLayers = noclipLocomotionLayers;
+                GTPlayer.Instance.locomotionEnabledLayers = restoreMask;
+                foreach (Collider c in GTPlayer.Instance.GetComponentsInChildren<Collider>())
+                    c.enabled = true;
+                if (GorillaTagger.Instance != null)
+                {
+                    foreach (Collider c in GorillaTagger.Instance.GetComponentsInChildren<Collider>())
+                        c.enabled = true;
+                }
+                UpdateClipColliders(true);
             }
         }
 
-        public static void DisableNoclip() =>
+        public static void DisableNoclip()
+        {
             SetNoclip(false, noclipFlyHeld);
+            if (GorillaTagger.Instance?.rigidbody != null)
+                GorillaTagger.Instance.rigidbody.useGravity = true;
+        }
+
+        public static void DisableConstantNoclip()
+        {
+            SetNoclip(false, noclipFlyHeld);
+            if (GorillaTagger.Instance?.rigidbody != null)
+                GorillaTagger.Instance.rigidbody.useGravity = true;
+        }
+
+        public static void ConstantNoclip()
+        {
+            SetNoclip(true, noclipFlyHeld);
+            if (GorillaTagger.Instance?.rigidbody != null && GorillaTagger.Instance.rigidbody.linearVelocity.y < 0f)
+                GorillaTagger.Instance.rigidbody.linearVelocity = new Vector3(GorillaTagger.Instance.rigidbody.linearVelocity.x, 0f, GorillaTagger.Instance.rigidbody.linearVelocity.z);
+            if (GTPlayer.Instance == null)
+                return;
+            Vector3 moveDir = Vector3.zero;
+            Transform head = GorillaTagger.Instance?.headCollider != null ? GorillaTagger.Instance.headCollider.transform : GTPlayer.Instance.transform;
+            if (Mathf.Abs(leftJoystick.x) > 0.2f || Mathf.Abs(leftJoystick.y) > 0.2f || Mathf.Abs(rightJoystick.y) > 0.2f)
+                moveDir += head.forward * leftJoystick.y + head.right * leftJoystick.x + Vector3.up * rightJoystick.y;
+            if (Keyboard.current != null)
+            {
+                if (Keyboard.current.wKey.isPressed)
+                    moveDir += head.forward;
+                if (Keyboard.current.sKey.isPressed)
+                    moveDir -= head.forward;
+                if (Keyboard.current.dKey.isPressed)
+                    moveDir += head.right;
+                if (Keyboard.current.aKey.isPressed)
+                    moveDir -= head.right;
+                if (Keyboard.current.spaceKey.isPressed)
+                    moveDir += Vector3.up;
+                if (Keyboard.current.leftCtrlKey.isPressed)
+                    moveDir -= Vector3.up;
+            }
+            if (moveDir != Vector3.zero)
+            {
+                GTPlayer.Instance.transform.position += moveDir.normalized * (Time.deltaTime * FlySpeed);
+                if (GorillaTagger.Instance?.rigidbody != null)
+                    GorillaTagger.Instance.rigidbody.linearVelocity = Vector3.zero;
+            }
+        }
 
         public static void DisableNoclipFly() =>
             SetNoclip(noclipHeld, false);
@@ -707,8 +819,8 @@ namespace iiMenu.Mods
             if (fastRopesInt < 0)
                 fastRopesInt = speedamounts.Length - 1;
 
-            RopePatch.amplifier = speedamounts[driveInt];
-            Buttons.GetIndex("Change Fast Ropes Speed").overlapText = "Change Fast Ropes Speed <color=grey>[</color><color=green>" + speedNames[driveInt] + "</color><color=grey>]</color>";
+            RopePatch.amplifier = speedamounts[fastRopesInt];
+            Buttons.GetIndex("Change Fast Ropes Speed").overlapText = "Change Fast Ropes Speed <color=grey>[</color><color=green>" + speedNames[fastRopesInt] + "</color><color=grey>]</color>";
         }
 
 
@@ -1686,7 +1798,7 @@ namespace iiMenu.Mods
             }
 
             if (isOnBranch)
-                GorillaTagger.Instance.rigidbody.linearVelocity = GTPlayer.Instance.headCollider.transform.forward * 10f;
+                GorillaTagger.Instance.rigidbody.linearVelocity = GTPlayer.Instance.headCollider.transform.forward * autoBranchSpeed;
 
             switch (isOnBranch)
             {
@@ -2923,8 +3035,15 @@ namespace iiMenu.Mods
         {
             bool gripNoclip = Buttons.GetIndex("Grip Noclip").enabled;
             bool constantNoclip = Buttons.GetIndex("Constant Noclip").enabled;
-
-            SetNoclip((gripNoclip ? rightGrab : rightTrigger > 0.5f) || constantNoclip, noclipFlyHeld);
+            if (constantNoclip)
+            {
+                ConstantNoclip();
+                return;
+            }
+            bool held = gripNoclip ? rightGrab : rightTrigger > 0.5f;
+            SetNoclip(held, noclipFlyHeld);
+            if (held && GorillaTagger.Instance?.rigidbody != null && GorillaTagger.Instance.rigidbody.linearVelocity.y < 0f)
+                GorillaTagger.Instance.rigidbody.linearVelocity = new Vector3(GorillaTagger.Instance.rigidbody.linearVelocity.x, 0f, GorillaTagger.Instance.rigidbody.linearVelocity.z);
         }
 
         public static readonly List<GameObject> forestColliders = new List<GameObject>();
@@ -5017,8 +5136,51 @@ namespace iiMenu.Mods
             nextAirSwimLookup = 0f;
         }
 
-        public static void SetSwimSpeed(float speed = 3f) =>
-            GTPlayer.Instance.swimmingParamsList.ForEach(s => s.swimmingVelocityOutOfWaterDrainRate = speed);
+        private static List<float> swimBaseDampingHalfLife;
+        private static List<float> swimUnderWaterDampingHalfLife;
+        private static List<float> swimDrainRates;
+        private static float nextSwimSpeedUpdate;
+
+        public static void SetSwimSpeed(float speed = 3f)
+        {
+            if (speed <= 3f)
+            {
+                if (swimBaseDampingHalfLife == null)
+                    return;
+
+                for (int i = 0; i < GTPlayer.Instance.swimmingParamsList.Count && i < swimBaseDampingHalfLife.Count; i++)
+                {
+                    GTPlayer.Instance.swimmingParamsList[i].baseUnderWaterDampingHalfLife = swimBaseDampingHalfLife[i];
+                    GTPlayer.Instance.swimmingParamsList[i].swimUnderWaterDampingHalfLife = swimUnderWaterDampingHalfLife[i];
+                    GTPlayer.Instance.swimmingParamsList[i].swimmingVelocityOutOfWaterDrainRate = swimDrainRates[i];
+                }
+
+                swimBaseDampingHalfLife = null;
+                swimUnderWaterDampingHalfLife = null;
+                swimDrainRates = null;
+                nextSwimSpeedUpdate = 0f;
+                return;
+            }
+
+            if (Time.time < nextSwimSpeedUpdate)
+                return;
+
+            nextSwimSpeedUpdate = Time.time + 1f;
+
+            if (swimBaseDampingHalfLife == null)
+            {
+                swimBaseDampingHalfLife = GTPlayer.Instance.swimmingParamsList.Select(s => s.baseUnderWaterDampingHalfLife).ToList();
+                swimUnderWaterDampingHalfLife = GTPlayer.Instance.swimmingParamsList.Select(s => s.swimUnderWaterDampingHalfLife).ToList();
+                swimDrainRates = GTPlayer.Instance.swimmingParamsList.Select(s => s.swimmingVelocityOutOfWaterDrainRate).ToList();
+            }
+
+            for (int i = 0; i < GTPlayer.Instance.swimmingParamsList.Count && i < swimBaseDampingHalfLife.Count; i++)
+            {
+                GTPlayer.Instance.swimmingParamsList[i].baseUnderWaterDampingHalfLife = swimBaseDampingHalfLife[i] * 0.05f;
+                GTPlayer.Instance.swimmingParamsList[i].swimUnderWaterDampingHalfLife = swimUnderWaterDampingHalfLife[i] * 0.05f;
+                GTPlayer.Instance.swimmingParamsList[i].swimmingVelocityOutOfWaterDrainRate = swimDrainRates[i] * 0.1f;
+            }
+        }
 
         private static List<float> waterSurfaceJumpAmount;
         private static List<float> waterSurfaceJumpMaxSpeed;
@@ -5043,6 +5205,38 @@ namespace iiMenu.Mods
                     GTPlayer.Instance.swimmingParamsList[i].waterSurfaceJumpMaxSpeed = waterSurfaceJumpMaxSpeed[i];
                 }
             }
+        }
+
+        private static float nextUnderwaterVisionCheck;
+        private static readonly List<UnderwaterCameraEffect> disabledUnderwaterEffects = new List<UnderwaterCameraEffect>();
+
+        public static void Enable_UnderwaterVision()
+        {
+            if (Time.time < nextUnderwaterVisionCheck)
+                return;
+
+            nextUnderwaterVisionCheck = Time.time + 1f;
+
+            foreach (UnderwaterCameraEffect underwaterEffect in Object.FindObjectsByType<UnderwaterCameraEffect>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+            {
+                if (underwaterEffect.enabled)
+                {
+                    underwaterEffect.enabled = false;
+                    disabledUnderwaterEffects.Add(underwaterEffect);
+                }
+            }
+        }
+
+        public static void Disable_UnderwaterVision()
+        {
+            foreach (UnderwaterCameraEffect underwaterEffect in disabledUnderwaterEffects)
+            {
+                if (underwaterEffect != null)
+                    underwaterEffect.enabled = true;
+            }
+
+            disabledUnderwaterEffects.Clear();
+            nextUnderwaterVisionCheck = 0f;
         }
 
         public static void PiggybackGun()
@@ -6651,6 +6845,197 @@ namespace iiMenu.Mods
                 multiplicationAmount = 1280;
 
             Buttons.GetIndex("Knockback Multiplication Amount").overlapText = "Knockback Multiplication Amount <color=grey>[</color><color=green>" + (multiplicationAmount / 10f) + "</color><color=grey>]</color>";
+        }
+
+        private static float cannonballForce;
+        private static float cannonballNextLaunch;
+        private static float cannonballNextIncrease;
+
+        public static void Enable_Cannonball()
+        {
+            cannonballForce = 10f;
+            cannonballNextLaunch = 0f;
+            cannonballNextIncrease = Time.time + 0.5f;
+        }
+
+        public static void CannonballUpdate()
+        {
+            if (Time.time >= cannonballNextIncrease)
+            {
+                cannonballForce = Mathf.Min(cannonballForce + 2f, 80f);
+                cannonballNextIncrease = Time.time + 0.5f;
+            }
+
+            if (Time.time >= cannonballNextLaunch)
+            {
+                cannonballNextLaunch = Time.time + 0.1f;
+
+                Vector3 direction = GorillaTagger.Instance.headCollider.transform.forward;
+                GorillaTagger.Instance.rigidbody.linearVelocity = direction * cannonballForce;
+            }
+        }
+
+        public static void Disable_Cannonball() =>
+            cannonballForce = 0f;
+
+        private static float ladderJumpSpeed;
+        private static bool ladderJumpSpeedSaved;
+
+        public static void Enable_LadderAnywhere()
+        {
+            if (GTPlayer.Instance == null)
+                return;
+
+            ladderJumpSpeed = GTPlayer.Instance.maxJumpSpeed;
+            ladderJumpSpeedSaved = true;
+            GTPlayer.Instance.maxJumpSpeed = 0f;
+        }
+
+        public static void LadderAnywhereUpdate()
+        {
+            if (GTPlayer.Instance == null || !(leftGrab || rightGrab))
+                return;
+
+            Vector3 leftVelocity = GTPlayer.Instance.LeftHand.velocityTracker.GetAverageVelocity(true, 0);
+            Vector3 rightVelocity = GTPlayer.Instance.RightHand.velocityTracker.GetAverageVelocity(true, 0);
+
+            ZeroGravity();
+            GorillaTagger.Instance.rigidbody.linearVelocity = (leftVelocity + rightVelocity) / 2f;
+        }
+
+        public static void Disable_LadderAnywhere()
+        {
+            if (GTPlayer.Instance != null && ladderJumpSpeedSaved)
+            {
+                ladderJumpSpeedSaved = false;
+                GTPlayer.Instance.maxJumpSpeed = ladderJumpSpeed;
+            }
+        }
+
+        public static bool handcuffActive;
+        public static VRRig handcuffTarget;
+
+        public static void Enable_Handcuff()
+        {
+            handcuffActive = true;
+            NotificationManager.SendNotification("<color=grey>[</color><color=green>HANDCUFF</color><color=grey>]</color> Handcuff armed - shoot a player to cuff them to you");
+        }
+
+        public static void HandcuffUpdate()
+        {
+            if (!handcuffActive)
+                return;
+
+            if (handcuffTarget == null)
+            {
+                if (GetGunInput(false))
+                {
+                    var GunData = RenderGun();
+                    RaycastHit Ray = GunData.Ray;
+
+                    if (GetGunInput(true))
+                    {
+                        VRRig gunTarget = GetRigFromHit(Ray);
+                        if (gunTarget && !gunTarget.IsLocal())
+                        {
+                            gunLocked = true;
+                            lockTarget = gunTarget;
+                            handcuffTarget = gunTarget;
+                        }
+                    }
+                }
+            }
+            else
+            {
+                Vector3 myPos = GorillaTagger.Instance.bodyCollider.transform.position;
+                Vector3 targetPos = handcuffTarget.transform.position;
+                float distance = Vector3.Distance(myPos, targetPos);
+
+                if (distance > 3f)
+                {
+                    GorillaTagger.Instance.rigidbody.linearVelocity = (targetPos - myPos).normalized * (distance * 2f);
+                    handcuffTarget.transform.position = myPos + (targetPos - myPos).normalized * 3f;
+                }
+            }
+        }
+
+        public static void Disable_Handcuff()
+        {
+            handcuffActive = false;
+            handcuffTarget = null;
+            gunLocked = false;
+            lockTarget = null;
+            NotificationManager.SendNotification("<color=grey>[</color><color=red>HANDCUFF</color><color=grey>]</color> Handcuff removed");
+        }
+
+        public static readonly Queue<(Vector3 pos, Quaternion rot, Vector3 vel)> timeRewindBuffer = new Queue<(Vector3 pos, Quaternion rot, Vector3 vel)>();
+        public static bool timeRewindReplaying;
+        public static float timeRewindDelay;
+        private static bool timeRewindWasGrabbing;
+        private static List<(Vector3 pos, Quaternion rot, Vector3 vel)> timeRewindReplayList;
+        private static int timeRewindReplayIndex;
+
+        public static void Enable_TimeRewind()
+        {
+            timeRewindBuffer.Clear();
+            timeRewindReplaying = false;
+            timeRewindWasGrabbing = false;
+            timeRewindReplayList = null;
+            timeRewindReplayIndex = -1;
+        }
+
+        public static void TimeRewindUpdate()
+        {
+            if (GorillaTagger.Instance == null || GorillaTagger.Instance.rigidbody == null)
+                return;
+
+            Rigidbody rigidbody = GorillaTagger.Instance.rigidbody;
+
+            if (timeRewindReplaying)
+            {
+                for (int i = 0; i < 10 && timeRewindReplayIndex >= 0; i++)
+                {
+                    var (pos, rot, _) = timeRewindReplayList[timeRewindReplayIndex];
+                    timeRewindReplayIndex--;
+
+                    rigidbody.position = pos;
+                    rigidbody.rotation = rot;
+                    rigidbody.linearVelocity = Vector3.zero;
+                }
+
+                if (timeRewindReplayIndex < 0)
+                {
+                    timeRewindReplaying = false;
+                    timeRewindDelay = Time.time + 0.3f;
+                    timeRewindBuffer.Clear();
+                    timeRewindReplayList = null;
+                }
+
+                return;
+            }
+
+            timeRewindBuffer.Enqueue((rigidbody.position, rigidbody.rotation, rigidbody.linearVelocity));
+            while (timeRewindBuffer.Count > 90)
+                timeRewindBuffer.Dequeue();
+
+            bool pressed = rightGrab && !timeRewindWasGrabbing;
+            timeRewindWasGrabbing = rightGrab;
+
+            if (pressed && timeRewindBuffer.Count >= 10 && Time.time > timeRewindDelay)
+            {
+                timeRewindReplayList = timeRewindBuffer.ToList();
+                timeRewindReplayIndex = timeRewindReplayList.Count - 1;
+                timeRewindBuffer.Clear();
+                timeRewindReplaying = true;
+            }
+        }
+
+        public static void Disable_TimeRewind()
+        {
+            timeRewindBuffer.Clear();
+            timeRewindReplaying = false;
+            timeRewindReplayList = null;
+            timeRewindReplayIndex = -1;
         }
     }
 }

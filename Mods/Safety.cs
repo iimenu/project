@@ -1320,5 +1320,35 @@ namespace iiMenu.Mods
                 Debug.LogError($"[iimenu] Critical Error in PullYourID: {ex.Message}");
             }
         }
+
+        public static bool moduleHistoryLogEnabled;
+        public static readonly string ModuleHistoryPath = $"{PluginInfo.BaseDirectory}/ModuleHistory.log";
+
+        public static void LogModuleEvent(string action, string modName, string extra = null)
+        {
+            if (!moduleHistoryLogEnabled) return;
+            try
+            {
+                if (!Directory.Exists(PluginInfo.BaseDirectory))
+                    Directory.CreateDirectory(PluginInfo.BaseDirectory);
+                string room = (PhotonNetwork.InRoom && PhotonNetwork.CurrentRoom != null) ? PhotonNetwork.CurrentRoom.Name : "Not In Room";
+                string extraInfo = string.IsNullOrEmpty(extra) ? "" : $" ({extra})";
+                string entry = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] [{action}] {modName}{extraInfo} | Room: {room}\n";
+                File.AppendAllText(ModuleHistoryPath, entry);
+            }
+            catch { }
+        }
+
+        public static void ModuleHistoryLog()
+        {
+            moduleHistoryLogEnabled = true;
+            LogModuleEvent("LOGGING_STARTED", "Module History Log");
+        }
+
+        public static void DisableModuleHistoryLog()
+        {
+            LogModuleEvent("LOGGING_STOPPED", "Module History Log");
+            moduleHistoryLogEnabled = false;
+        }
     }
 }

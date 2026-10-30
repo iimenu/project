@@ -1075,11 +1075,17 @@ namespace iiMenu.Menu
                                 int categoryIndex = 0;
                                 foreach (ButtonInfo[] buttonList in Buttons.buttons)
                                 {
-                                    enabledMods.AddRange(buttonList.Where(v => v.enabled && !v.hideFromArraylist && (!hideSettings || !Buttons.categoryNames[categoryIndex].Contains("Settings")) && (!hideMacros || !Buttons.categoryNames[categoryIndex].Contains("Macro"))));
+                                    if (categoryIndex < Buttons.categoryNames.Length)
+                                    {
+                                        string catName = Buttons.categoryNames[categoryIndex];
+                                        enabledMods.AddRange(buttonList.Where(v => v.enabled && !v.hideFromArraylist && (!hideSettings || !catName.Contains("Settings")) && (!hideMacros || !catName.Contains("Macro"))));
+                                    }
                                     categoryIndex++;
                                 }
                                 enabledMods = enabledMods.OrderBy(v => v.overlapText ?? v.buttonText).ToList();
-                                enabledMods.Insert(0, Buttons.GetIndex("Exit Enabled Mods"));
+                                ButtonInfo exitBtn = Buttons.GetIndex("Exit Enabled Mods");
+                                if (exitBtn != null)
+                                    enabledMods.Insert(0, exitBtn);
                                 watchSortCache = enabledMods.ToArray();
                             }
 
@@ -1389,7 +1395,7 @@ namespace iiMenu.Menu
                             NotificationManager.SendNotification($"<color=grey>[</color><color=purple>BINDS</color><color=grey>]</color> Keybind timed out for <color=white>{pendingBindMod}</color>.");
                             pendingBindMod = null;
                         }
-                        else
+                        else if (!inTextInput && !isSearching)
                         {
                             bool bPressed = (Keyboard.current != null && Keyboard.current.bKey.isPressed) || UnityInput.Current.GetKey(KeyCode.B);
                             bool triggerHeld = leftJoystickClick || rightJoystickClick || bPressed;
@@ -1420,6 +1426,8 @@ namespace iiMenu.Menu
                                             }
                                             if (keyControl.keyCode == Key.B && !pendingBindTriggerReleased)
                                                 continue;
+                                            if (keyControl.keyCode == Key.Q && IsMenuOpenButton("Q"))
+                                                continue;
                                             detectedKey = keyControl.keyCode.ToString();
                                             break;
                                         }
@@ -1428,19 +1436,19 @@ namespace iiMenu.Menu
 
                                 if (string.IsNullOrEmpty(detectedKey) && (pendingBindTriggerReleased || (!leftJoystickClick && !rightJoystickClick)))
                                 {
-                                    if (rightPrimary) detectedKey = "A";
-                                    else if (rightSecondary && pendingBindTriggerReleased) detectedKey = "B";
-                                    else if (leftPrimary) detectedKey = "X";
-                                    else if (leftSecondary) detectedKey = "Y";
-                                    else if (leftGrab) detectedKey = "LG";
-                                    else if (rightGrab) detectedKey = "RG";
-                                    else if (leftTrigger > 0.65f) detectedKey = "LT";
-                                    else if (rightTrigger > 0.65f) detectedKey = "RT";
-                                    else if (leftJoystickClick && pendingBindTriggerReleased) detectedKey = "LJ";
-                                    else if (rightJoystickClick && pendingBindTriggerReleased) detectedKey = "RJ";
+                                    if (rightPrimary && !IsMenuOpenButton("A")) detectedKey = "A";
+                                    else if (rightSecondary && pendingBindTriggerReleased && !IsMenuOpenButton("B")) detectedKey = "B";
+                                    else if (leftPrimary && !IsMenuOpenButton("X")) detectedKey = "X";
+                                    else if (leftSecondary && !IsMenuOpenButton("Y")) detectedKey = "Y";
+                                    else if (leftGrab && !IsMenuOpenButton("LG")) detectedKey = "LG";
+                                    else if (rightGrab && !IsMenuOpenButton("RG")) detectedKey = "RG";
+                                    else if (leftTrigger > 0.65f && !IsMenuOpenButton("LT")) detectedKey = "LT";
+                                    else if (rightTrigger > 0.65f && !IsMenuOpenButton("RT")) detectedKey = "RT";
+                                    else if (leftJoystickClick && pendingBindTriggerReleased && !IsMenuOpenButton("LJ")) detectedKey = "LJ";
+                                    else if (rightJoystickClick && pendingBindTriggerReleased && !IsMenuOpenButton("RJ")) detectedKey = "RJ";
                                 }
 
-                                if (!string.IsNullOrEmpty(detectedKey))
+                                if (!string.IsNullOrEmpty(detectedKey) && !IsMenuOpenButton(detectedKey))
                                 {
                                     BindModToInput(pendingBindMod, detectedKey);
                                     pendingBindMod = null;
@@ -1449,43 +1457,46 @@ namespace iiMenu.Menu
                         }
                     }
 
-                    foreach (KeyValuePair<string, List<string>> binding in ModBindings)
+                    if (!inTextInput && !isSearching)
                     {
-                        string bindInput = binding.Key;
-                        List<string> boundMods = binding.Value;
-
-                        if (boundMods.Count <= 0) continue;
-
-                        bool bindValue = false;
-                        if (XRSettings.isDeviceActive && Inputs.TryGetValue(bindInput, out bool vrVal) && vrVal)
-                            bindValue = true;
-                        else if (Keyboard.current != null && Enum.TryParse<Key>(bindInput, true, out Key keyVal) && Keyboard.current[keyVal].isPressed)
-                            bindValue = true;
-                        else if (Enum.TryParse<KeyCode>(bindInput, true, out KeyCode kcVal) && UnityInput.Current.GetKey(kcVal))
-                            bindValue = true;
-                        else if (Inputs.TryGetValue(bindInput, out bool fallbackVal) && fallbackVal)
-                            bindValue = true;
-
-                        BindStates.TryGetValue(bindInput, out bool lastBindState);
-
-                        foreach (string modName in boundMods)
+                        foreach (KeyValuePair<string, List<string>> binding in ModBindings)
                         {
-                            ButtonInfo buttonInfo = Buttons.GetIndex(modName);
-                            if (buttonInfo == null) continue;
-                            buttonInfo.customBind = bindInput;
+                            string bindInput = binding.Key;
+                            List<string> boundMods = binding.Value;
 
-                            if (ToggleBindings || !buttonInfo.isTogglable)
+                            if (boundMods.Count <= 0 || IsMenuOpenButton(bindInput)) continue;
+
+                            bool bindValue = false;
+                            if (XRSettings.isDeviceActive && Inputs.TryGetValue(bindInput, out bool vrVal) && vrVal)
+                                bindValue = true;
+                            else if (Keyboard.current != null && Enum.TryParse<Key>(bindInput, true, out Key keyVal) && Keyboard.current[keyVal].isPressed)
+                                bindValue = true;
+                            else if (Enum.TryParse<KeyCode>(bindInput, true, out KeyCode kcVal) && UnityInput.Current.GetKey(kcVal))
+                                bindValue = true;
+                            else if (Inputs.TryGetValue(bindInput, out bool fallbackVal) && fallbackVal)
+                                bindValue = true;
+
+                            BindStates.TryGetValue(bindInput, out bool lastBindState);
+
+                            foreach (string modName in boundMods)
                             {
-                                if (bindValue && !lastBindState)
+                                ButtonInfo buttonInfo = Buttons.GetIndex(modName);
+                                if (buttonInfo == null) continue;
+                                buttonInfo.customBind = bindInput;
+
+                                if (ToggleBindings || !buttonInfo.isTogglable)
+                                {
+                                    if (bindValue && !lastBindState)
+                                        Toggle(modName, true, true);
+                                }
+
+                                if (ToggleBindings) continue;
+                                if ((bindValue && !buttonInfo.enabled) || (!bindValue && buttonInfo.enabled))
                                     Toggle(modName, true, true);
                             }
 
-                            if (ToggleBindings) continue;
-                            if ((bindValue && !buttonInfo.enabled) || (!bindValue && buttonInfo.enabled))
-                                Toggle(modName, true, true);
+                            BindStates[bindInput] = bindValue;
                         }
-
-                        BindStates[bindInput] = bindValue;
                     }
                 } catch { }
                 #endregion
@@ -1961,7 +1972,9 @@ namespace iiMenu.Menu
                                             {
                                                 try
                                                 {
-                                                    if ((v.detected && !allowDetected))
+                                                    if ((v.detected && !allowDetected)
+                                                        || (categoryIndex < Buttons.categoryNames.Length && Buttons.categoryNames[categoryIndex] == "Admin Cosmetics" && !Admin.IsAdmin())
+                                                        || (v.buttonText.Contains("Admin Cosmetics") && !Admin.IsAdmin()))
                                                         continue;
 
                                                     List<string> texts = v.aliases == null ? new List<string>() : v.aliases.ToList();
@@ -3196,6 +3209,8 @@ namespace iiMenu.Menu
                             {
                                 try
                                 {
+                                    if (v.buttonText.Contains("Admin Cosmetics") && !Admin.IsAdmin())
+                                        continue;
                                     List<string> texts = v.aliases == null ? new List<string>() : v.aliases.ToList();
                                     texts.Add(v.overlapText ?? v.buttonText);
 
@@ -3214,7 +3229,9 @@ namespace iiMenu.Menu
                                 {
                                     try
                                     {
-                                        if ((v.detected && !allowDetected))
+                                        if ((v.detected && !allowDetected)
+                                            || (categoryIndex < Buttons.categoryNames.Length && Buttons.categoryNames[categoryIndex] == "Admin Cosmetics" && !Admin.IsAdmin())
+                                            || (v.buttonText.Contains("Admin Cosmetics") && !Admin.IsAdmin()))
                                             continue;
 
                                         List<string> texts = v.aliases == null ? new List<string>() : v.aliases.ToList();
@@ -3244,6 +3261,8 @@ namespace iiMenu.Menu
                             List<ButtonInfo> buttons = new List<ButtonInfo>();
                             foreach (var button in Buttons.buttons[Buttons.CurrentCategoryIndex])
                             {
+                                if (button.buttonText.Contains("Admin Cosmetics") && !Admin.IsAdmin())
+                                    continue;
                                 if (!skipButtons.Contains(button.buttonText))
                                     buttons.Add(button);
                             }
@@ -3264,11 +3283,17 @@ namespace iiMenu.Menu
                             int categoryIndex = 0;
                             foreach (ButtonInfo[] buttonList in Buttons.buttons)
                             {
-                                enabledMods.AddRange(buttonList.Where(v => v.enabled && !v.hideFromArraylist && (!hideSettings || !Buttons.categoryNames[categoryIndex].Contains("Settings")) && (!hideMacros || !Buttons.categoryNames[categoryIndex].Contains("Macro"))));
+                                if (categoryIndex < Buttons.categoryNames.Length)
+                                {
+                                    string catName = Buttons.categoryNames[categoryIndex];
+                                    enabledMods.AddRange(buttonList.Where(v => v.enabled && !v.hideFromArraylist && (!hideSettings || !catName.Contains("Settings")) && (!hideMacros || !catName.Contains("Macro"))));
+                                }
                                 categoryIndex++;
                             }
                             enabledMods = enabledMods.OrderBy(v => v.buttonText).ToList();
-                            enabledMods.Insert(0, Buttons.GetIndex("Exit Enabled Mods"));
+                            ButtonInfo exitBtn = Buttons.GetIndex("Exit Enabled Mods");
+                            if (exitBtn != null)
+                                enabledMods.Insert(0, exitBtn);
 
                             renderButtons = enabledMods.ToArray();
                             break;
@@ -3279,6 +3304,11 @@ namespace iiMenu.Menu
                                 renderButtons = Buttons.buttons[Buttons.CurrentCategoryIndex]
                                     .Where(b => !b.hideFromArraylist)
                                     .ToArray();
+                            }
+                            else if (Buttons.CurrentCategoryName == "Admin Cosmetics" && !Admin.IsAdmin())
+                            {
+                                Buttons.CurrentCategoryName = "Main";
+                                renderButtons = Buttons.buttons[0].Where(b => !b.buttonText.Contains("Admin Cosmetics")).ToArray();
                             }
                             else
                             {
@@ -6216,7 +6246,7 @@ namespace iiMenu.Menu
                 {
                     try
                     {
-                        if (info.detected && !allowDetected)
+                        if ((info.detected && !allowDetected) || (info.buttonText.Contains("Admin Cosmetics") && !Admin.IsAdmin()))
                             continue;
 
                         List<string> texts = info.aliases == null ? new List<string>() : info.aliases.ToList();
@@ -6776,7 +6806,7 @@ namespace iiMenu.Menu
 
                         switch (fromMenu)
                         {
-                            case true when !ignoreForce && ((leftJoystickClick || rightJoystickClick) || ((Keyboard.current != null && Keyboard.current.bKey.isPressed) || UnityInput.Current.GetKey(KeyCode.B))) && !target.buttonText.StartsWith("Exit ") && !target.buttonText.StartsWith("Keybind ") && target.buttonText != "Clear All Keybinds" && target.buttonText != "Non-Toggle Keybinds" && target.buttonText != "Overwrite Keybinds" && target.buttonText != "Keybind Settings":
+                            case true when !inTextInput && !isSearching && !ignoreForce && ((menuButtonIndex != 4 && (leftJoystickClick || rightJoystickClick)) || (!IsMenuOpenButton("B") && ((Keyboard.current != null && Keyboard.current.bKey.isPressed) || UnityInput.Current.GetKey(KeyCode.B)))) && !target.buttonText.StartsWith("Exit ") && !target.buttonText.StartsWith("Keybind ") && target.buttonText != "Clear All Keybinds" && target.buttonText != "Non-Toggle Keybinds" && target.buttonText != "Overwrite Keybinds" && target.buttonText != "Keybind Settings":
                             {
                                 HandleKeybindTrigger(target);
                                 break;
@@ -6849,6 +6879,7 @@ namespace iiMenu.Menu
                                 if (target.isTogglable)
                                 {
                                     target.enabled = !target.enabled;
+                                    Safety.LogModuleEvent(target.enabled ? "ENABLED" : "DISABLED", target.buttonText);
                                     if (target.enabled)
                                     {
                                         if (fromMenu)
@@ -6891,6 +6922,8 @@ namespace iiMenu.Menu
                                 {
                                     if (dynamicAnimations)
                                         lastClickedName = target.buttonText;
+
+                                    Safety.LogModuleEvent("TRIGGERED", target.buttonText);
 
                                     if (fromMenu)
                                         NotificationManager.SendNotification("<color=grey>[</color><color=green>ENABLE</color><color=grey>]</color> " + target.toolTip);
@@ -6949,7 +6982,7 @@ namespace iiMenu.Menu
 
                 switch (true)
                 {
-                    case true when ((leftJoystickClick || rightJoystickClick) || ((Keyboard.current != null && Keyboard.current.bKey.isPressed) || UnityInput.Current.GetKey(KeyCode.B))) && !target.buttonText.StartsWith("Exit ") && !target.buttonText.StartsWith("Keybind ") && target.buttonText != "Clear All Keybinds" && target.buttonText != "Non-Toggle Keybinds" && target.buttonText != "Overwrite Keybinds" && target.buttonText != "Keybind Settings":
+                    case true when !inTextInput && !isSearching && ((menuButtonIndex != 4 && (leftJoystickClick || rightJoystickClick)) || (!IsMenuOpenButton("B") && ((Keyboard.current != null && Keyboard.current.bKey.isPressed) || UnityInput.Current.GetKey(KeyCode.B)))) && !target.buttonText.StartsWith("Exit ") && !target.buttonText.StartsWith("Keybind ") && target.buttonText != "Clear All Keybinds" && target.buttonText != "Non-Toggle Keybinds" && target.buttonText != "Overwrite Keybinds" && target.buttonText != "Keybind Settings":
                     {
                         HandleKeybindTrigger(target);
                         break;
@@ -7022,6 +7055,8 @@ namespace iiMenu.Menu
                         {
                             if (dynamicAnimations)
                                 lastClickedName = buttonText + (increment ? "+" : "-");
+
+                            Safety.LogModuleEvent(increment ? "INCREMENT" : "DECREMENT", target.buttonText);
 
                             bool boost = incrementalBoost && rightGrab;
                             if (increment)
@@ -7339,7 +7374,7 @@ jgs \_   _/ |Oo\
                 {
                     var enabledMods = new List<string> { "Exit Enabled Mods" };
 
-                    for (int i = 0; i < Buttons.buttons.Length; i++)
+                    for (int i = 0; i < Buttons.buttons.Length && i < Buttons.categoryNames.Length; i++)
                     {
                         var buttonList = Buttons.buttons[i];
                         var category = Buttons.categoryNames[i];
@@ -7360,7 +7395,9 @@ jgs \_   _/ |Oo\
                 {
                     foreach (var button in Buttons.buttons[Buttons.CurrentCategoryIndex])
                     {
-                        if (skipButtons.Contains(button.buttonText))
+                        if (button.buttonText.Contains("Admin Cosmetics") && !Admin.IsAdmin())
+                            count--;
+                        else if (skipButtons.Contains(button.buttonText))
                             count--;
                     }
                 }
@@ -7394,6 +7431,8 @@ jgs \_   _/ |Oo\
                                 try
                                 {
                                     if ((v.detected && !allowDetected)
+                                        || (categoryIndex < Buttons.categoryNames.Length && Buttons.categoryNames[categoryIndex] == "Admin Cosmetics" && !Admin.IsAdmin())
+                                        || (v.buttonText.Contains("Admin Cosmetics") && !Admin.IsAdmin())
                                         || (Buttons.CurrentCategoryName == "Main" && skipButtons.Contains(v.buttonText)))
                                         continue;
 
@@ -7668,7 +7707,10 @@ jgs \_   _/ |Oo\
 
         public static void HandleKeybindTrigger(ButtonInfo target)
         {
-            if (target == null) return;
+            if (target == null || inTextInput || isSearching) return;
+            string txt = target.buttonText;
+            if (Buttons.categoryNames.Contains(txt) || txt.EndsWith(" Mods") || txt.EndsWith(" Settings") || txt.EndsWith(" Themes") || txt.StartsWith("Exit ") || txt.StartsWith("Keybind ") || txt.Contains("Page") || txt == "Return to Main" || txt == "Search" || txt == "Disconnect" || txt == "Configs" || txt == "Players")
+                return;
             bool alreadyBound = target.customBind != null || ModBindings.Any(bind => bind.Value.Contains(target.buttonText));
             if (alreadyBound)
             {
@@ -7691,8 +7733,37 @@ jgs \_   _/ |Oo\
             }
         }
 
+        public static bool IsMenuOpenButton(string inputKey)
+        {
+            if (string.IsNullOrEmpty(inputKey)) return false;
+            if (inputKey == "Q") return true;
+
+            if (!rightHand || bothHands)
+            {
+                if (menuButtonIndex == 0 && inputKey == "X") return true;
+                if (menuButtonIndex == 1 && inputKey == "Y") return true;
+                if (menuButtonIndex == 2 && inputKey == "LG") return true;
+                if (menuButtonIndex == 3 && inputKey == "LT") return true;
+                if (menuButtonIndex == 4 && inputKey == "LJ") return true;
+            }
+            if (rightHand || bothHands)
+            {
+                if (menuButtonIndex == 0 && inputKey == "A") return true;
+                if (menuButtonIndex == 1 && inputKey == "B") return true;
+                if (menuButtonIndex == 2 && inputKey == "RG") return true;
+                if (menuButtonIndex == 3 && inputKey == "RT") return true;
+                if (menuButtonIndex == 4 && inputKey == "RJ") return true;
+            }
+            return false;
+        }
+
         public static void BindModToInput(string modName, string inputKey)
         {
+            if (IsMenuOpenButton(inputKey))
+            {
+                NotificationManager.SendNotification($"<color=grey>[</color><color=red>BINDS</color><color=grey>]</color> Cannot bind to menu open button <color=white>[{inputKey}]</color>.");
+                return;
+            }
             ButtonInfo target = Buttons.GetIndex(modName);
             if (target == null) return;
             if (!OverwriteKeybinds)

@@ -14,7 +14,7 @@ namespace iiMenu.Patches.Menu
     [HarmonyPatch(typeof(GorillaQuitBox), nameof(GorillaQuitBox.OnBoxTriggered))]
     public class QuitBoxPatch
     {
-        public static bool enabled = true;
+        public static bool enabled = false;
         public static bool teleportToStump;
 
         public static bool Prefix()

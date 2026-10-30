@@ -93,11 +93,14 @@ namespace iiMenu.Patches.Safety
         }
 
         [SecurityPatch]
-        [HarmonyPatch(typeof(MonkeAgent), nameof(MonkeAgent.QuitDelay), MethodType.Enumerator)]
+        [HarmonyPatch(typeof(MonkeAgent), nameof(MonkeAgent.QuitDelay))]
         public class NoQuitDelay
         {
-            private static bool Prefix() =>
-                false;
+            private static bool Prefix(ref System.Collections.IEnumerator __result)
+            {
+                __result = System.Linq.Enumerable.Empty<object>().GetEnumerator();
+                return false;
+            }
         }
 
         [SecurityPatch]
@@ -111,6 +114,33 @@ namespace iiMenu.Patches.Safety
         [SecurityPatch]
         [HarmonyPatch(typeof(MonkeAgent), nameof(MonkeAgent.ShouldDisconnectFromRoom))]
         public class NoShouldDisconnectFromRoom                                                                         
+        {
+            private static bool Prefix(ref bool __result)
+            {
+                __result = false;
+                return false;
+            }
+        }
+
+        [SecurityPatch]
+        [HarmonyPatch(typeof(RoomSystem), "OnApplicationPause")]
+        public class NoRoomSystemPause
+        {
+            private static bool Prefix() =>
+                false;
+        }
+
+        [SecurityPatch]
+        [HarmonyPatch(typeof(RoomSystem), "TimerDC")]
+        public class NoRoomSystemTimerDC
+        {
+            private static bool Prefix() =>
+                false;
+        }
+
+        [SecurityPatch]
+        [HarmonyPatch(typeof(GorillaNetworking.PhotonNetworkController), "OnApplicationPause")]
+        public class NoPhotonPause
         {
             private static bool Prefix() =>
                 false;
