@@ -491,21 +491,132 @@ namespace iiMenu.Mods
             }
         }
 
-        private static bool previousFullbrightStatus;
-        public static void SetFullbrightStatus(bool fullBright)
+        private static bool fullbrightEnabled;
+        private static Color previousAmbientLight;
+        private static AmbientMode previousAmbientMode;
+        private static GameObject fullbrightLight;
+
+        public static void FullbrightUpdate()
         {
-            if (GameLightingManager.instance == null)
+            if (!fullbrightEnabled)
                 return;
 
-            if (fullBright)
+            RenderSettings.ambientMode = AmbientMode.Flat;
+            RenderSettings.ambientLight = Color.white;
+            if (BetterDayNightManager.instance != null)
+                BetterDayNightManager.instance.SetTimeOfDay(3);
+        }
+
+        public static void EnableFullbright()
+        {
+            fullbrightEnabled = true;
+            previousAmbientMode = RenderSettings.ambientMode;
+            previousAmbientLight = RenderSettings.ambientLight;
+            RenderSettings.ambientMode = AmbientMode.Flat;
+            RenderSettings.ambientLight = Color.white;
+
+            if (fullbrightLight == null && GorillaTagger.Instance != null && GorillaTagger.Instance.headCollider != null)
             {
-                previousFullbrightStatus = GameLightingManager.instance.customVertexLightingEnabled;
-                GameLightingManager.instance.SetCustomDynamicLightingEnabled(false);
-            } else
-            {
-                if (previousFullbrightStatus)
-                    GameLightingManager.instance.SetCustomDynamicLightingEnabled(true);
+                fullbrightLight = new GameObject("iiMenu_FullbrightLight");
+                fullbrightLight.transform.SetParent(GorillaTagger.Instance.headCollider.transform, false);
+                Light l = fullbrightLight.AddComponent<Light>();
+                l.type = LightType.Point;
+                l.range = 100f;
+                l.intensity = 25f;
+                l.color = Color.white;
+                l.renderMode = LightRenderMode.ForcePixel;
+                l.shadows = LightShadows.None;
             }
+        }
+
+        public static void DisableFullbright()
+        {
+            fullbrightEnabled = false;
+            RenderSettings.ambientMode = previousAmbientMode;
+            RenderSettings.ambientLight = previousAmbientLight;
+
+            if (fullbrightLight != null)
+                Object.Destroy(fullbrightLight);
+            fullbrightLight = null;
+        }
+
+        public static void SetFullbrightStatus(bool fullBright)
+        {
+            if (fullBright)
+                EnableFullbright();
+            else
+                DisableFullbright();
+        }
+
+        private static GameObject monkeLight;
+        private static GameObject monkeTargetLight;
+        private static Coroutine monkeLightRoutine;
+        public static void Enable_MonkeLight()
+        {
+            if (!SceneReady() || GorillaTagger.Instance.offlineVRRig == null)
+                return;
+
+            Transform head = GorillaLocomotion.GTPlayer.Instance.headCollider.transform;
+            monkeLight = new GameObject("iiMenu_MonkeLight");
+            monkeLight.transform.SetParent(head, false);
+            monkeLight.transform.localPosition = Vector3.forward * 0.25f;
+            monkeLight.transform.localRotation = Quaternion.identity;
+
+            Light light = monkeLight.AddComponent<Light>();
+            light.type = LightType.Spot;
+            light.range = 50f;
+            light.intensity = 40f;
+            light.color = new Color(1f, 0.9569f, 0.8941f);
+            light.spotAngle = 75f;
+            light.renderMode = LightRenderMode.ForcePixel;
+            light.shadows = LightShadows.None;
+
+            monkeTargetLight = new GameObject("iiMenu_MonkeTargetLight");
+            Light targetLight = monkeTargetLight.AddComponent<Light>();
+            targetLight.type = LightType.Spot;
+            targetLight.range = 50f;
+            targetLight.intensity = 40f;
+            targetLight.color = new Color(1f, 0.9569f, 0.8941f);
+            targetLight.spotAngle = 75f;
+            targetLight.renderMode = LightRenderMode.ForcePixel;
+            targetLight.shadows = LightShadows.None;
+            monkeTargetLight.SetActive(false);
+
+            monkeLightRoutine = CoroutineManager.instance.StartCoroutine(MonkeLightRoutine());
+        }
+
+        private static IEnumerator MonkeLightRoutine()
+        {
+            while (monkeTargetLight != null)
+            {
+                if (gunLocked && lockTarget != null)
+                {
+                    monkeTargetLight.SetActive(true);
+                    monkeTargetLight.transform.position = lockTarget.headMesh.transform.position + Vector3.up * 0.5f;
+                    monkeTargetLight.transform.rotation = Quaternion.LookRotation(Vector3.down);
+                }
+                else
+                    monkeTargetLight.SetActive(false);
+
+                yield return null;
+            }
+        }
+
+        public static void Disable_MonkeLight()
+        {
+            if (monkeLightRoutine != null && CoroutineManager.instance != null)
+                CoroutineManager.instance.StopCoroutine(monkeLightRoutine);
+
+            monkeLightRoutine = null;
+
+            if (monkeLight != null)
+                Object.Destroy(monkeLight);
+
+            if (monkeTargetLight != null)
+                Object.Destroy(monkeTargetLight);
+
+            monkeLight = null;
+            monkeTargetLight = null;
         }
 
         private static float removeBlindfoldDelay;
@@ -2597,190 +2708,7 @@ namespace iiMenu.Mods
             taggedNameTags.Clear();
         }
 
-        public static readonly Dictionary<string, string> modDictionary = new Dictionary<string, string> {
-            { "genesis", "Genesis" },
-            { "HP_Left", "Holdable Pad" },
-            { "GrateVersion", "Grate" },
-            { "void", "Void" },
-            { "BANANAOS", "Banana OS" },
-            { "GC", "Gorilla Craft" },
-            { "CarName", "Gorilla Vehicles" },
-            { "6p72ly3j85pau2g9mda6ib8px", "CCM V2" },
-            { "FPS-Nametags for Zlothy", "FPS Tags" },
-            { "cronos", "Cronos" },
-            { "ORBIT", "Orbit" },
-            { "Violet On Top", "Violet" },
-            { "MP25", "Monke Phone" },
-            { "GorillaWatch", "Gorilla Watch" },
-            { "InfoWatch", "Gorilla Info Watch" },
-            { "BananaPhone", "Banana Phone" },
-            { "Vivid", "Vivid" },
-            { "RGBA", "Custom Cosmetics" },
-            { "cheese is gouda", "Whos Icheating" },
-            { "shirtversion", "Gorilla Shirts" },
-            { "gpronouns", "Gorilla Pronouns" },
-            { "gfaces", "Gorilla Faces" },
-            { "monkephone", "Monke Phone" },
-            { "pmversion", "Player Models" },
-            { "gtrials", "Gorilla Trials" },
-            { "msp", "Monke Smartphone" },
-            { "gorillastats", "Gorilla Stats" },
-            { "using gorilladrift", "Gorilla Drift" },
-            { "monkehavocversion", "Monke Havoc" },
-            { "tictactoe", "Tic Tac Toe" },
-            { "ccolor", "Index" },
-            { "imposter", "Gorilla Among Us" },
-            { "spectapeversion", "Spec Tape" },
-            { "cats", "Cats" },
-            { "made by biotest05 :3", "Dogs" },
-            { "fys cool magic mod", "Fys Magic Mod" },
-            { "colour", "Custom Cosmetics" },
-            { "chainedtogether", "Chained Together" },
-            { "goofywalkversion", "Goofy Walk" },
-            { "void_menu_open", "Void" },
-            { "violetpaiduser", "Violet Paid" },
-            { "violetfree", "Violet Free" },
-            { "obsidianmc", "Obsidian.Lol" },
-            { "dark", "Shiba GT Dark" },
-            { "hidden menu", "Hidden" },
-            { "oblivionuser", "Oblivion" },
-            { "hgrehngio889584739_hugb\n", "Resurgence" },
-            { "eyerock reborn", "Eye Rock" },
-            { "asteroidlite", "Asteroid Lite" },
-            { "elux", "Elux" },
-            { "cokecosmetics", "Coke Cosmetx" },
-            { "GFaces", "G Faces" },
-            { "github.com/maroon-shadow/SimpleBoards", "Simple Boards" },
-            { "ObsidianMC", "Obsidian" },
-            { "hgrehngio889584739_hugb", "Resurgence" },
-            { "GTrials", "G Trials" },
-            { "github.com/ZlothY29IQ/GorillaMediaDisplay", "Gorilla Media Display" },
-            { "github.com/ZlothY29IQ/TooMuchInfo", "Too Much Info" },
-            { "github.com/ZlothY29IQ/RoomUtils-IW", "Room Utils IW" },
-            { "github.com/ZlothY29IQ/MonkeClick", "Monke Click" },
-            { "github.com/ZlothY29IQ/MonkeClick-CI", "Monke Click CI" },
-            { "github.com/ZlothY29IQ/MonkeRealism", "Monke Realism" },
-            { "MediaPad", "Media Pad" },
-            { "GorillaCinema", "Gorilla Cinema" },
-            { "ChainedTogetherActive", "Chained Together" },
-            { "GPronouns", "G Pronouns" },
-            { "CSVersion", "Custom Skin" },
-            { "github.com/ZlothY29IQ/Zloth-RecRoomRig", "Zloth Rec Room Rig" },
-            { "ShirtProperties", "Shirts Old" },
-            { "GorillaShirts", "Shirts" },
-            { "GS", "Old Shirts" },
-            { "6XpyykmrCthKhFeUfkYGxv7xnXpoe2", "CCM V2" },
-            { "Body Tracking", "Body Track Old" },
-            { "Body Estimation", "Han Body Est" },
-            { "Gorilla Track", "Body Track" },
-            { "CustomMaterial", "Custom Cosmetics" },
-            { "I like cheese", "Rec Room Rig" },
-            { "silliness", "Silliness" },
-            { "EmoteWheel", "Fortnite Emote Wheel" },
-            { "untitled", "Untitled" },
-            { "BoyDoILoveInformation Public", "BoyDoILoveInformation" },
-            { "DTAOI", "DTAOI" },
-            { "GorillaShop", "GorillaShop" },
-            { "Fusioned", "Fusioned" },
-            { "y u lookin in here weirdo", "Malachi Menu Reborn" },
-            { "�????", "Orbit" },
-            { "Atlas", "Atlas" }
-        };
 
-        private static readonly Dictionary<VRRig, GameObject> modNameTags = new Dictionary<VRRig, GameObject>();
-        public static void ModTags()
-        {
-            List<KeyValuePair<VRRig, GameObject>> nametagsCopy = modNameTags.ToList();
-            foreach (var nametag in nametagsCopy.Where(nametag => !VRRigCache.ActiveRigs.Contains(nametag.Key)))
-            {
-                Object.Destroy(nametag.Value);
-                modNameTags.Remove(nametag.Key);
-            }
-
-            foreach (VRRig vrrig in VRRigCache.ActiveRigs)
-            {
-                try
-                {
-                    if (!vrrig.isLocal || selfNameTag)
-                    {
-                        if (!modNameTags.ContainsKey(vrrig))
-                        {
-                            GameObject go = new GameObject("iiMenu_Modtag");
-                            go.transform.localScale = new Vector3(0.25f, 0.25f, 0.25f);
-                            TextMeshPro TextMeshPro = go.AddComponent<TextMeshPro>();
-                            TextMeshPro.fontSize = 4.8f;
-                            TextMeshPro.alignment = TextAlignmentOptions.Center;
-
-                            modNameTags.Add(vrrig, go);
-                        }
-
-                        GameObject nameTag = modNameTags[vrrig];
-                        TextMeshPro tmp = nameTag.GetOrAddComponent<TextMeshPro>();
-
-                        if (NameTagOptimize())
-                        {
-                            string specialMods = null;
-                            Dictionary<string, object> customProps = new Dictionary<string, object>();
-                            foreach (DictionaryEntry dictionaryEntry in NetPlayerToPlayer(GetPlayerFromVRRig(vrrig)).CustomProperties)
-                                customProps[dictionaryEntry.Key.ToString().ToLower()] = dictionaryEntry.Value;
-
-                            foreach (var mod in modDictionary.Where(mod => customProps.ContainsKey(mod.Key.ToLower())))
-                            {
-                                if (specialMods == null)
-                                    specialMods = mod.Value;
-                                else
-                                {
-                                    if (specialMods.Contains("&"))
-                                        specialMods = mod.Value + ", " + specialMods;
-                                    else
-                                        specialMods += " & " + mod.Value;
-                                }
-                            }
-
-                            CosmeticsController.CosmeticSet cosmeticSet = vrrig.cosmeticSet;
-                            if (cosmeticSet.items.Any(cosmetic => !cosmetic.isNullItem && !vrrig.CosmeticsString().Contains(cosmetic.itemName)))
-                            {
-                                if (specialMods == null)
-                                    specialMods = "Cosmetx";
-                                else
-                                {
-                                    if (specialMods.Contains("&"))
-                                        specialMods = "Cosmetx, " + specialMods;
-                                    else
-                                        specialMods += " & Cosmetx";
-                                }
-                            }
-
-                            tmp.SafeSetText(specialMods);
-
-                            tmp.color = vrrig.GetColor();
-                            tmp.SafeSetFontStyle(activeFontStyle);
-                            tmp.SafeSetFont(activeFont);
-                            if (nameTagChams)
-                                tmp.Chams();
-                        }
-                        
-                        if (!string.IsNullOrEmpty(tmp.text))
-                        {
-                            nameTag.transform.localScale = new Vector3(0.25f, 0.25f, 0.25f) * vrrig.scaleFactor;
-
-                            nameTag.transform.position = GetNameTagPosition(vrrig);
-                            nameTag.transform.LookAt(iiMenu.Menu.Main.MainCam.transform.position);
-                            nameTag.transform.Rotate(0f, 180f, 0f);
-                        }
-                    }
-                }
-                catch { }
-            }
-        }
-
-        public static void DisableModTags()
-        {
-            foreach (KeyValuePair<VRRig, GameObject> nametag in modNameTags)
-                Object.Destroy(nametag.Value);
-
-            modNameTags.Clear();
-        }
 
         public static readonly Dictionary<string, string> specialCosmetics = new Dictionary<string, string>
         {
@@ -2806,7 +2734,7 @@ namespace iiMenu.Mods
             {
                 try
                 {
-                    if ((!vrrig.isLocal || selfNameTag) && cosmetics == null)
+                    if (!vrrig.isLocal || selfNameTag)
                     {
                         if (!cosmeticNameTags.ContainsKey(vrrig))
                         {
@@ -5735,6 +5663,519 @@ namespace iiMenu.Mods
             RightSphere = null;
         }
 
+        private static readonly Dictionary<VRRig, GameObject> miniProfiles = new Dictionary<VRRig, GameObject>();
+
+        public static void MiniprofileESP()
+        {
+            List<KeyValuePair<VRRig, GameObject>> cardsCopy = miniProfiles.ToList();
+            foreach (var card in cardsCopy.Where(c => !VRRigCache.ActiveRigs.Contains(c.Key)))
+            {
+                Object.Destroy(card.Value);
+                miniProfiles.Remove(card.Key);
+            }
+
+            bool hoc = Buttons.GetIndex("Hidden on Camera").enabled;
+
+            foreach (VRRig vrrig in VRRigCache.ActiveRigs)
+            {
+                try
+                {
+                    if (!vrrig.isLocal || selfNameTag)
+                    {
+                        if (!miniProfiles.ContainsKey(vrrig))
+                        {
+                            GameObject cardObj = new GameObject("iiMenu_MiniprofileESP");
+                            if (hoc)
+                                cardObj.layer = 19;
+
+                            GameObject textObj = new GameObject("CardText");
+                            textObj.transform.SetParent(cardObj.transform, false);
+                            TextMeshPro tmp = textObj.AddComponent<TextMeshPro>();
+                            RectTransform rt = textObj.GetComponent<RectTransform>();
+                            rt.sizeDelta = new Vector2(1.2f, 0.6f);
+                            rt.pivot = new Vector2(0f, 0.5f);
+                            rt.localPosition = Vector3.zero;
+                            tmp.fontSize = 1.75f;
+                            tmp.alignment = TextAlignmentOptions.MidlineLeft;
+                            tmp.richText = true;
+                            tmp.enableWordWrapping = false;
+
+                            miniProfiles.Add(vrrig, cardObj);
+                        }
+
+                        GameObject card = miniProfiles[vrrig];
+                        if (card != null)
+                        {
+                            Transform bgTr = card.transform.Find("Background");
+                            if (bgTr != null)
+                                Object.Destroy(bgTr.gameObject);
+                            Transform borderTr = card.transform.Find("Border");
+                            if (borderTr != null)
+                                Object.Destroy(borderTr.gameObject);
+
+                            Transform headTr = (vrrig.headMesh != null) ? vrrig.headMesh.transform : vrrig.transform;
+                            if (vrrig.isLocal && GorillaTagger.Instance != null && GorillaTagger.Instance.headCollider != null)
+                                headTr = GorillaTagger.Instance.headCollider.transform;
+
+                            Vector3 headPos = headTr.position;
+                            Vector3 camPos = (iiMenu.Menu.Main.MainCam != null) ? iiMenu.Menu.Main.MainCam.transform.position : headPos;
+                            Vector3 toCam = camPos - headPos;
+                            toCam.y = 0f;
+                            Vector3 cardRight = toCam.sqrMagnitude > 0.01f ? Vector3.Cross(Vector3.up, toCam.normalized) : headTr.right;
+
+                            float scale = 0.35f * vrrig.scaleFactor;
+                            card.transform.localScale = new Vector3(scale, scale, scale);
+                            card.transform.position = headPos + Vector3.up * 0.10f + cardRight * (0.35f * vrrig.scaleFactor);
+
+                            if (iiMenu.Menu.Main.MainCam != null)
+                            {
+                                card.transform.LookAt(iiMenu.Menu.Main.MainCam.transform.position);
+                                card.transform.Rotate(0f, 180f, 0f);
+                            }
+
+                            try
+                            {
+                                if (NameTagOptimize())
+                                {
+                                    Transform textTr = card.transform.Find("CardText");
+                                    if (textTr != null)
+                                    {
+                                        TextMeshPro tmp = textTr.GetComponent<TextMeshPro>();
+                                        if (tmp != null)
+                                        {
+                                            RectTransform rt = textTr.GetComponent<RectTransform>();
+                                            if (rt != null)
+                                            {
+                                                rt.sizeDelta = new Vector2(1.2f, 0.6f);
+                                                rt.pivot = new Vector2(0f, 0.5f);
+                                                rt.localPosition = Vector3.zero;
+                                            }
+
+                                            var player = GetPlayerFromVRRig(vrrig);
+                                            string name = player != null && !string.IsNullOrEmpty(player.NickName) ? player.NickName : GetPlayerName(vrrig);
+                                            string colorHex = ColorUtility.ToHtmlStringRGB(vrrig.GetColor());
+
+                                            List<string> cosmeticsList = new List<string>();
+                                            if (vrrig.cosmeticSet.items != null)
+                                            {
+                                                foreach (var c in vrrig.cosmeticSet.items)
+                                                {
+                                                    if (!c.isNullItem && !string.IsNullOrEmpty(c.itemName))
+                                                    {
+                                                        string label = c.itemName;
+                                                        string withDot = label.EndsWith(".") ? label : label + ".";
+                                                        if (specialCosmetics.TryGetValue(withDot, out string specialLabel))
+                                                            label = $"<color=yellow>{specialLabel}</color>";
+                                                        else if (!string.IsNullOrEmpty(c.displayName))
+                                                            label = c.displayName;
+                                                        cosmeticsList.Add(label);
+                                                    }
+                                                }
+                                            }
+
+                                            if (cosmeticsList.Count == 0)
+                                            {
+                                                var parsed = CosmeticsUtilities.ParseCosmeticsString(vrrig.CosmeticsString());
+                                                foreach (string p in parsed.Take(3))
+                                                {
+                                                    string withDot = p.EndsWith(".") ? p : p + ".";
+                                                    if (specialCosmetics.TryGetValue(withDot, out string specialLabel))
+                                                        cosmeticsList.Add($"<color=yellow>{specialLabel}</color>");
+                                                    else
+                                                        cosmeticsList.Add(p);
+                                                }
+                                            }
+
+                                            string cosmeticsText = cosmeticsList.Count > 0 ? string.Join(", ", cosmeticsList.Take(3)) : "None";
+                                            bool isTagged = vrrig.IsTagged() || vrrig.setMatIndex == 1 || vrrig.setMatIndex == 2 || (vrrig.mainSkin != null && vrrig.mainSkin.material != null && (vrrig.mainSkin.material.name.Contains("fected") || vrrig.mainSkin.material.name.Contains("lava")));
+                                            string statusText = isTagged ? "<color=red>TAGGED</color>" : "<color=#00FF88>CASUAL</color>";
+
+                                            string cardContent = $"<color=#{colorHex}><b>{CleanPlayerName(name)}</b></color>\n" +
+                                                                 $"<color=grey>Plat:</color> {GetPrettyPlatform(vrrig)}\n" +
+                                                                 $"<color=grey>Ping:</color> {GetPrettyPing(vrrig)} <color=grey>FPS:</color> {GetPrettyFPS(vrrig)}\n" +
+                                                                 $"<color=grey>Status:</color> {statusText}\n" +
+                                                                 $"<color=grey>Items:</color> <color=#DDDDDD>{cosmeticsText}</color>";
+
+                                            tmp.SafeSetText(cardContent);
+                                            tmp.SafeSetFontStyle(activeFontStyle);
+                                            tmp.SafeSetFont(activeFont);
+
+                                            if (nameTagChams)
+                                                tmp.Chams();
+                                        }
+                                    }
+                                }
+                            }
+                            catch { }
+                        }
+                    }
+                }
+                catch { }
+            }
+        }
+
+        public static void DisableMiniprofileESP()
+        {
+            foreach (KeyValuePair<VRRig, GameObject> card in miniProfiles)
+                Object.Destroy(card.Value);
+
+            miniProfiles.Clear();
+        }
+
+        private static readonly Dictionary<VRRig, GameObject> outlineESPObjects = new Dictionary<VRRig, GameObject>();
+        private static Mesh outlineSharedMesh;
+
+        private static Mesh GetOutlineMesh(Mesh sourceMesh)
+        {
+            if (outlineSharedMesh != null)
+                return outlineSharedMesh;
+
+            outlineSharedMesh = Object.Instantiate(sourceMesh);
+            outlineSharedMesh.name = "iiMenu_GorillaOutlineMesh";
+            Vector3[] verts = outlineSharedMesh.vertices;
+            Vector3[] normals = outlineSharedMesh.normals;
+            for (int i = 0; i < verts.Length; i++)
+                verts[i] += normals[i] * 0.075f;
+            outlineSharedMesh.vertices = verts;
+            outlineSharedMesh.RecalculateBounds();
+            return outlineSharedMesh;
+        }
+
+        public static void OutlineESP()
+        {
+            List<VRRig> toRemove = new List<VRRig>();
+            foreach (var kvp in outlineESPObjects.Where(kvp => !VRRigCache.ActiveRigs.Contains(kvp.Key)))
+            {
+                toRemove.Add(kvp.Key);
+                Object.Destroy(kvp.Value);
+            }
+            foreach (var rig in toRemove)
+                outlineESPObjects.Remove(rig);
+
+            bool hoc = Buttons.GetIndex("Hidden on Camera").enabled;
+            Color menuColor = backgroundColor.GetCurrentColor();
+            Color brightColor = new Color(Mathf.Clamp01(menuColor.r * 1.8f), Mathf.Clamp01(menuColor.g * 1.8f), Mathf.Clamp01(menuColor.b * 1.8f), 1f);
+
+            foreach (var vrrig in VRRigCache.ActiveRigs.Where(vrrig => !vrrig.isLocal && vrrig.mainSkin != null && vrrig.mainSkin.sharedMesh != null))
+            {
+                try
+                {
+                    if (!outlineESPObjects.TryGetValue(vrrig, out GameObject outlineContainer))
+                    {
+                        outlineContainer = new GameObject("iiMenu_OutlineESP");
+                        outlineContainer.transform.SetParent(vrrig.transform, false);
+
+                        GameObject outerObj = new GameObject("Outer");
+                        outerObj.transform.SetParent(outlineContainer.transform, false);
+                        SkinnedMeshRenderer outerSkin = outerObj.AddComponent<SkinnedMeshRenderer>();
+                        outerSkin.sharedMesh = GetOutlineMesh(vrrig.mainSkin.sharedMesh);
+                        outerSkin.bones = vrrig.mainSkin.bones;
+                        outerSkin.rootBone = vrrig.mainSkin.rootBone;
+
+                        Material outerMat = new Material(LoadAsset<Shader>("Chams") ?? Shader.Find("Universal Render Pipeline/Unlit") ?? Shader.Find("Sprites/Default"));
+                        outerMat.SetFloat("_Cull", 1f);
+                        outerSkin.material = outerMat;
+
+                        outlineESPObjects.Add(vrrig, outlineContainer);
+                    }
+
+                    if (hoc)
+                        outlineContainer.layer = 19;
+
+                    Transform outerTr = outlineContainer.transform.Find("Outer");
+                    if (outerTr != null)
+                    {
+                        SkinnedMeshRenderer r = outerTr.GetComponent<SkinnedMeshRenderer>();
+                        if (r != null && r.material != null)
+                            r.material.color = brightColor;
+                    }
+                }
+                catch { }
+            }
+        }
+
+        public static void DisableOutlineESP()
+        {
+            foreach (var kvp in outlineESPObjects)
+                Object.Destroy(kvp.Value);
+            outlineESPObjects.Clear();
+        }
+
+        private class PastStepMarker
+        {
+            public GameObject marker;
+            public Renderer renderer;
+            public float spawnTime;
+            public Color baseColor;
+        }
+
+        private static readonly List<PastStepMarker> pastSteps = new List<PastStepMarker>();
+        private static Texture2D handprintTexture;
+
+        private static Texture2D GetHandprintTexture()
+        {
+            if (handprintTexture != null)
+                return handprintTexture;
+
+            int w = 128;
+            int h = 128;
+            handprintTexture = new Texture2D(w, h, TextureFormat.RGBA32, false);
+            handprintTexture.filterMode = FilterMode.Bilinear;
+            Color[] colors = new Color[w * h];
+
+            Vector2 palmBase = new Vector2(64f, 44f);
+            Vector2 palmTop = new Vector2(64f, 54f);
+
+            (Vector2 basePos, Vector2 tipPos, float radius)[] fingers = new[]
+            {
+                (new Vector2(44f, 44f), new Vector2(20f, 32f), 8.5f),
+                (new Vector2(53f, 62f), new Vector2(49f, 106f), 9.5f),
+                (new Vector2(75f, 62f), new Vector2(79f, 106f), 9.5f)
+            };
+
+            for (int y = 0; y < h; y++)
+            {
+                for (int x = 0; x < w; x++)
+                {
+                    Vector2 p = new Vector2(x, y);
+
+                    Vector2 pa = p - palmBase;
+                    Vector2 ba = palmTop - palmBase;
+                    float t = Mathf.Clamp01(Vector2.Dot(pa, ba) / Vector2.Dot(ba, ba));
+                    float minDist = Vector2.Distance(p, palmBase + ba * t) - 22f;
+
+                    foreach (var f in fingers)
+                    {
+                        Vector2 fpa = p - f.basePos;
+                        Vector2 fba = f.tipPos - f.basePos;
+                        float ft = Mathf.Clamp01(Vector2.Dot(fpa, fba) / Vector2.Dot(fba, fba));
+                        float dSegment = Vector2.Distance(p, f.basePos + fba * ft) - f.radius;
+                        if (dSegment < minDist)
+                            minDist = dSegment;
+                    }
+
+                    float alpha = Mathf.Clamp01(1f - minDist / 2.5f);
+                    colors[y * w + x] = new Color(1f, 1f, 1f, alpha);
+                }
+            }
+
+            handprintTexture.SetPixels(colors);
+            handprintTexture.Apply();
+            return handprintTexture;
+        }
+
+        private static bool pastStepsHooked;
+        public static void EnablePastStepsESP()
+        {
+            if (!pastStepsHooked)
+            {
+                HandTapPatch.OnHandTapWithHand += OnPastStepTap;
+                pastStepsHooked = true;
+            }
+        }
+
+        public static void OnPastStepTap(VRRig rig, Vector3 tapPos, bool isLeftHand)
+        {
+            if (rig == null)
+                return;
+
+            bool hoc = Buttons.GetIndex("Hidden on Camera").enabled;
+
+            Vector3 spawnPos = tapPos;
+            Vector3 normal = Vector3.up;
+            if (Physics.Raycast(tapPos + Vector3.up * 0.2f, Vector3.down, out RaycastHit hit, 0.6f, LayerMask.GetMask("Default", "NoMirror", "Terrain")))
+            {
+                spawnPos = hit.point + hit.normal * 0.015f;
+                normal = hit.normal;
+            }
+
+            GameObject marker = GameObject.CreatePrimitive(PrimitiveType.Quad);
+            marker.name = "iiMenu_PastHandStep";
+            Object.Destroy(marker.GetComponent<Collider>());
+            if (hoc)
+                marker.layer = 19;
+
+            marker.transform.position = spawnPos;
+            marker.transform.rotation = Quaternion.LookRotation(-normal, rig.transform.forward);
+
+            float scale = 0.26f * Mathf.Max(0.5f, rig.scaleFactor);
+            marker.transform.localScale = new Vector3(isLeftHand ? -scale : scale, scale, 1f);
+
+            Color stepColor = rig.playerColor;
+            if (stepColor.r < 0.15f && stepColor.g < 0.15f && stepColor.b < 0.15f)
+                stepColor = Color.Lerp(stepColor, Color.white, 0.35f);
+            stepColor.a = 0.9f;
+
+            Renderer rend = marker.GetComponent<Renderer>();
+            rend.material = new Material(Shader.Find("Sprites/Default"));
+            rend.material.mainTexture = GetHandprintTexture();
+            rend.material.color = stepColor;
+
+            pastSteps.Add(new PastStepMarker { marker = marker, renderer = rend, spawnTime = Time.time, baseColor = stepColor });
+        }
+
+        public static void PastStepsESP()
+        {
+            if (!pastStepsHooked)
+                EnablePastStepsESP();
+
+            for (int i = pastSteps.Count - 1; i >= 0; i--)
+            {
+                PastStepMarker step = pastSteps[i];
+                float age = Time.time - step.spawnTime;
+                if (age >= 3f || step.marker == null)
+                {
+                    if (step.marker != null)
+                        Object.Destroy(step.marker);
+                    pastSteps.RemoveAt(i);
+                }
+                else
+                {
+                    float alpha = Mathf.Clamp01(1f - (age / 3f)) * 0.9f;
+                    if (step.renderer != null)
+                    {
+                        Color c = step.baseColor;
+                        c.a = alpha;
+                        step.renderer.material.color = c;
+                    }
+                }
+            }
+        }
+
+        public static void DisablePastStepsESP()
+        {
+            if (pastStepsHooked)
+            {
+                HandTapPatch.OnHandTapWithHand -= OnPastStepTap;
+                pastStepsHooked = false;
+            }
+
+            foreach (PastStepMarker step in pastSteps)
+            {
+                if (step.marker != null)
+                    Object.Destroy(step.marker);
+            }
+            pastSteps.Clear();
+            handprintTexture = null;
+        }
+
+        private static readonly Dictionary<VRRig, GameObject> starOfDavidESP = new Dictionary<VRRig, GameObject>();
+        private static Texture2D starOfDavidTexture;
+
+        private static Texture2D GetStarOfDavidTexture()
+        {
+            if (starOfDavidTexture != null)
+                return starOfDavidTexture;
+
+            int w = 128;
+            int h = 128;
+            starOfDavidTexture = new Texture2D(w, h, TextureFormat.RGBA32, false);
+            starOfDavidTexture.filterMode = FilterMode.Bilinear;
+            Color[] colors = new Color[w * h];
+
+            float r = 46f;
+            float sideH = r * 0.8660254f;
+            float halfR = r * 0.5f;
+
+            (Vector2 a, Vector2 b)[] segs = new[]
+            {
+                (new Vector2(64f, 64f + r), new Vector2(64f + sideH, 64f - halfR)),
+                (new Vector2(64f + sideH, 64f - halfR), new Vector2(64f - sideH, 64f - halfR)),
+                (new Vector2(64f - sideH, 64f - halfR), new Vector2(64f, 64f + r)),
+                (new Vector2(64f, 64f - r), new Vector2(64f - sideH, 64f + halfR)),
+                (new Vector2(64f - sideH, 64f + halfR), new Vector2(64f + sideH, 64f + halfR)),
+                (new Vector2(64f + sideH, 64f + halfR), new Vector2(64f, 64f - r))
+            };
+
+            for (int y = 0; y < h; y++)
+            {
+                for (int x = 0; x < w; x++)
+                {
+                    Vector2 p = new Vector2(x, y);
+                    float minDist = 999f;
+                    for (int s = 0; s < 6; s++)
+                    {
+                        Vector2 pa = p - segs[s].a;
+                        Vector2 ba = segs[s].b - segs[s].a;
+                        float t = Mathf.Clamp01(Vector2.Dot(pa, ba) / Vector2.Dot(ba, ba));
+                        float dist = Vector2.Distance(p, segs[s].a + ba * t);
+                        if (dist < minDist)
+                            minDist = dist;
+                    }
+                    float stroke = 4.5f;
+                    float alpha = Mathf.Clamp01(1f - (minDist - stroke) / 1.5f);
+                    colors[y * w + x] = new Color(1f, 1f, 1f, alpha);
+                }
+            }
+
+            starOfDavidTexture.SetPixels(colors);
+            starOfDavidTexture.Apply();
+            return starOfDavidTexture;
+        }
+
+        public static void StarOfDavidESP()
+        {
+            if (DoPerformanceCheck())
+                return;
+
+            bool hoc = Buttons.GetIndex("Hidden on Camera").enabled;
+
+            List<VRRig> toRemove = new List<VRRig>();
+            foreach (var kvp in starOfDavidESP.Where(kvp => !VRRigCache.ActiveRigs.Contains(kvp.Key)))
+            {
+                toRemove.Add(kvp.Key);
+                Object.Destroy(kvp.Value);
+            }
+            foreach (VRRig rig in toRemove)
+                starOfDavidESP.Remove(rig);
+
+            Transform camTr = Camera.main != null ? Camera.main.transform : (GorillaTagger.Instance.headCollider != null ? GorillaTagger.Instance.headCollider.transform : null);
+
+            foreach (VRRig vrrig in VRRigCache.ActiveRigs)
+            {
+                if (vrrig == null || (vrrig.isLocal && !selfNameTag))
+                    continue;
+
+                if (!starOfDavidESP.TryGetValue(vrrig, out GameObject starObj))
+                {
+                    starObj = GameObject.CreatePrimitive(PrimitiveType.Quad);
+                    starObj.name = "iiMenu_StarOfDavidESP";
+                    Object.Destroy(starObj.GetComponent<Collider>());
+
+                    Renderer rend = starObj.GetComponent<Renderer>();
+                    rend.material = new Material(Shader.Find("GUI/Text Shader"));
+                    rend.material.mainTexture = GetStarOfDavidTexture();
+                    rend.material.color = new Color(0.08f, 0.45f, 1f, 1f);
+
+                    starOfDavidESP.Add(vrrig, starObj);
+                }
+
+                if (hoc)
+                    starObj.layer = 19;
+
+                Vector3 headPos = vrrig.headMesh != null ? vrrig.headMesh.transform.position : vrrig.transform.position + Vector3.up * 0.6f;
+                float heightOffset = 0.42f * Mathf.Max(0.5f, vrrig.scaleFactor);
+                starObj.transform.position = headPos + Vector3.up * heightOffset;
+
+                float scale = 0.36f * Mathf.Max(0.5f, vrrig.scaleFactor);
+                starObj.transform.localScale = new Vector3(scale, scale, 1f);
+
+                if (camTr != null)
+                    starObj.transform.rotation = Quaternion.LookRotation(starObj.transform.position - camTr.position);
+            }
+        }
+
+        public static void DisableStarOfDavidESP()
+        {
+            foreach (var kvp in starOfDavidESP)
+            {
+                if (kvp.Value != null)
+                    Object.Destroy(kvp.Value);
+            }
+            starOfDavidESP.Clear();
+            starOfDavidTexture = null;
+        }
+
         public static void AutomaticESP(Action infection, Action hunt, Action other)
         {
             if (!SceneReady(true) || GorillaGameManager.instance == null)
@@ -6563,7 +7004,6 @@ namespace iiMenu.Mods
                 foreach (var kv in new Dictionary<VRRig, GameObject>(pingNameTags).Where(k => k.Key == rig)) { if (kv.Value != null) Object.Destroy(kv.Value); pingNameTags.Remove(kv.Key); }
                 foreach (var kv in new Dictionary<VRRig, GameObject>(turnNameTags).Where(k => k.Key == rig)) { if (kv.Value != null) Object.Destroy(kv.Value); turnNameTags.Remove(kv.Key); }
                 foreach (var kv in new Dictionary<VRRig, GameObject>(taggedNameTags).Where(k => k.Key == rig)) { if (kv.Value != null) Object.Destroy(kv.Value); taggedNameTags.Remove(kv.Key); }
-                foreach (var kv in new Dictionary<VRRig, GameObject>(modNameTags).Where(k => k.Key == rig)) { if (kv.Value != null) Object.Destroy(kv.Value); modNameTags.Remove(kv.Key); }
                 foreach (var kv in new Dictionary<VRRig, GameObject>(cosmeticNameTags).Where(k => k.Key == rig)) { if (kv.Value != null) Object.Destroy(kv.Value); cosmeticNameTags.Remove(kv.Key); }
                 foreach (var kv in new Dictionary<VRRig, GameObject>(verifiedNameTags).Where(k => k.Key == rig)) { if (kv.Value != null) Object.Destroy(kv.Value); verifiedNameTags.Remove(kv.Key); }
                 foreach (var kv in new Dictionary<VRRig, GameObject>(crashedNameTags).Where(k => k.Key == rig)) { if (kv.Value != null) Object.Destroy(kv.Value); crashedNameTags.Remove(kv.Key); }
@@ -6581,6 +7021,8 @@ namespace iiMenu.Mods
                 foreach (var kv in new Dictionary<VRRig, List<LineRenderer>>(boneESP).Where(k => k.Key == rig)) { foreach (var lr in kv.Value) if (lr != null) Object.Destroy(lr.gameObject); boneESP.Remove(kv.Key); }
                 foreach (var kv in new Dictionary<VRRig, LineRenderer>(predictions).Where(k => k.Key == rig)) { if (kv.Value != null) Object.Destroy(kv.Value.gameObject); predictions.Remove(kv.Key); }
                 foreach (var kv in new Dictionary<VRRig, TrailRenderer>(breadcrumbs).Where(k => k.Key == rig)) { if (kv.Value != null) Object.Destroy(kv.Value.gameObject); breadcrumbs.Remove(kv.Key); }
+                foreach (var kv in new Dictionary<VRRig, GameObject>(micBars).Where(k => k.Key == rig)) { if (kv.Value != null) Object.Destroy(kv.Value); micBars.Remove(kv.Key); }
+                ghostTrailHistory.Remove(rig.GetInstanceID());
                 if (handTaps.ContainsKey(rig)) { if (handTaps[rig][3] is GameObject go && go != null) Object.Destroy(go); handTaps.Remove(rig); }
                 if (rigLerpCoroutines.TryGetValue(rig, out Coroutine c)) { try { CoroutineManager.instance.StopCoroutine(c); } catch { } rigLerpCoroutines.Remove(rig); }
                 ntDistanceList.Remove(rig);
@@ -7164,6 +7606,592 @@ namespace iiMenu.Mods
             fovConeMesh.triangles = triangles;
             fovConeMesh.RecalculateNormals();
             return fovConeMesh;
+        }
+
+        private static GameObject monkeMirrorQuad;
+        private static Camera monkeMirrorCam;
+        private static RenderTexture monkeMirrorTex;
+
+        public static void Enable_MonkeMirror()
+        {
+            if (monkeMirrorQuad != null) return;
+            Transform head = GorillaLocomotion.GTPlayer.Instance.headCollider.transform;
+            monkeMirrorQuad = GameObject.CreatePrimitive(PrimitiveType.Quad);
+            monkeMirrorQuad.name = "iiMenu_MonkeMirror";
+            Object.Destroy(monkeMirrorQuad.GetComponent<Collider>());
+            monkeMirrorQuad.transform.SetPositionAndRotation(head.position + head.forward * 1.2f - head.up * 0.1f, Quaternion.LookRotation(head.forward));
+            monkeMirrorQuad.transform.localScale = new Vector3(0.85f, 1.15f, 1f);
+
+            monkeMirrorTex = new RenderTexture(512, 512, 24);
+            Renderer renderer = monkeMirrorQuad.GetComponent<Renderer>();
+            renderer.material = new Material(Shader.Find("Universal Render Pipeline/Unlit") ?? Shader.Find("Unlit/Texture")) { mainTexture = monkeMirrorTex };
+            renderer.material.mainTextureScale = new Vector2(-1f, 1f);
+            renderer.material.mainTextureOffset = new Vector2(1f, 0f);
+
+            GameObject camObject = new GameObject("iiMenu_MonkeMirrorCam");
+            camObject.transform.SetParent(monkeMirrorQuad.transform, false);
+            camObject.transform.localPosition = new Vector3(0f, 0f, -0.05f);
+            monkeMirrorCam = camObject.AddComponent<Camera>();
+            monkeMirrorCam.targetTexture = monkeMirrorTex;
+            monkeMirrorCam.cullingMask = ~0;
+            monkeMirrorCam.transform.LookAt(head.position);
+
+            GameObject border = new GameObject("Outline");
+            border.transform.SetParent(monkeMirrorQuad.transform, false);
+            LineRenderer lr = border.AddComponent<LineRenderer>();
+            lr.useWorldSpace = false;
+            lr.loop = true;
+            lr.positionCount = 4;
+            lr.startWidth = 0.02f;
+            lr.endWidth = 0.02f;
+            lr.material = new Material(Shader.Find("Sprites/Default"));
+            lr.material.color = backgroundColor.GetCurrentColor();
+            lr.SetPosition(0, new Vector3(-0.5f, -0.5f, -0.002f));
+            lr.SetPosition(1, new Vector3(0.5f, -0.5f, -0.002f));
+            lr.SetPosition(2, new Vector3(0.5f, 0.5f, -0.002f));
+            lr.SetPosition(3, new Vector3(-0.5f, 0.5f, -0.002f));
+        }
+
+        public static void Disable_MonkeMirror()
+        {
+            if (monkeMirrorCam != null) Object.Destroy(monkeMirrorCam.gameObject);
+            if (monkeMirrorQuad != null) Object.Destroy(monkeMirrorQuad);
+            if (monkeMirrorTex != null) monkeMirrorTex.Release();
+            monkeMirrorCam = null;
+            monkeMirrorQuad = null;
+            monkeMirrorTex = null;
+        }
+
+        private static readonly Dictionary<VRRig, GameObject> micBars = new Dictionary<VRRig, GameObject>();
+
+        public static void Enable_MicBars()
+        {
+            if (micBars.Count > 0)
+                Disable_MicBars();
+        }
+
+        public static void Disable_MicBars()
+        {
+            foreach (KeyValuePair<VRRig, GameObject> bar in micBars)
+                Object.Destroy(bar.Value);
+
+            micBars.Clear();
+        }
+
+        public static void MicBarsUpdate()
+        {
+            if (!SceneReady())
+                return;
+
+            bool hoc = Buttons.GetIndex("Hidden on Camera").enabled;
+
+            List<KeyValuePair<VRRig, GameObject>> barCopy = micBars.ToList();
+            foreach (var bar in barCopy.Where(bar => !VRRigCache.ActiveRigs.Contains(bar.Key)))
+            {
+                Object.Destroy(bar.Value);
+                micBars.Remove(bar.Key);
+            }
+
+            foreach (VRRig vrrig in VRRigCache.ActiveRigs.Where(vrrig => !vrrig.isLocal))
+            {
+                try
+                {
+                    float loudness = 0f;
+                    GorillaSpeakerLoudness speaker = vrrig.GetComponent<GorillaSpeakerLoudness>();
+                    if (speaker != null && speaker.IsSpeaking)
+                        loudness = Mathf.Clamp01(speaker.LoudnessNormalized);
+
+                    if (!micBars.TryGetValue(vrrig, out GameObject barObject) || barObject == null)
+                    {
+                        if (loudness <= 0.001f)
+                            continue;
+
+                        barObject = new GameObject("iiMenu_MicBar");
+
+                        GameObject background = GameObject.CreatePrimitive(PrimitiveType.Quad);
+                        Object.Destroy(background.GetComponent<Collider>());
+                        background.name = "bg";
+                        background.transform.SetParent(barObject.transform, false);
+                        background.transform.localScale = new Vector3(0.6f, 0.075f, 1f);
+                        background.GetComponent<Renderer>().material.shader = GetVisualShader();
+                        background.GetComponent<Renderer>().material.color = new Color(0f, 0f, 0f, 0.6f);
+
+                        GameObject fill = GameObject.CreatePrimitive(PrimitiveType.Quad);
+                        Object.Destroy(fill.GetComponent<Collider>());
+                        fill.name = "fill";
+                        fill.transform.SetParent(barObject.transform, false);
+                        fill.GetComponent<Renderer>().material.shader = GetVisualShader();
+
+                        micBars[vrrig] = barObject;
+                    }
+
+                    if (loudness <= 0.001f)
+                    {
+                        barObject.SetActive(false);
+                        continue;
+                    }
+
+                    barObject.SetActive(true);
+                    barObject.layer = hoc ? 19 : 0;
+
+                    Transform backgroundTransform = barObject.transform.Find("bg");
+                    Transform fillTransform = barObject.transform.Find("fill");
+
+                    backgroundTransform.gameObject.layer = hoc ? 19 : 0;
+                    fillTransform.gameObject.layer = hoc ? 19 : 0;
+
+                    fillTransform.GetComponent<Renderer>().material.color = Color.Lerp(Color.green, Color.red, loudness);
+                    fillTransform.localScale = new Vector3(0.56f * loudness, 0.045f, 1f);
+                    fillTransform.localPosition = new Vector3(-0.28f + 0.28f * loudness, 0f, -0.01f);
+
+                    barObject.transform.localScale = Vector3.one * vrrig.scaleFactor;
+                    barObject.transform.position = vrrig.headMesh.transform.position + Vector3.up * (0.5f * vrrig.scaleFactor);
+                    barObject.transform.LookAt(iiMenu.Menu.Main.MainCam.transform.position);
+                    barObject.transform.Rotate(0f, 180f, 0f);
+                }
+                catch { }
+            }
+        }
+
+        private static GameObject proximityCanvasObject;
+        private static Image proximityImage;
+        private static Material proximityMaterial;
+        private static Texture2D proximityTexture;
+
+        public static void Enable_ProximityAlert()
+        {
+            if (proximityCanvasObject != null)
+                return;
+
+            proximityCanvasObject = new GameObject("iiMenu_ProximityAlert");
+            Canvas canvas = proximityCanvasObject.AddComponent<Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            canvas.sortingOrder = 999;
+
+            GameObject vignette = new GameObject("Vignette");
+            vignette.transform.SetParent(proximityCanvasObject.transform, false);
+            RectTransform rect = vignette.AddComponent<RectTransform>();
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.one;
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
+
+            if (proximityTexture == null)
+                proximityTexture = CreateVignetteTexture();
+
+            proximityMaterial = new Material(Shader.Find("UI/Default") ?? Shader.Find("Sprites/Default"))
+            {
+                mainTexture = proximityTexture
+            };
+
+            proximityImage = vignette.AddComponent<Image>();
+            proximityImage.material = proximityMaterial;
+            proximityImage.color = new Color(1f, 0f, 0f, 0f);
+            proximityImage.raycastTarget = false;
+        }
+
+        public static void Disable_ProximityAlert()
+        {
+            if (proximityCanvasObject != null)
+                Object.Destroy(proximityCanvasObject);
+
+            if (proximityMaterial != null)
+                Object.Destroy(proximityMaterial);
+
+            if (proximityTexture != null)
+                Object.Destroy(proximityTexture);
+
+            proximityCanvasObject = null;
+            proximityImage = null;
+            proximityMaterial = null;
+            proximityTexture = null;
+        }
+
+        private static Texture2D CreateVignetteTexture()
+        {
+            Texture2D texture = new Texture2D(64, 64, TextureFormat.ARGB32, false);
+
+            for (int y = 0; y < 64; y++)
+            {
+                for (int x = 0; x < 64; x++)
+                {
+                    float edge = Mathf.Max(Mathf.Abs(x / 63f - 0.5f), Mathf.Abs(y / 63f - 0.5f)) * 2f;
+                    texture.SetPixel(x, y, new Color(1f, 0f, 0f, Mathf.Clamp01((edge - 0.35f) / 0.65f)));
+                }
+            }
+
+            texture.Apply();
+            return texture;
+        }
+
+        public static void ProximityAlertUpdate()
+        {
+            if (!SceneReady())
+                return;
+
+            if (proximityCanvasObject == null || proximityImage == null)
+                Enable_ProximityAlert();
+
+            if (proximityImage == null)
+                return;
+
+            Transform head = GorillaTagger.Instance.headCollider.transform;
+            float closest = float.MaxValue;
+
+            foreach (VRRig vrrig in VRRigCache.ActiveRigs)
+            {
+                if (vrrig.isLocal)
+                    continue;
+
+                Vector3 toRig = vrrig.transform.position - head.position;
+                float distance = toRig.magnitude;
+
+                if (distance > 2f || distance <= 0.001f)
+                    continue;
+
+                if (Vector3.Dot(head.forward, toRig / distance) < 0f && distance < closest)
+                    closest = distance;
+            }
+
+            float target = closest < float.MaxValue ? 1f - closest / 2f : 0f;
+            Color color = proximityImage.color;
+            color.a = Mathf.Lerp(color.a, target, Mathf.Clamp01(Time.deltaTime * 12f));
+            proximityImage.color = color;
+        }
+
+        private static readonly Dictionary<int, Queue<Vector3>> ghostTrailHistory = new Dictionary<int, Queue<Vector3>>();
+        private static readonly List<GameObject> ghostTrailPool = new List<GameObject>();
+        private static Material ghostTrailMaterial;
+        private static float ghostTrailLastRecord;
+
+        public static void Enable_GhostTrail()
+        {
+            if (ghostTrailPool.Count > 0)
+                Disable_GhostTrail();
+        }
+
+        public static void Disable_GhostTrail()
+        {
+            foreach (GameObject sphere in ghostTrailPool)
+            {
+                if (sphere != null)
+                    Object.Destroy(sphere);
+            }
+
+            ghostTrailPool.Clear();
+            ghostTrailHistory.Clear();
+
+            if (ghostTrailMaterial != null)
+                Object.Destroy(ghostTrailMaterial);
+
+            ghostTrailMaterial = null;
+            ghostTrailLastRecord = 0f;
+        }
+
+        public static void GhostTrailUpdate()
+        {
+            if (!SceneReady(true))
+                return;
+
+            ghostTrailPool.RemoveAll(sphere => sphere == null);
+
+            if (Time.time - ghostTrailLastRecord >= 0.5f)
+            {
+                ghostTrailLastRecord = Time.time;
+
+                foreach (VRRig vrrig in VRRigCache.ActiveRigs)
+                {
+                    if (vrrig.isLocal)
+                        continue;
+
+                    int rigId = vrrig.GetInstanceID();
+                    if (!ghostTrailHistory.TryGetValue(rigId, out Queue<Vector3> history))
+                    {
+                        history = new Queue<Vector3>();
+                        ghostTrailHistory.Add(rigId, history);
+                    }
+
+                    history.Enqueue(vrrig.transform.position);
+                    while (history.Count > 30)
+                        history.Dequeue();
+                }
+            }
+
+            if (ghostTrailMaterial == null)
+            {
+                ghostTrailMaterial = new Material(GetVisualShader());
+                ghostTrailMaterial.color = new Color(1f, 1f, 1f, 0.15f);
+            }
+
+            bool hoc = Buttons.GetIndex("Hidden on Camera").enabled;
+            int used = 0;
+
+            foreach (VRRig vrrig in VRRigCache.ActiveRigs)
+            {
+                if (vrrig.isLocal || used >= 60)
+                    continue;
+
+                if (!ghostTrailHistory.TryGetValue(vrrig.GetInstanceID(), out Queue<Vector3> history) || history.Count < 7)
+                    continue;
+
+                Vector3 delayedPosition = history.ToArray()[history.Count - 7];
+
+                if (used >= ghostTrailPool.Count)
+                {
+                    GameObject pooled = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+                    Object.Destroy(pooled.GetComponent<Collider>());
+                    pooled.GetComponent<Renderer>().material = ghostTrailMaterial;
+                    pooled.SetActive(false);
+                    ghostTrailPool.Add(pooled);
+                }
+
+                GameObject sphere = ghostTrailPool[used];
+                sphere.SetActive(true);
+                sphere.transform.position = delayedPosition;
+                sphere.transform.localScale = Vector3.one * (0.25f * vrrig.scaleFactor);
+                sphere.layer = hoc ? 19 : 0;
+
+                used++;
+            }
+
+            for (int i = used; i < ghostTrailPool.Count; i++)
+                ghostTrailPool[i].SetActive(false);
+        }
+
+        private static readonly List<Transform> beeTargets = new List<Transform>();
+        private static readonly List<LineRenderer> beeLines = new List<LineRenderer>();
+        private static readonly List<GameObject> beeLabels = new List<GameObject>();
+        private static float nextBeeScan;
+
+        public static void Enable_BeeESP()
+        {
+            nextBeeScan = 0f;
+        }
+
+        public static void Disable_BeeESP()
+        {
+            foreach (LineRenderer line in beeLines)
+            {
+                if (line != null)
+                    Object.Destroy(line.gameObject);
+            }
+
+            foreach (GameObject label in beeLabels)
+            {
+                if (label != null)
+                    Object.Destroy(label);
+            }
+
+            beeLines.Clear();
+            beeLabels.Clear();
+            beeTargets.Clear();
+            nextBeeScan = 0f;
+        }
+
+        public static void BeeESPUpdate()
+        {
+            if (!SceneReady(true) || iiMenu.Menu.Main.MainCam == null)
+                return;
+
+            bool hoc = Buttons.GetIndex("Hidden on Camera").enabled;
+            bool tt = Buttons.GetIndex("Transparent Theme").enabled;
+
+            Color beeColor = Color.yellow;
+            if (tt)
+                beeColor.a = 0.5f;
+
+            if (Time.time >= nextBeeScan)
+            {
+                nextBeeScan = Time.time + 0.5f;
+
+                beeTargets.Clear();
+                foreach (BeeSwarmManager manager in GetAllType<BeeSwarmManager>())
+                {
+                    List<AnimatedBee> bees = Traverse.Create(manager).Field("bees").GetValue<List<AnimatedBee>>();
+                    if (bees == null)
+                        continue;
+
+                    foreach (AnimatedBee bee in bees)
+                    {
+                        if (bee.visual != null)
+                            beeTargets.Add(bee.visual.transform);
+                    }
+                }
+
+                while (beeLines.Count > beeTargets.Count)
+                {
+                    int last = beeLines.Count - 1;
+                    Object.Destroy(beeLines[last].gameObject);
+                    Object.Destroy(beeLabels[last]);
+                    beeLines.RemoveAt(last);
+                    beeLabels.RemoveAt(last);
+                }
+
+                while (beeLines.Count < beeTargets.Count)
+                {
+                    GameObject lineObject = new GameObject("iiMenu_BeeLine");
+                    LineRenderer line = lineObject.AddComponent<LineRenderer>();
+                    if (smoothLines)
+                    {
+                        line.numCapVertices = 10;
+                        line.numCornerVertices = 5;
+                    }
+                    line.material.shader = Shader.Find("GUI/Text Shader");
+                    line.startWidth = 0.01f;
+                    line.endWidth = 0.01f;
+                    line.positionCount = 2;
+                    line.useWorldSpace = true;
+                    beeLines.Add(line);
+
+                    GameObject label = new GameObject("iiMenu_BeeLabel");
+                    label.transform.localScale = new Vector3(0.25f, 0.25f, 0.25f);
+                    TextMeshPro text = label.AddComponent<TextMeshPro>();
+                    text.fontSize = 2.4f;
+                    text.alignment = TextAlignmentOptions.Center;
+                    text.color = Color.yellow;
+                    text.SafeSetText("BEES");
+                    text.SafeSetFontStyle(activeFontStyle);
+                    text.SafeSetFont(activeFont);
+                    beeLabels.Add(label);
+                }
+            }
+
+            Vector3 origin = GorillaTagger.Instance.headCollider.transform.position;
+
+            for (int i = 0; i < beeTargets.Count; i++)
+            {
+                LineRenderer line = beeLines[i];
+                GameObject label = beeLabels[i];
+                Transform target = beeTargets[i];
+
+                if (line == null || label == null)
+                    continue;
+
+                if (target == null)
+                {
+                    line.enabled = false;
+                    label.SetActive(false);
+                    continue;
+                }
+
+                if (hoc)
+                {
+                    line.gameObject.layer = 19;
+                    label.layer = 19;
+                }
+
+                line.enabled = true;
+                label.SetActive(true);
+
+                line.startColor = beeColor;
+                line.endColor = beeColor;
+
+                line.SetPosition(0, origin);
+                line.SetPosition(1, target.position);
+
+                label.transform.position = target.position + Vector3.up * 0.25f;
+                label.transform.LookAt(iiMenu.Menu.Main.MainCam.transform.position);
+                label.transform.Rotate(0f, 180f, 0f);
+            }
+        }
+
+        private static GameObject eventLabel;
+        private static string eventText;
+        private static float nextEventRefresh;
+
+        public static void Enable_EventESP()
+        {
+            nextEventRefresh = 0f;
+        }
+
+        public static void Disable_EventESP()
+        {
+            if (eventLabel != null)
+                Object.Destroy(eventLabel);
+
+            eventLabel = null;
+            eventText = null;
+            nextEventRefresh = 0f;
+
+            NotificationManager.information.Remove("Scheduled Event");
+        }
+
+        public static void EventESPUpdate()
+        {
+            if (!SceneReady() || iiMenu.Menu.Main.MainCam == null)
+                return;
+
+            if (Time.time >= nextEventRefresh)
+            {
+                nextEventRefresh = Time.time + 1f;
+                eventText = BuildEventInfoText();
+            }
+
+            if (string.IsNullOrEmpty(eventText))
+                return;
+
+            bool hoc = Buttons.GetIndex("Hidden on Camera").enabled;
+
+            if (GorillaComputer.instance != null)
+            {
+                NotificationManager.information.Remove("Scheduled Event");
+
+                if (eventLabel == null)
+                {
+                    eventLabel = new GameObject("iiMenu_EventLabel");
+                    eventLabel.transform.localScale = new Vector3(0.25f, 0.25f, 0.25f);
+                    TextMeshPro text = eventLabel.AddComponent<TextMeshPro>();
+                    text.fontSize = 2.4f;
+                    text.alignment = TextAlignmentOptions.Center;
+                    text.color = Color.white;
+                    text.SafeSetFontStyle(activeFontStyle);
+                    text.SafeSetFont(activeFont);
+                }
+
+                eventLabel.layer = hoc ? 19 : 0;
+
+                TextMeshPro label = eventLabel.GetComponent<TextMeshPro>();
+                label.SafeSetText(eventText);
+
+                eventLabel.transform.position = GorillaComputer.instance.transform.position + Vector3.up * 1.25f;
+                eventLabel.transform.LookAt(iiMenu.Menu.Main.MainCam.transform.position);
+                eventLabel.transform.Rotate(0f, 180f, 0f);
+            }
+            else
+            {
+                if (eventLabel != null)
+                {
+                    Object.Destroy(eventLabel);
+                    eventLabel = null;
+                }
+
+                NotificationManager.information["Scheduled Event"] = eventText.Replace("\n", " | ");
+            }
+        }
+
+        private static string BuildEventInfoText()
+        {
+            GorillaNetworking.ScheduledEvents.ScheduledEventManager manager = GorillaNetworking.ScheduledEvents.ScheduledEventManager.Instance;
+            if (manager == null)
+                return "<color=yellow><b>Scheduled Event</b></color>\nManager unavailable";
+
+            string eventName = Traverse.Create(manager).Field("titleDataKey").GetValue<string>();
+            if (string.IsNullOrEmpty(eventName))
+                eventName = "Scheduled Event";
+
+            var phase = manager.CurrentPhase;
+
+            string status;
+            if (!manager.IsResolved || !manager.DataReady)
+                status = "Waiting for data...";
+            else if (phase == GorillaNetworking.ScheduledEvents.ScheduledEventPhase.During)
+                status = "Event in progress";
+            else if (manager.HasEvent)
+                status = $"Starts in {manager.SecondsUntilEventStart:F0}s";
+            else
+                status = "No event scheduled";
+
+            return $"<color=yellow><b>{eventName}</b></color>\nPhase: {phase}\n{status}";
         }
     }
 }

@@ -16,11 +16,14 @@ namespace iiMenu.Patches.Menu
     public class HandTapPatch
     {
         public static Action<VRRig, Vector3> OnHandTap;
+        public static Action<VRRig, Vector3, bool> OnHandTapWithHand;
         public static bool enabled;
 
         public static bool Prefix(VRRigSerializer __instance, int audioClipIndex, bool isDownTap, bool isLeftHand, float handTapSpeed, long packedDirFromHitToHand, PhotonMessageInfoWrapped info)
         {
-            OnHandTap?.Invoke(__instance.vrrig, isLeftHand ? __instance.vrrig.leftHandTransform.position : __instance.vrrig.rightHandTransform.position);
+            Vector3 pos = isLeftHand ? __instance.vrrig.leftHandTransform.position : __instance.vrrig.rightHandTransform.position;
+            OnHandTap?.Invoke(__instance.vrrig, pos);
+            OnHandTapWithHand?.Invoke(__instance.vrrig, pos, isLeftHand);
 
             return !enabled;
         }

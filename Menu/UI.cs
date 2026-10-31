@@ -856,7 +856,7 @@ namespace iiMenu.Menu
                     {
                         try
                         {
-                            if (!button.enabled || button.hideFromArraylist || (hideSettings && (!hideSettings ||
+                            if (!button.enabled || button.hideFromArraylist || (hideSettings && (categoryIndex >= Buttons.categoryNames.Length ||
                                                                      Buttons.categoryNames[categoryIndex]
                                                                          .Contains("Settings"))) ||
                                 (onlyModsArraylist && categoryIndex < Buttons.categoryNames.Length &&
