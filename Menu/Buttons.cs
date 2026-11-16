@@ -2182,11 +2182,7 @@ new ButtonInfo { buttonText = "Miku", method =() => Managers.EmoteManager.Emote(
 
                 new ButtonInfo { buttonText = "Snowball Overload <color=grey>[</color><color=green>UD</color><color=grey>]</color>", aliases = new[] { "effect overload" }, enableMethod =() => Overpowered.NotifyState("SNOWBALL SPAM", true), method = Overpowered.EffectOverload, disableMethod =() => { Overpowered.SnowballSpamOff(); Overpowered.NotifyState("SNOWBALL SPAM", false); }, toolTip = "funny snowball spam, very fast and undetected." },
                 new ButtonInfo { buttonText = "Mothership Anti-Ban <color=grey>[</color><color=green>T</color><color=grey>]</color>", enableMethod =() => { MothershipPatches.enabled = true; StealthPatches.enabled = true; Overpowered.NotifyState("MOTHERSHIP", true); }, method =() => { }, disableMethod =() => { MothershipPatches.enabled = false; StealthPatches.enabled = false; Overpowered.NotifyState("MOTHERSHIP", false); }, toolTip = "Blocks telemetry from Mothership so you don't get flagged" },
-                
-                new ButtonInfo { buttonText = "Crash Master [SD]", method = Overpowered.CrittersFreeze, isTogglable = false, toolTip = "Crashes Master As Non-Master" },
-                new ButtonInfo { buttonText = "Crash Gun [SD]", method = Overpowered.CrashGun, toolTip = "Crashes player as master." },
-                new ButtonInfo { buttonText = "Crash Lobby [SD]", method = Overpowered.CrashLobby, isTogglable = false, toolTip = "Crashes everyone as master." },
-               
+
                 new ButtonInfo { buttonText = "Always Guardian", method = Overpowered.AlwaysGuardian, disableMethod = Movement.EnableRig, toolTip = "Makes you always the guardian."},
                 
                 new ButtonInfo { buttonText = "Guardian Protector", method = Overpowered.GuardianProtector, toolTip = "Pushes people away from the guardian moon if they try to approach it."},
