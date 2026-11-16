@@ -904,7 +904,7 @@ namespace iiMenu.Menu
 
                 new ButtonInfo { buttonText = "Remove Blindfold", method = Visuals.RemoveBlindfold, toolTip = "Disables the blindfold in the prop hunt map."},
                 new ButtonInfo { buttonText = "Ghost ESP", method = Patches.Menu.GhostESPPatch.Enable, disableMethod = Patches.Menu.GhostESPPatch.Disable, toolTip = "Makes ghost players visible in the Ghost gamemode."},
-    new ButtonInfo { buttonText = "Monke Light", enableMethod =() => Visuals.Enable_MonkeLight(), disableMethod =() => Visuals.Disable_MonkeLight(), toolTip = "Spotlight follows you" },
+                new ButtonInfo { buttonText = "Monke Light", enableMethod =() => Visuals.Enable_MonkeLight(), disableMethod =() => Visuals.Disable_MonkeLight(), toolTip = "Spotlight follows you" },
                 //new ButtonInfo { buttonText = "Lucy ESP", method = Overpowered.LucyESP, disableMethod = Overpowered.DisableLucyESP, toolTip = "Applies Chams to Lucy." },
                 //new ButtonInfo { buttonText = "Lucy Tracers", method = Visuals.LucyTracers, toolTip = "Draws a line pointing to Lucy." },
                 //new ButtonInfo { buttonText = "Lucy Skeleton ESP", method = Visuals.LucySkeletonESP, toolTip = "Draws lines connecting Lucy's joints." },
@@ -913,7 +913,7 @@ namespace iiMenu.Menu
                 //new ButtonInfo { buttonText = "Lucy Target Line", method = Visuals.LucyToTargetESP, toolTip = "Draws a line from Lucy to her target." },
                 //new ButtonInfo { buttonText = "Rainbow Lucy", method = Visuals.RainbowLucy, disableMethod = Overpowered.DisableLucyESP, toolTip = "Makes Lucy cycle through RGB rainbow colors." },
                 //new ButtonInfo { buttonText = "Lucy Head Spin", method = Visuals.LucyHeadSpin, toolTip = "Continuously spins Lucy's head 360 degrees." },
-                new ButtonInfo { buttonText = "Disable Alien Clutter", method = Visuals.DisableAlienClutter, disableMethod = Visuals.EnableAlienClutter, toolTip = "Removes the alien/halloween decorations in forest." },
+                //new ButtonInfo { buttonText = "Disable Alien Clutter", method = Visuals.DisableAlienClutter, disableMethod = Visuals.EnableAlienClutter, toolTip = "Removes the alien/halloween decorations in forest." },
 
 
                 new ButtonInfo { buttonText = "Core ESP", method = Visuals.CoreESP, toolTip = "Puts dots on your screen at where all of the cores in the ghost reactor map are."},
@@ -1986,7 +1986,7 @@ new ButtonInfo { buttonText = "Miku", method =() => Managers.EmoteManager.Emote(
                 new ButtonInfo { buttonText = "Unguardian Gun", method = Overpowered.UnguardianGun, toolTip = "Removes whoever your hand desires from the guardian position."},
                 new ButtonInfo { buttonText = "Unguardian All", method = Overpowered.UnguardianAll, isTogglable = false, toolTip = "Removes everyone in the room from the guardian position."},
 
-                //new ButtonInfo { buttonText = "Guardian Spaz", method = Overpowered.GuardianSpaz, toolTip = "Makes Lucy spaz out on the target."},
+                new ButtonInfo { buttonText = "Guardian Spaz", method = Overpowered.GuardianSpaz, toolTip = "Makes Lucy spaz out on the target."},
 
                 new ButtonInfo { buttonText = "Red Color Self", method =() => Overpowered.SetColorSelf(1), isTogglable = false, toolTip = "Changes your color to red."},
                 new ButtonInfo { buttonText = "Red Color Gun", method =() => Overpowered.SetColorGun(1), toolTip = "Changes whoever your hand desires' color to red."},
@@ -2054,11 +2054,11 @@ new ButtonInfo { buttonText = "Miku", method =() => Managers.EmoteManager.Emote(
                 new ButtonInfo { buttonText = "Super Infection Break Audio Gun", method = Overpowered.SuperInfectionBreakAudioGun, toolTip = "Breaks the audio of whoever your hand desires in the Super Infection gamemode."},
                 new ButtonInfo { buttonText = "Super Infection Break Audio All", method = Overpowered.SuperInfectionBreakAudioAll, toolTip = "Breaks the audio of everyone in the Super Infection gamemode."},
 
-                new ButtonInfo { buttonText = "Break Movement Gun", method = Overpowered.BreakMovementGun, toolTip = "Breaks the movement of whoever your hand desires, freezing their body in place."},
-                new ButtonInfo { buttonText = "Break Movement All", method = Overpowered.BreakMovementAll, isTogglable = false, toolTip = "Breaks the movement of everyone in the room, freezing their body in place."},
-                new ButtonInfo { buttonText = "Fix Movement Gun", method = Overpowered.FixMovementGun, toolTip = "Fixes the movement of whoever your hand desires."},
-                new ButtonInfo { buttonText = "Fix Movement All", method = Overpowered.FixMovementAll, isTogglable = false, toolTip = "Fixes the movement of everyone in the room."},
-                new ButtonInfo { buttonText = "Fix Movement Self", method = Overpowered.FixMovementSelf, isTogglable = false, toolTip = "Fixes your own movement if it is frozen or disabled."},
+                //new ButtonInfo { buttonText = "Break Movement Gun", method = Overpowered.BreakMovementGun, toolTip = "Breaks the movement of whoever your hand desires, freezing their body in place."},
+                //new ButtonInfo { buttonText = "Break Movement All", method = Overpowered.BreakMovementAll, isTogglable = false, toolTip = "Breaks the movement of everyone in the room, freezing their body in place."},
+                //new ButtonInfo { buttonText = "Fix Movement Gun", method = Overpowered.FixMovementGun, toolTip = "Fixes the movement of whoever your hand desires."},
+                //new ButtonInfo { buttonText = "Fix Movement All", method = Overpowered.FixMovementAll, isTogglable = false, toolTip = "Fixes the movement of everyone in the room."},
+                //new ButtonInfo { buttonText = "Fix Movement Self", method = Overpowered.FixMovementSelf, isTogglable = false, toolTip = "Fixes your own movement if it is frozen or disabled."},
 
                 new ButtonInfo { buttonText = "Kill Self", method =() => Fun.SetStateSelf(1), isTogglable = false, toolTip = "Turns you into a ghost."},
                 new ButtonInfo { buttonText = "Kill Gun", method =() => Fun.SetStateGun(1), toolTip = "Turns whoever your hand desires into a ghost."},
@@ -2755,16 +2755,16 @@ new ButtonInfo { buttonText = "Miku", method =() => Managers.EmoteManager.Emote(
             },
             new[] {
                 new ButtonInfo { buttonText = "Exit Admin Cosmetics", method =() => CurrentCategoryName = "Main", isTogglable = false, toolTip = "Returns you back to the main page." },
-                new ButtonInfo { buttonText = "Admin Badge", enableMethod =() => Admin.ToggleCosmetic("LBAAD.", true), disableMethod =() => Admin.ToggleCosmetic("LBAAD.", false), toolTip = "Gives you the Gold Administrator badge (visible to menu users)." },
-                new ButtonInfo { buttonText = "AA Creator", enableMethod =() => Admin.ToggleCosmetic("LBANI.", true), disableMethod =() => Admin.ToggleCosmetic("LBANI.", false), toolTip = "Gives you the Another Axiom Creator badge (visible to menu users)." },
-                new ButtonInfo { buttonText = "Admin Stick", enableMethod =() => Admin.ToggleCosmetic("LBAAK.", true), disableMethod =() => Admin.ToggleCosmetic("LBAAK.", false), toolTip = "Gives you the glowing Admin Stick (visible to menu users)." },
-                new ButtonInfo { buttonText = "Grab Admin Stick", enableMethod =() => Admin.GrabHoldable("LBAAK", true), disableMethod =() => Admin.GrabHoldable("LBAAK", false), toolTip = "Holds the Admin Stick in your right hand." },
-                new ButtonInfo { buttonText = "Finger Painter", enableMethod =() => Admin.ToggleCosmetic("LBADE.", true), disableMethod =() => Admin.ToggleCosmetic("LBADE.", false), toolTip = "Gives you the Finger Painter badge (visible to menu users)." },
-                new ButtonInfo { buttonText = "Illustrator", enableMethod =() => Admin.ToggleCosmetic("LBAGS.", true), disableMethod =() => Admin.ToggleCosmetic("LBAGS.", false), toolTip = "Gives you the Illustrator badge (visible to menu users)." },
-                new ButtonInfo { buttonText = "Forest Guide", enableMethod =() => Admin.ToggleCosmetic("LMAPY.", true), disableMethod =() => Admin.ToggleCosmetic("LMAPY.", false), toolTip = "Gives you the Forest Guide stick (visible to menu users)." },
-                new ButtonInfo { buttonText = "Grab Forest Guide", enableMethod =() => Admin.GrabHoldable("LMAPY", true), disableMethod =() => Admin.GrabHoldable("LMAPY", false), toolTip = "Holds the Forest Guide stick in your right hand." },
-                new ButtonInfo { buttonText = "All Admin Cosmetics", enableMethod = Admin.EnableAll, disableMethod = Admin.DisableAll, toolTip = "Enables all admin cosmetics at once." },
-                new ButtonInfo { buttonText = "Admin Cosmetics Others", enableMethod =() => Admin.showOtherAdminCosmetics = true, disableMethod =() => Admin.showOtherAdminCosmetics = false, enabled = true, toolTip = "Displays admin cosmetics on verified admins in your lobby." }
+                //new ButtonInfo { buttonText = "Admin Badge", enableMethod =() => Admin.ToggleCosmetic("LBAAD.", true), disableMethod =() => Admin.ToggleCosmetic("LBAAD.", false), toolTip = "Gives you the Gold Administrator badge (visible to menu users)." },
+                //new ButtonInfo { buttonText = "AA Creator", enableMethod =() => Admin.ToggleCosmetic("LBANI.", true), disableMethod =() => Admin.ToggleCosmetic("LBANI.", false), toolTip = "Gives you the Another Axiom Creator badge (visible to menu users)." },
+                //new ButtonInfo { buttonText = "Admin Stick", enableMethod =() => Admin.ToggleCosmetic("LBAAK.", true), disableMethod =() => Admin.ToggleCosmetic("LBAAK.", false), toolTip = "Gives you the glowing Admin Stick (visible to menu users)." },
+                //new ButtonInfo { buttonText = "Grab Admin Stick", enableMethod =() => Admin.GrabHoldable("LBAAK", true), disableMethod =() => Admin.GrabHoldable("LBAAK", false), toolTip = "Holds the Admin Stick in your right hand." },
+                //new ButtonInfo { buttonText = "Finger Painter", enableMethod =() => Admin.ToggleCosmetic("LBADE.", true), disableMethod =() => Admin.ToggleCosmetic("LBADE.", false), toolTip = "Gives you the Finger Painter badge (visible to menu users)." },
+                //new ButtonInfo { buttonText = "Illustrator", enableMethod =() => Admin.ToggleCosmetic("LBAGS.", true), disableMethod =() => Admin.ToggleCosmetic("LBAGS.", false), toolTip = "Gives you the Illustrator badge (visible to menu users)." },
+                //new ButtonInfo { buttonText = "Forest Guide", enableMethod =() => Admin.ToggleCosmetic("LMAPY.", true), disableMethod =() => Admin.ToggleCosmetic("LMAPY.", false), toolTip = "Gives you the Forest Guide stick (visible to menu users)." },
+                //new ButtonInfo { buttonText = "Grab Forest Guide", enableMethod =() => Admin.GrabHoldable("LMAPY", true), disableMethod =() => Admin.GrabHoldable("LMAPY", false), toolTip = "Holds the Forest Guide stick in your right hand." },
+                //new ButtonInfo { buttonText = "All Admin Cosmetics", enableMethod = Admin.EnableAll, disableMethod = Admin.DisableAll, toolTip = "Enables all admin cosmetics at once." },
+                //new ButtonInfo { buttonText = "Admin Cosmetics Others", enableMethod =() => Admin.showOtherAdminCosmetics = true, disableMethod =() => Admin.showOtherAdminCosmetics = false, enabled = true, toolTip = "Displays admin cosmetics on verified admins in your lobby." }
             }
         };
 
