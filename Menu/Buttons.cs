@@ -904,16 +904,16 @@ namespace iiMenu.Menu
 
                 new ButtonInfo { buttonText = "Remove Blindfold", method = Visuals.RemoveBlindfold, toolTip = "Disables the blindfold in the prop hunt map."},
                 new ButtonInfo { buttonText = "Ghost ESP", method = Patches.Menu.GhostESPPatch.Enable, disableMethod = Patches.Menu.GhostESPPatch.Disable, toolTip = "Makes ghost players visible in the Ghost gamemode."},
-    new ButtonInfo { buttonText = "Monke Light", enableMethod =() => Visuals.Enable_MonkeLight(), disableMethod =() => Visuals.Disable_MonkeLight(), toolTip = "Spotlight follows you" },
-                new ButtonInfo { buttonText = "Lucy ESP", method = Overpowered.LucyESP, disableMethod = Overpowered.DisableLucyESP, toolTip = "Applies Chams to Lucy." },
-                new ButtonInfo { buttonText = "Lucy Tracers", method = Visuals.LucyTracers, toolTip = "Draws a line pointing to Lucy." },
-                new ButtonInfo { buttonText = "Lucy Skeleton ESP", method = Visuals.LucySkeletonESP, toolTip = "Draws lines connecting Lucy's joints." },
-                new ButtonInfo { buttonText = "Lucy Look Tracer", method = Visuals.LucyLookTracer, toolTip = "Draws a line indicating where Lucy is looking." },
-                new ButtonInfo { buttonText = "Lucy State ESP", method = Visuals.LucyStateESP, disableMethod = Visuals.DisableLucyStateESP, toolTip = "Shows distance to Lucy and her current state." },
-                new ButtonInfo { buttonText = "Lucy Target Line", method = Visuals.LucyToTargetESP, toolTip = "Draws a line from Lucy to her target." },
-                new ButtonInfo { buttonText = "Rainbow Lucy", method = Visuals.RainbowLucy, disableMethod = Overpowered.DisableLucyESP, toolTip = "Makes Lucy cycle through RGB rainbow colors." },
-                new ButtonInfo { buttonText = "Lucy Head Spin", method = Visuals.LucyHeadSpin, toolTip = "Continuously spins Lucy's head 360 degrees." },
-                new ButtonInfo { buttonText = "Disable Alien Clutter", method = Visuals.DisableAlienClutter, disableMethod = Visuals.EnableAlienClutter, toolTip = "Removes the alien/halloween decorations in forest." },
+                new ButtonInfo { buttonText = "Monke Light", enableMethod =() => Visuals.Enable_MonkeLight(), disableMethod =() => Visuals.Disable_MonkeLight(), toolTip = "Spotlight follows you" },
+                //new ButtonInfo { buttonText = "Lucy ESP", method = Overpowered.LucyESP, disableMethod = Overpowered.DisableLucyESP, toolTip = "Applies Chams to Lucy." },
+                //new ButtonInfo { buttonText = "Lucy Tracers", method = Visuals.LucyTracers, toolTip = "Draws a line pointing to Lucy." },
+                //new ButtonInfo { buttonText = "Lucy Skeleton ESP", method = Visuals.LucySkeletonESP, toolTip = "Draws lines connecting Lucy's joints." },
+                //new ButtonInfo { buttonText = "Lucy Look Tracer", method = Visuals.LucyLookTracer, toolTip = "Draws a line indicating where Lucy is looking." },
+                //new ButtonInfo { buttonText = "Lucy State ESP", method = Visuals.LucyStateESP, disableMethod = Visuals.DisableLucyStateESP, toolTip = "Shows distance to Lucy and her current state." },
+                //new ButtonInfo { buttonText = "Lucy Target Line", method = Visuals.LucyToTargetESP, toolTip = "Draws a line from Lucy to her target." },
+                //new ButtonInfo { buttonText = "Rainbow Lucy", method = Visuals.RainbowLucy, disableMethod = Overpowered.DisableLucyESP, toolTip = "Makes Lucy cycle through RGB rainbow colors." },
+                //new ButtonInfo { buttonText = "Lucy Head Spin", method = Visuals.LucyHeadSpin, toolTip = "Continuously spins Lucy's head 360 degrees." },
+                //new ButtonInfo { buttonText = "Disable Alien Clutter", method = Visuals.DisableAlienClutter, disableMethod = Visuals.EnableAlienClutter, toolTip = "Removes the alien/halloween decorations in forest." },
 
 
                 new ButtonInfo { buttonText = "Core ESP", method = Visuals.CoreESP, toolTip = "Puts dots on your screen at where all of the cores in the ghost reactor map are."},
@@ -1949,34 +1949,34 @@ new ButtonInfo { buttonText = "Miku", method =() => Managers.EmoteManager.Emote(
 
                 new ButtonInfo { buttonText = "Map Force Unload", method = Master.MapForceUnload, isTogglable = false, toolTip = "discord.gg/poopoovr" },
 
-                new ButtonInfo { buttonText = "Spawn Lucy", method = Overpowered.SpawnLucy, isTogglable = false, toolTip = "Summons Lucy at closest grave" },
-                new ButtonInfo { buttonText = "Spawn Red Lucy", method = Overpowered.SpawnRedLucy, isTogglable = false, toolTip = "Summons the Red Lucy" },
-                new ButtonInfo { buttonText = "Despawn Lucy", method = Overpowered.DespawnLucy, isTogglable = false, toolTip = "Removes Lucy from the map." },
+                //new ButtonInfo { buttonText = "Spawn Lucy", method = Overpowered.SpawnLucy, isTogglable = false, toolTip = "Summons Lucy at closest grave" },
+                //new ButtonInfo { buttonText = "Spawn Red Lucy", method = Overpowered.SpawnRedLucy, isTogglable = false, toolTip = "Summons the Red Lucy" },
+                //new ButtonInfo { buttonText = "Despawn Lucy", method = Overpowered.DespawnLucy, isTogglable = false, toolTip = "Removes Lucy from the map." },
                 
-                new ButtonInfo { buttonText = "Become Lucy", method = Overpowered.BecomeLucy, disableMethod = Movement.EnableRig, toolTip = "Hides your rig and lets you control Lucy yourself." },
-                new ButtonInfo { buttonText = "Spaz Lucy", method = Overpowered.SpazLucy, toolTip = "Rapidly moves Lucy's position to make her twitch out." },
-                new ButtonInfo { buttonText = "Break Lucy", method = Overpowered.BreakLucy, toolTip = "Break's Lucy's position" },
-                new ButtonInfo { buttonText = "Annoying Lucy", method = Overpowered.AnnoyingLucy, toolTip = "Makes Lucy repeatedly gong and grab random players." },
-                new ButtonInfo { buttonText = "Lucy Attack All", method = Overpowered.LucyAttackAll, isTogglable = false, toolTip = "Makes Lucy instantly grab every player in the lobby." },
+                //new ButtonInfo { buttonText = "Become Lucy", method = Overpowered.BecomeLucy, disableMethod = Movement.EnableRig, toolTip = "Hides your rig and lets you control Lucy yourself." },
+                //new ButtonInfo { buttonText = "Spaz Lucy", method = Overpowered.SpazLucy, toolTip = "Rapidly moves Lucy's position to make her twitch out." },
+                //new ButtonInfo { buttonText = "Break Lucy", method = Overpowered.BreakLucy, toolTip = "Break's Lucy's position" },
+                //new ButtonInfo { buttonText = "Annoying Lucy", method = Overpowered.AnnoyingLucy, toolTip = "Makes Lucy repeatedly gong and grab random players." },
+                //new ButtonInfo { buttonText = "Lucy Attack All", method = Overpowered.LucyAttackAll, isTogglable = false, toolTip = "Makes Lucy instantly grab every player in the lobby." },
                 
-                new ButtonInfo { buttonText = "Lucy Attack Gun", method = Overpowered.LucyAttackGun, toolTip = "Shoot a player to make Lucy aggressively attack them." },
-                new ButtonInfo { buttonText = "Lucy Harass Gun", method = Overpowered.LucyHarassGun, toolTip = "Shoot a player to make Lucy relentlessly harass them." },
-                new ButtonInfo { buttonText = "Lucy Fling Gun", method = Overpowered.LucyFlingGun, toolTip = "Shoot a player to make Lucy fling them into the sky." },
-                new ButtonInfo { buttonText = "Lucy Backshots Gun", method = Overpowered.LucyBackshotsGun, toolTip = "Shoot a player and Lucy does weird stuff to them." },
-                new ButtonInfo { buttonText = "Lucy Head Gun", method = Overpowered.LucyHeadGun, toolTip = "Shoot a player and Lucy does weird stuff to them." },
-                new ButtonInfo { buttonText = "Lucy Orbit", method = Overpowered.LucyOrbit, toolTip = "Makes Lucy orbit around you." },
-                new ButtonInfo { buttonText = "Lucy Orbit Vertical", method = Overpowered.LucyOrbitVertical, toolTip = "Makes Lucy orbit vertically around you." },
-                new ButtonInfo { buttonText = "Lucy Crown", method = Overpowered.LucyCrown, toolTip = "Makes Lucy orbit right above your head like a halo." },
-                new ButtonInfo { buttonText = "Helicopter Lucy", method = Overpowered.HelicopterLucy, toolTip = "Rapidly spins Lucy horizontally like a helicopter" },
-                new ButtonInfo { buttonText = "Hand Grab Lucy", method = Overpowered.HandGrabLucy, toolTip = "Hold the right grip to hold Lucy in your hand." },
-                new ButtonInfo { buttonText = "Lucy Orbit Gun", method = Overpowered.LucyOrbitGun, toolTip = "Shoot a player to make Lucy orbit around them." },
-                new ButtonInfo { buttonText = "Lucy Bodyguard", method = Overpowered.LucyBodyguard, toolTip = "Lucy protects you and attacks any player who comes within 5 meters." },
+                //new ButtonInfo { buttonText = "Lucy Attack Gun", method = Overpowered.LucyAttackGun, toolTip = "Shoot a player to make Lucy aggressively attack them." },
+                //new ButtonInfo { buttonText = "Lucy Harass Gun", method = Overpowered.LucyHarassGun, toolTip = "Shoot a player to make Lucy relentlessly harass them." },
+                //new ButtonInfo { buttonText = "Lucy Fling Gun", method = Overpowered.LucyFlingGun, toolTip = "Shoot a player to make Lucy fling them into the sky." },
+                //new ButtonInfo { buttonText = "Lucy Backshots Gun", method = Overpowered.LucyBackshotsGun, toolTip = "Shoot a player and Lucy does weird stuff to them." },
+                //new ButtonInfo { buttonText = "Lucy Head Gun", method = Overpowered.LucyHeadGun, toolTip = "Shoot a player and Lucy does weird stuff to them." },
+                //new ButtonInfo { buttonText = "Lucy Orbit", method = Overpowered.LucyOrbit, toolTip = "Makes Lucy orbit around you." },
+                //new ButtonInfo { buttonText = "Lucy Orbit Vertical", method = Overpowered.LucyOrbitVertical, toolTip = "Makes Lucy orbit vertically around you." },
+                //new ButtonInfo { buttonText = "Lucy Crown", method = Overpowered.LucyCrown, toolTip = "Makes Lucy orbit right above your head like a halo." },
+                //new ButtonInfo { buttonText = "Helicopter Lucy", method = Overpowered.HelicopterLucy, toolTip = "Rapidly spins Lucy horizontally like a helicopter" },
+                //new ButtonInfo { buttonText = "Hand Grab Lucy", method = Overpowered.HandGrabLucy, toolTip = "Hold the right grip to hold Lucy in your hand." },
+                //new ButtonInfo { buttonText = "Lucy Orbit Gun", method = Overpowered.LucyOrbitGun, toolTip = "Shoot a player to make Lucy orbit around them." },
+                //new ButtonInfo { buttonText = "Lucy Bodyguard", method = Overpowered.LucyBodyguard, toolTip = "Lucy protects you and attacks any player who comes within 5 meters." },
                 
-                new ButtonInfo { buttonText = "Anti-Lucy", method = Overpowered.AntiLucy, toolTip = "Teleports Lucy away into an loop if she gets too close to you." },
-                new ButtonInfo { buttonText = "Freeze Lucy", method = Overpowered.FreezeLucy, disableMethod = Overpowered.UnfreezeLucy, toolTip = "Sets Lucy's speed to 0, completely freezing her." },
-                new ButtonInfo { buttonText = "Slow Lucy", method = Overpowered.SlowLucy, disableMethod = Overpowered.UnfreezeLucy, toolTip = "Sets Lucy's speed to a crawl." },
-                new ButtonInfo { buttonText = "Fast Lucy", method = Overpowered.FastLucy, disableMethod = Overpowered.UnfreezeLucy, toolTip = "Sets Lucy's speed incredibly high." },
-                new ButtonInfo { buttonText = "Lucy Gun", method = Overpowered.MoveLucyGun, toolTip = "Teleports Lucy to where you shoot." },
+                //new ButtonInfo { buttonText = "Anti-Lucy", method = Overpowered.AntiLucy, toolTip = "Teleports Lucy away into an loop if she gets too close to you." },
+                //new ButtonInfo { buttonText = "Freeze Lucy", method = Overpowered.FreezeLucy, disableMethod = Overpowered.UnfreezeLucy, toolTip = "Sets Lucy's speed to 0, completely freezing her." },
+                //new ButtonInfo { buttonText = "Slow Lucy", method = Overpowered.SlowLucy, disableMethod = Overpowered.UnfreezeLucy, toolTip = "Sets Lucy's speed to a crawl." },
+                //new ButtonInfo { buttonText = "Fast Lucy", method = Overpowered.FastLucy, disableMethod = Overpowered.UnfreezeLucy, toolTip = "Sets Lucy's speed incredibly high." },
+                //new ButtonInfo { buttonText = "Lucy Gun", method = Overpowered.MoveLucyGun, toolTip = "Teleports Lucy to where you shoot." },
 
                 new ButtonInfo { buttonText = "Guardian Self", method = Overpowered.GuardianSelf, isTogglable = false, toolTip = "Makes you red."},
                 new ButtonInfo { buttonText = "Guardian Gun", method = Overpowered.GuardianGun, toolTip = "Makes whoever your hand desires the guardian."},
@@ -2054,11 +2054,11 @@ new ButtonInfo { buttonText = "Miku", method =() => Managers.EmoteManager.Emote(
                 new ButtonInfo { buttonText = "Super Infection Break Audio Gun", method = Overpowered.SuperInfectionBreakAudioGun, toolTip = "Breaks the audio of whoever your hand desires in the Super Infection gamemode."},
                 new ButtonInfo { buttonText = "Super Infection Break Audio All", method = Overpowered.SuperInfectionBreakAudioAll, toolTip = "Breaks the audio of everyone in the Super Infection gamemode."},
 
-                new ButtonInfo { buttonText = "Break Movement Gun", method = Overpowered.BreakMovementGun, toolTip = "Breaks the movement of whoever your hand desires, freezing their body in place."},
-                new ButtonInfo { buttonText = "Break Movement All", method = Overpowered.BreakMovementAll, isTogglable = false, toolTip = "Breaks the movement of everyone in the room, freezing their body in place."},
-                new ButtonInfo { buttonText = "Fix Movement Gun", method = Overpowered.FixMovementGun, toolTip = "Fixes the movement of whoever your hand desires."},
-                new ButtonInfo { buttonText = "Fix Movement All", method = Overpowered.FixMovementAll, isTogglable = false, toolTip = "Fixes the movement of everyone in the room."},
-                new ButtonInfo { buttonText = "Fix Movement Self", method = Overpowered.FixMovementSelf, isTogglable = false, toolTip = "Fixes your own movement if it is frozen or disabled."},
+                //new ButtonInfo { buttonText = "Break Movement Gun", method = Overpowered.BreakMovementGun, toolTip = "Breaks the movement of whoever your hand desires, freezing their body in place."},
+                //new ButtonInfo { buttonText = "Break Movement All", method = Overpowered.BreakMovementAll, isTogglable = false, toolTip = "Breaks the movement of everyone in the room, freezing their body in place."},
+                //new ButtonInfo { buttonText = "Fix Movement Gun", method = Overpowered.FixMovementGun, toolTip = "Fixes the movement of whoever your hand desires."},
+                //new ButtonInfo { buttonText = "Fix Movement All", method = Overpowered.FixMovementAll, isTogglable = false, toolTip = "Fixes the movement of everyone in the room."},
+                //new ButtonInfo { buttonText = "Fix Movement Self", method = Overpowered.FixMovementSelf, isTogglable = false, toolTip = "Fixes your own movement if it is frozen or disabled."},
 
                 new ButtonInfo { buttonText = "Kill Self", method =() => Fun.SetStateSelf(1), isTogglable = false, toolTip = "Turns you into a ghost."},
                 new ButtonInfo { buttonText = "Kill Gun", method =() => Fun.SetStateGun(1), toolTip = "Turns whoever your hand desires into a ghost."},
@@ -2174,19 +2174,15 @@ new ButtonInfo { buttonText = "Miku", method =() => Managers.EmoteManager.Emote(
             new[] { // Overpowered Mods [17]
                 new ButtonInfo { buttonText = "Exit Overpowered Mods", method =() => CurrentCategoryName = "Main", isTogglable = false, toolTip = "Returns you back to the main page."},
 
-                new ButtonInfo { buttonText = "Ride Lucy", method = Overpowered.RideLucy, toolTip = "Ride on Lucy's head" },
+                //new ButtonInfo { buttonText = "Ride Lucy", method = Overpowered.RideLucy, toolTip = "Ride on Lucy's head" },
 
-                new ButtonInfo { buttonText = "Lucy Physics", enableMethod = Overpowered.Enable_LucyPhysics, method = Overpowered.LucyPhysToggle, disableMethod = Overpowered.Disable_LucyPhysics, toolTip = "Gives Lucy Physics" },
-                new ButtonInfo { buttonText = "Bouncy Lucy", method = Overpowered.BouncyLucy, isTogglable = false, toolTip = "Makes Lucy Bouncy" },
-                new ButtonInfo { buttonText = "Lucy Follow Me", method = Overpowered.LucyFollowMe, isTogglable = false, toolTip = "Makes Lucy follow you" },
+                //new ButtonInfo { buttonText = "Lucy Physics", enableMethod = Overpowered.Enable_LucyPhysics, method = Overpowered.LucyPhysToggle, disableMethod = Overpowered.Disable_LucyPhysics, toolTip = "Gives Lucy Physics" },
+                //new ButtonInfo { buttonText = "Bouncy Lucy", method = Overpowered.BouncyLucy, isTogglable = false, toolTip = "Makes Lucy Bouncy" },
+                //new ButtonInfo { buttonText = "Lucy Follow Me", method = Overpowered.LucyFollowMe, isTogglable = false, toolTip = "Makes Lucy follow you" },
 
                 new ButtonInfo { buttonText = "Snowball Overload <color=grey>[</color><color=green>UD</color><color=grey>]</color>", aliases = new[] { "effect overload" }, enableMethod =() => Overpowered.NotifyState("SNOWBALL SPAM", true), method = Overpowered.EffectOverload, disableMethod =() => { Overpowered.SnowballSpamOff(); Overpowered.NotifyState("SNOWBALL SPAM", false); }, toolTip = "funny snowball spam, very fast and undetected." },
                 new ButtonInfo { buttonText = "Mothership Anti-Ban <color=grey>[</color><color=green>T</color><color=grey>]</color>", enableMethod =() => { MothershipPatches.enabled = true; StealthPatches.enabled = true; Overpowered.NotifyState("MOTHERSHIP", true); }, method =() => { }, disableMethod =() => { MothershipPatches.enabled = false; StealthPatches.enabled = false; Overpowered.NotifyState("MOTHERSHIP", false); }, toolTip = "Blocks telemetry from Mothership so you don't get flagged" },
-                
-                new ButtonInfo { buttonText = "Crash Master [SD]", method = Overpowered.CrittersFreeze, isTogglable = false, toolTip = "Crashes Master As Non-Master" },
-                new ButtonInfo { buttonText = "Crash Gun [SD]", method = Overpowered.CrashGun, toolTip = "Crashes player as master." },
-                new ButtonInfo { buttonText = "Crash Lobby [SD]", method = Overpowered.CrashLobby, isTogglable = false, toolTip = "Crashes everyone as master." },
-               
+
                 new ButtonInfo { buttonText = "Always Guardian", method = Overpowered.AlwaysGuardian, disableMethod = Movement.EnableRig, toolTip = "Makes you always the guardian."},
                 
                 new ButtonInfo { buttonText = "Guardian Protector", method = Overpowered.GuardianProtector, toolTip = "Pushes people away from the guardian moon if they try to approach it."},
@@ -2579,7 +2575,7 @@ new ButtonInfo { buttonText = "Miku", method =() => Managers.EmoteManager.Emote(
                 
 
                 new ButtonInfo { buttonText = "GPL v3", method =() => System.Diagnostics.Process.Start("https://www.gnu.org/licenses/gpl-3.0.html"), isTogglable = false, toolTip = "The GNU General Public License Version 3 is the license that my menu uses. It proveides a \"free, copyleft license for software and other kinds of works.\""},
-                new ButtonInfo { buttonText = "iiDk", method =() => System.Diagnostics.Process.Start("https://tianjo.cc/iidk"), isTogglable = false, toolTip = "Original Menu Developer - https://tianjo.cc/iidk" },
+                new ButtonInfo { buttonText = "iiDk", method =() => System.Diagnostics.Process.Start("https://tianjo.cc/iidk"), isTogglable = false, toolTip = "Original Menu Developer - https: tianjo.cc/iidk" },
             },
 
             new[] // Custom Maps [39]
@@ -2755,16 +2751,16 @@ new ButtonInfo { buttonText = "Miku", method =() => Managers.EmoteManager.Emote(
             },
             new[] {
                 new ButtonInfo { buttonText = "Exit Admin Cosmetics", method =() => CurrentCategoryName = "Main", isTogglable = false, toolTip = "Returns you back to the main page." },
-                new ButtonInfo { buttonText = "Admin Badge", enableMethod =() => Admin.ToggleCosmetic("LBAAD.", true), disableMethod =() => Admin.ToggleCosmetic("LBAAD.", false), toolTip = "Gives you the Gold Administrator badge (visible to menu users)." },
-                new ButtonInfo { buttonText = "AA Creator", enableMethod =() => Admin.ToggleCosmetic("LBANI.", true), disableMethod =() => Admin.ToggleCosmetic("LBANI.", false), toolTip = "Gives you the Another Axiom Creator badge (visible to menu users)." },
-                new ButtonInfo { buttonText = "Admin Stick", enableMethod =() => Admin.ToggleCosmetic("LBAAK.", true), disableMethod =() => Admin.ToggleCosmetic("LBAAK.", false), toolTip = "Gives you the glowing Admin Stick (visible to menu users)." },
-                new ButtonInfo { buttonText = "Grab Admin Stick", enableMethod =() => Admin.GrabHoldable("LBAAK", true), disableMethod =() => Admin.GrabHoldable("LBAAK", false), toolTip = "Holds the Admin Stick in your right hand." },
-                new ButtonInfo { buttonText = "Finger Painter", enableMethod =() => Admin.ToggleCosmetic("LBADE.", true), disableMethod =() => Admin.ToggleCosmetic("LBADE.", false), toolTip = "Gives you the Finger Painter badge (visible to menu users)." },
-                new ButtonInfo { buttonText = "Illustrator", enableMethod =() => Admin.ToggleCosmetic("LBAGS.", true), disableMethod =() => Admin.ToggleCosmetic("LBAGS.", false), toolTip = "Gives you the Illustrator badge (visible to menu users)." },
-                new ButtonInfo { buttonText = "Forest Guide", enableMethod =() => Admin.ToggleCosmetic("LMAPY.", true), disableMethod =() => Admin.ToggleCosmetic("LMAPY.", false), toolTip = "Gives you the Forest Guide stick (visible to menu users)." },
-                new ButtonInfo { buttonText = "Grab Forest Guide", enableMethod =() => Admin.GrabHoldable("LMAPY", true), disableMethod =() => Admin.GrabHoldable("LMAPY", false), toolTip = "Holds the Forest Guide stick in your right hand." },
-                new ButtonInfo { buttonText = "All Admin Cosmetics", enableMethod = Admin.EnableAll, disableMethod = Admin.DisableAll, toolTip = "Enables all admin cosmetics at once." },
-                new ButtonInfo { buttonText = "Admin Cosmetics Others", enableMethod =() => Admin.showOtherAdminCosmetics = true, disableMethod =() => Admin.showOtherAdminCosmetics = false, enabled = true, toolTip = "Displays admin cosmetics on verified admins in your lobby." }
+                //new ButtonInfo { buttonText = "Admin Badge", enableMethod =() => Admin.ToggleCosmetic("LBAAD.", true), disableMethod =() => Admin.ToggleCosmetic("LBAAD.", false), toolTip = "Gives you the Gold Administrator badge (visible to menu users)." },
+                //new ButtonInfo { buttonText = "AA Creator", enableMethod =() => Admin.ToggleCosmetic("LBANI.", true), disableMethod =() => Admin.ToggleCosmetic("LBANI.", false), toolTip = "Gives you the Another Axiom Creator badge (visible to menu users)." },
+                //new ButtonInfo { buttonText = "Admin Stick", enableMethod =() => Admin.ToggleCosmetic("LBAAK.", true), disableMethod =() => Admin.ToggleCosmetic("LBAAK.", false), toolTip = "Gives you the glowing Admin Stick (visible to menu users)." },
+                //new ButtonInfo { buttonText = "Grab Admin Stick", enableMethod =() => Admin.GrabHoldable("LBAAK", true), disableMethod =() => Admin.GrabHoldable("LBAAK", false), toolTip = "Holds the Admin Stick in your right hand." },
+                //new ButtonInfo { buttonText = "Finger Painter", enableMethod =() => Admin.ToggleCosmetic("LBADE.", true), disableMethod =() => Admin.ToggleCosmetic("LBADE.", false), toolTip = "Gives you the Finger Painter badge (visible to menu users)." },
+                //new ButtonInfo { buttonText = "Illustrator", enableMethod =() => Admin.ToggleCosmetic("LBAGS.", true), disableMethod =() => Admin.ToggleCosmetic("LBAGS.", false), toolTip = "Gives you the Illustrator badge (visible to menu users)." },
+                //new ButtonInfo { buttonText = "Forest Guide", enableMethod =() => Admin.ToggleCosmetic("LMAPY.", true), disableMethod =() => Admin.ToggleCosmetic("LMAPY.", false), toolTip = "Gives you the Forest Guide stick (visible to menu users)." },
+                //new ButtonInfo { buttonText = "Grab Forest Guide", enableMethod =() => Admin.GrabHoldable("LMAPY", true), disableMethod =() => Admin.GrabHoldable("LMAPY", false), toolTip = "Holds the Forest Guide stick in your right hand." },
+                //new ButtonInfo { buttonText = "All Admin Cosmetics", enableMethod = Admin.EnableAll, disableMethod = Admin.DisableAll, toolTip = "Enables all admin cosmetics at once." },
+                //new ButtonInfo { buttonText = "Admin Cosmetics Others", enableMethod =() => Admin.showOtherAdminCosmetics = true, disableMethod =() => Admin.showOtherAdminCosmetics = false, enabled = true, toolTip = "Displays admin cosmetics on verified admins in your lobby." }
             }
         };
 
