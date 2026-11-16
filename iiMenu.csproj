@@ -114,22 +114,22 @@
     <Reference Include="Unity.Cinemachine">
       <HintPath>$(GameRefs)\Unity.Cinemachine.dll</HintPath>
     </Reference>
-    <Reference Include="Fusion.Common">
+    <Reference Include="Fusion.Common" Condition="Exists('$(GameRefs)\Fusion.Common.dll')">
       <HintPath>$(GameRefs)\Fusion.Common.dll</HintPath>
     </Reference>
-    <Reference Include="Fusion.Log">
+    <Reference Include="Fusion.Log" Condition="Exists('$(GameRefs)\Fusion.Log.dll')">
       <HintPath>$(GameRefs)\Fusion.Log.dll</HintPath>
     </Reference>
-    <Reference Include="Fusion.Realtime">
+    <Reference Include="Fusion.Realtime" Condition="Exists('$(GameRefs)\Fusion.Realtime.dll')">
       <HintPath>$(GameRefs)\Fusion.Realtime.dll</HintPath>
     </Reference>
-    <Reference Include="Fusion.Runtime">
+    <Reference Include="Fusion.Runtime" Condition="Exists('$(GameRefs)\Fusion.Runtime.dll')">
       <HintPath>$(GameRefs)\Fusion.Runtime.dll</HintPath>
     </Reference>
-    <Reference Include="Fusion.Sockets">
+    <Reference Include="Fusion.Sockets" Condition="Exists('$(GameRefs)\Fusion.Sockets.dll')">
       <HintPath>$(GameRefs)\Fusion.Sockets.dll</HintPath>
     </Reference>
-    <Reference Include="Fusion.Unity">
+    <Reference Include="Fusion.Unity" Condition="Exists('$(GameRefs)\Fusion.Unity.dll')">
       <HintPath>$(GameRefs)\Fusion.Unity.dll</HintPath>
     </Reference>
     <Reference Include="geometry3Sharp">
@@ -189,7 +189,7 @@
     <Reference Include="MonoMod.Utils">
       <HintPath>$(CoreRefs)\MonoMod.Utils.dll</HintPath>
     </Reference>
-    <Reference Include="NanoSockets">
+    <Reference Include="NanoSockets" Condition="Exists('$(GameRefs)\NanoSockets.dll')">
       <HintPath>$(GameRefs)\NanoSockets.dll</HintPath>
     </Reference>
     <Reference Include="NavMeshComponents">
@@ -237,7 +237,7 @@
     <Reference Include="PhotonVoice.API" Publicize="true">
       <HintPath>$(GameRefs)\PhotonVoice.API.dll</HintPath>
     </Reference>
-    <Reference Include="PhotonVoice.Fusion" Publicize="true">
+    <Reference Include="PhotonVoice.Fusion" Publicize="true" Condition="Exists('$(GameRefs)\PhotonVoice.Fusion.dll')">
       <HintPath>$(GameRefs)\PhotonVoice.Fusion.dll</HintPath>
     </Reference>
     <Reference Include="PhotonVoice.PUN" Publicize="true">

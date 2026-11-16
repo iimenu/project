@@ -3417,7 +3417,7 @@ namespace iiMenu.Mods
                 dropBoard = CoroutineManager.instance.StartCoroutine(EnableRig());
             }
 
-            FreeHoverboardManager.instance.SendDropBoardRPC(position, rotation, velocity, avelocity, boardColor);
+            FreeHoverboardManager.instance.SendDropBoardRPC(position, rotation, velocity, avelocity, boardColor, Vector3.one, 0);
             RPCProtection();
         }
 
@@ -4019,7 +4019,7 @@ Piece Name: {gunTarget.name}";
         {
             if (!hasGrabbedHoverboard)
             {
-                GTPlayer.Instance.GrabPersonalHoverboard(false, Vector3.zero, Quaternion.identity, Color.black);
+                GTPlayer.Instance.GrabPersonalHoverboard(false, Vector3.zero, Quaternion.identity, Color.black, 0);
                 hasGrabbedHoverboard = true;
             }
 
@@ -4065,7 +4065,7 @@ Piece Name: {gunTarget.name}";
 
             HoverboardVisual hoverboardVisual = VRRig.LocalRig.hoverboardVisual;
 
-            hoverboardVisual.SetIsHeld(true, hoverboardVisual.NominalParentTransform.InverseTransformPoint(HoverboardPos), hoverboardVisual.NominalParentTransform.InverseTransformRotation(HoverboardRotation), color);
+            hoverboardVisual.SetIsHeld(true, hoverboardVisual.NominalParentTransform.InverseTransformPoint(HoverboardPos), hoverboardVisual.NominalParentTransform.InverseTransformRotation(HoverboardRotation), color, 0);
             GTPlayer.Instance.SetHoverActive(false);
 
             hoverboardVisual.interpolatedLocalPosition = hoverboardVisual.NominalLocalPosition;
@@ -4188,7 +4188,7 @@ Piece Name: {gunTarget.name}";
             {
                 float h = Time.frameCount / 180f % 1f;
                 Color rgbColor = Color.HSVToRGB(h, 1f, 1f);
-                VRRig.LocalRig.hoverboardVisual.SetIsHeld(VRRig.LocalRig.hoverboardVisual.IsLeftHanded, VRRig.LocalRig.hoverboardVisual.NominalLocalPosition, VRRig.LocalRig.hoverboardVisual.NominalLocalRotation, rgbColor);
+                VRRig.LocalRig.hoverboardVisual.SetIsHeld(VRRig.LocalRig.hoverboardVisual.IsLeftHanded, VRRig.LocalRig.hoverboardVisual.NominalLocalPosition, VRRig.LocalRig.hoverboardVisual.NominalLocalRotation, rgbColor, 0);
             }
         }
 
@@ -4205,14 +4205,14 @@ Piece Name: {gunTarget.name}";
                 }
 
                 Color rgbColor = flashColor ? Color.white : Color.black;
-                VRRig.LocalRig.hoverboardVisual.SetIsHeld(VRRig.LocalRig.hoverboardVisual.IsLeftHanded, VRRig.LocalRig.hoverboardVisual.NominalLocalPosition, VRRig.LocalRig.hoverboardVisual.NominalLocalRotation, rgbColor);
+                VRRig.LocalRig.hoverboardVisual.SetIsHeld(VRRig.LocalRig.hoverboardVisual.IsLeftHanded, VRRig.LocalRig.hoverboardVisual.NominalLocalPosition, VRRig.LocalRig.hoverboardVisual.NominalLocalRotation, rgbColor, 0);
             }
         }
 
         public static void RandomHoverboard()
         {
             if (VRRig.LocalRig.hoverboardVisual != null && VRRig.LocalRig.hoverboardVisual.IsHeld)
-                VRRig.LocalRig.hoverboardVisual.SetIsHeld(VRRig.LocalRig.hoverboardVisual.IsLeftHanded, VRRig.LocalRig.hoverboardVisual.NominalLocalPosition, VRRig.LocalRig.hoverboardVisual.NominalLocalRotation, RandomColor());
+                VRRig.LocalRig.hoverboardVisual.SetIsHeld(VRRig.LocalRig.hoverboardVisual.IsLeftHanded, VRRig.LocalRig.hoverboardVisual.NominalLocalPosition, VRRig.LocalRig.hoverboardVisual.NominalLocalRotation, RandomColor(), 0);
         }
 
         public static void ModifyGliderSpeed(float pullUpLiftBonus, float dragVsSpeedDragFactor)
@@ -6340,7 +6340,7 @@ Piece Name: {gunTarget.name}";
         public static void SpazHoverboard()
         {
             if (VRRig.LocalRig.hoverboardVisual != null && VRRig.LocalRig.hoverboardVisual.IsHeld)
-                VRRig.LocalRig.hoverboardVisual.SetIsHeld(VRRig.LocalRig.hoverboardVisual.IsLeftHanded, VRRig.LocalRig.hoverboardVisual.NominalLocalPosition, RandomQuaternion(), RandomColor());
+                VRRig.LocalRig.hoverboardVisual.SetIsHeld(VRRig.LocalRig.hoverboardVisual.IsLeftHanded, VRRig.LocalRig.hoverboardVisual.NominalLocalPosition, RandomQuaternion(), RandomColor(), 0);
         }
 
         public static void OrbitObject(string objectName, float offset = 0)
@@ -7144,7 +7144,7 @@ Piece Name: {gunTarget.name}";
 
             HoverboardVisual hoverboardVisual = VRRig.LocalRig.hoverboardVisual;
 
-            hoverboardVisual.SetIsHeld(true, hoverboardVisual.NominalParentTransform.InverseTransformPoint(HoverboardPos), hoverboardVisual.NominalParentTransform.InverseTransformRotation(HoverboardRotation), VRRig.LocalRig.playerColor);
+            hoverboardVisual.SetIsHeld(true, hoverboardVisual.NominalParentTransform.InverseTransformPoint(HoverboardPos), hoverboardVisual.NominalParentTransform.InverseTransformRotation(HoverboardRotation), VRRig.LocalRig.playerColor, 0);
 
             hoverboardVisual.interpolatedLocalPosition = hoverboardVisual.NominalLocalPosition;
             hoverboardVisual.interpolatedLocalRotation = hoverboardVisual.NominalLocalRotation;

@@ -40,6 +40,7 @@ using static iiMenu.Utilities.RandomUtilities;
 using static iiMenu.Utilities.RigUtilities;
 using Object = UnityEngine.Object;
 using Random = UnityEngine.Random;
+using Input = iiMenu.Input;
 
 namespace iiMenu.Mods
 {
@@ -516,43 +517,52 @@ namespace iiMenu.Mods
                     noclipLocomotionLayersSaved = true;
                 }
                 GTPlayer.Instance.locomotionEnabledLayers = 0;
-                foreach (Collider c in GTPlayer.Instance.GetComponentsInChildren<Collider>())
-                    c.enabled = false;
-                if (GorillaTagger.Instance != null)
+                if (GorillaTagger.Instance?.bodyCollider != null)
+                    GorillaTagger.Instance.bodyCollider.enabled = false;
+                if (GorillaTagger.Instance?.headCollider != null)
+                    GorillaTagger.Instance.headCollider.enabled = false;
+                if (GorillaTagger.Instance?.rigidbody != null)
                 {
-                    foreach (Collider c in GorillaTagger.Instance.GetComponentsInChildren<Collider>())
-                        c.enabled = false;
+                    GorillaTagger.Instance.rigidbody.detectCollisions = false;
+                    GorillaTagger.Instance.rigidbody.useGravity = false;
+                    GorillaTagger.Instance.rigidbody.linearVelocity = Vector3.zero;
                 }
-                UpdateClipColliders(false);
             }
             else
             {
                 LayerMask restoreMask = noclipLocomotionLayersSaved && noclipLocomotionLayers != 0 ? noclipLocomotionLayers : (LayerMask)NoInvisLayerMask();
                 noclipLocomotionLayersSaved = false;
                 GTPlayer.Instance.locomotionEnabledLayers = restoreMask;
-                foreach (Collider c in GTPlayer.Instance.GetComponentsInChildren<Collider>())
-                    c.enabled = true;
-                if (GorillaTagger.Instance != null)
+                if (GorillaTagger.Instance?.bodyCollider != null)
+                    GorillaTagger.Instance.bodyCollider.enabled = true;
+                if (GorillaTagger.Instance?.headCollider != null)
+                    GorillaTagger.Instance.headCollider.enabled = true;
+                if (GorillaTagger.Instance?.rigidbody != null)
                 {
-                    foreach (Collider c in GorillaTagger.Instance.GetComponentsInChildren<Collider>())
-                        c.enabled = true;
+                    GorillaTagger.Instance.rigidbody.detectCollisions = true;
+                    GorillaTagger.Instance.rigidbody.useGravity = true;
                 }
-                UpdateClipColliders(true);
             }
         }
 
         public static void DisableNoclip()
         {
             SetNoclip(false, noclipFlyHeld);
-            if (GorillaTagger.Instance?.rigidbody != null)
+            if (!noclip && GorillaTagger.Instance?.rigidbody != null)
+            {
+                GorillaTagger.Instance.rigidbody.detectCollisions = true;
                 GorillaTagger.Instance.rigidbody.useGravity = true;
+            }
         }
 
         public static void DisableConstantNoclip()
         {
             SetNoclip(false, noclipFlyHeld);
-            if (GorillaTagger.Instance?.rigidbody != null)
+            if (!noclip && GorillaTagger.Instance?.rigidbody != null)
+            {
+                GorillaTagger.Instance.rigidbody.detectCollisions = true;
                 GorillaTagger.Instance.rigidbody.useGravity = true;
+            }
         }
 
         public static void ConstantNoclip()
@@ -589,8 +599,15 @@ namespace iiMenu.Mods
             }
         }
 
-        public static void DisableNoclipFly() =>
+        public static void DisableNoclipFly()
+        {
             SetNoclip(noclipHeld, false);
+            if (!noclip && GorillaTagger.Instance?.rigidbody != null)
+            {
+                GorillaTagger.Instance.rigidbody.detectCollisions = true;
+                GorillaTagger.Instance.rigidbody.useGravity = true;
+            }
+        }
 
         public static void NoclipFly()
         {
@@ -700,19 +717,19 @@ namespace iiMenu.Mods
         {
             bool stationary = !Buttons.GetIndex("Disable Stationary WASD Fly").enabled;
 
-            bool W = UnityInput.Current.GetKey(KeyCode.W);
-            bool A = UnityInput.Current.GetKey(KeyCode.A);
-            bool S = UnityInput.Current.GetKey(KeyCode.S);
-            bool D = UnityInput.Current.GetKey(KeyCode.D);
-            bool Space = UnityInput.Current.GetKey(KeyCode.Space);
-            bool Ctrl = UnityInput.Current.GetKey(KeyCode.LeftControl);
-            bool Shift = UnityInput.Current.GetKey(KeyCode.LeftShift);
-            bool Alt = UnityInput.Current.GetKey(KeyCode.LeftAlt);
+            bool W = Input.GetKey(KeyCode.W);
+            bool A = Input.GetKey(KeyCode.A);
+            bool S = Input.GetKey(KeyCode.S);
+            bool D = Input.GetKey(KeyCode.D);
+            bool Space = Input.GetKey(KeyCode.Space);
+            bool Ctrl = Input.GetKey(KeyCode.LeftControl);
+            bool Shift = Input.GetKey(KeyCode.LeftShift);
+            bool Alt = Input.GetKey(KeyCode.LeftAlt);
 
-            bool LeftArrow = UnityInput.Current.GetKey(KeyCode.LeftArrow);
-            bool RightArrow = UnityInput.Current.GetKey(KeyCode.RightArrow);
-            bool UpArrow = UnityInput.Current.GetKey(KeyCode.UpArrow);
-            bool DownArrow = UnityInput.Current.GetKey(KeyCode.DownArrow);
+            bool LeftArrow = Input.GetKey(KeyCode.LeftArrow);
+            bool RightArrow = Input.GetKey(KeyCode.RightArrow);
+            bool UpArrow = Input.GetKey(KeyCode.UpArrow);
+            bool DownArrow = Input.GetKey(KeyCode.DownArrow);
 
             if (stationary || W || A || S || D || Space || Ctrl)
                 GorillaTagger.Instance.rigidbody.linearVelocity = Vector3.zero;
@@ -3027,8 +3044,6 @@ namespace iiMenu.Mods
 
         public static void UpdateClipColliders(bool enabled)
         {
-            foreach (MeshCollider v in Resources.FindObjectsOfTypeAll<MeshCollider>())
-                v.enabled = enabled;
         }
 
         public static void Noclip()
@@ -3079,43 +3094,59 @@ namespace iiMenu.Mods
 
         public static void Invisible()
         {
+            VRRig rig = VRRig.LocalRig ?? GorillaTagger.Instance?.offlineVRRig;
+            if (rig == null) return;
             bool hit = rightSecondary;
-            if (Buttons.GetIndex("Non-Togglable Invisible").enabled)
+            bool nonTogglable = Buttons.GetIndex("Non-Togglable Invisible").enabled;
+            if (nonTogglable)
                 invisMonke = hit;
+            else if (hit && !lastHit2)
+                invisMonke = !invisMonke;
+            lastHit2 = hit;
+
             if (invisMonke)
             {
-                VRRig.LocalRig.enabled = false;
-                VRRig.LocalRig.transform.position = GorillaTagger.Instance.bodyCollider.transform.position - Vector3.up * 99999f;
+                rig.enabled = false;
+                rig.transform.position = GorillaTagger.Instance.bodyCollider.transform.position - Vector3.up * 99999f;
             }
-            if (hit && !lastHit2)
+            else
             {
-                invisMonke = !invisMonke;
-                if (invisMonke)
-                    wasDisabledAlready = VRRig.LocalRig.enabled;
-                else
-                    VRRig.LocalRig.enabled = wasDisabledAlready;
+                rig.enabled = true;
+                if (GorillaTagger.Instance?.bodyCollider != null)
+                    rig.transform.position = GorillaTagger.Instance.bodyCollider.transform.position;
             }
-            lastHit2 = hit;
         }
 
         private static bool ghostMonke;
         public static void Ghost()
         {
+            VRRig rig = VRRig.LocalRig ?? GorillaTagger.Instance?.offlineVRRig;
+            if (rig == null) return;
             bool hit = rightPrimary;
-            if (Buttons.GetIndex("Non-Togglable Ghost").enabled)
+            bool nonTogglable = Buttons.GetIndex("Non-Togglable Ghost").enabled;
+            if (nonTogglable)
                 ghostMonke = hit;
-            
-            VRRig.LocalRig.enabled = !ghostMonke;
-            if (hit && !lastHit)
+            else if (hit && !lastHit)
                 ghostMonke = !ghostMonke;
-            
             lastHit = hit;
+
+            rig.enabled = !ghostMonke;
+            if (!ghostMonke && GorillaTagger.Instance?.bodyCollider != null)
+                rig.transform.position = GorillaTagger.Instance.bodyCollider.transform.position;
         }
 
         public static void EnableRig()
         {
-            VRRig.LocalRig.enabled = true;
+            invisMonke = false;
+            ghostMonke = false;
             ghostException = false;
+            VRRig rig = VRRig.LocalRig ?? GorillaTagger.Instance?.offlineVRRig;
+            if (rig != null)
+            {
+                rig.enabled = true;
+                if (GorillaTagger.Instance?.bodyCollider != null)
+                    rig.transform.position = GorillaTagger.Instance.bodyCollider.transform.position;
+            }
         }
 
         public static void RigGun()
@@ -3538,10 +3569,10 @@ namespace iiMenu.Mods
 
             VRRig.LocalRig.head.rigTarget.transform.rotation = GorillaTagger.Instance.headCollider.transform.rotation;
 
-            bool W = UnityInput.Current.GetKey(KeyCode.W);
-            bool A = UnityInput.Current.GetKey(KeyCode.A);
-            bool S = UnityInput.Current.GetKey(KeyCode.S);
-            bool D = UnityInput.Current.GetKey(KeyCode.D);
+            bool W = Input.GetKey(KeyCode.W);
+            bool A = Input.GetKey(KeyCode.A);
+            bool S = Input.GetKey(KeyCode.S);
+            bool D = Input.GetKey(KeyCode.D);
 
             float speed = FlySpeed;
             Transform head = GorillaTagger.Instance.headCollider.transform;

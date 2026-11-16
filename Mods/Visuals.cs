@@ -1355,12 +1355,12 @@ namespace iiMenu.Mods
             if (debugStats == null)
                 return;
 
-            debugStats.builder = new StringBuilder();
-            debugStats.drawCallsRecorder = ProfilerRecorder.StartNew(
+            debugStats._builder = new StringBuilder();
+            debugStats._drawCallsRecorder = ProfilerRecorder.StartNew(
                 ProfilerCategory.Render,
                 "Draw Calls Count"
             );
-            debugStats.trisRecorder = ProfilerRecorder.StartNew(
+            debugStats._trisRecorder = ProfilerRecorder.StartNew(
                 ProfilerCategory.Render,
                 "Tris Count"
             );

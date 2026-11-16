@@ -24,6 +24,7 @@ using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.Controls;
 using UnityEngine.UI;
+using Input = iiMenu.Input;
 using static iiMenu.Menu.Main;
 using static iiMenu.Utilities.AssetUtilities;
 
@@ -732,14 +733,14 @@ namespace iiMenu.Menu
                 FrameProfiler.End();
             }
 
-            if (UnityInput.Current.GetKeyDown(KeyCode.Backslash))
+            if (Input.GetKeyDown(KeyCode.Backslash))
                 ToggleGUI();
 
             if (isOpen)
             {
                 uiPrefab.SetActive(true);
 
-                if (UnityInput.Current.GetKeyDown(KeyCode.BackQuote))
+                if (Input.GetKeyDown(KeyCode.BackQuote))
                     ToggleDebug();
 
                 Color guiColor = Buttons.GetIndex("Swap GUI Colors").enabled

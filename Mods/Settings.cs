@@ -6711,8 +6711,22 @@ exit 0";
             return finaltext;
         }
 
+        public static string GetPreferencesPath()
+        {
+            string primary = $"{PluginInfo.BaseDirectory}/iiMenu_Preferences.txt";
+            if (File.Exists(primary))
+                return primary;
+            string current = Path.Combine(Directory.GetCurrentDirectory(), PluginInfo.BaseDirectory, "iiMenu_Preferences.txt");
+            if (File.Exists(current))
+                return current;
+            string game = Path.Combine(FileUtilities.GetGamePath(), PluginInfo.BaseDirectory, "iiMenu_Preferences.txt");
+            if (File.Exists(game))
+                return game;
+            return primary;
+        }
+
         public static void SavePreferences() =>
-            File.WriteAllText($"{PluginInfo.BaseDirectory}/iiMenu_Preferences.txt", SavePreferencesToText());
+            File.WriteAllText(GetPreferencesPath(), SavePreferencesToText());
 
         public static int loadingPreferencesFrame;
 
@@ -7088,20 +7102,20 @@ exit 0";
         {
             try
             {
-                if (!File.Exists($"{PluginInfo.BaseDirectory}/iiMenu_Preferences.txt"))
+                string path = GetPreferencesPath();
+                if (!File.Exists(path))
                 {
                     hasLoadedPreferences = true;
                     clickGUI = false;
                     return;
                 }
 
-                string text = File.ReadAllText($"{PluginInfo.BaseDirectory}/iiMenu_Preferences.txt");
+                string text = File.ReadAllText(path);
                 LoadPreferencesFromText(text);
             }
             catch (Exception e)
             {
                 LogManager.Log("Error loading preferences: " + e.Message);
-
                 hasLoadedPreferences = true;
             }
         }
@@ -7151,9 +7165,23 @@ exit 0";
             { ControllerBinding.LeftOverride, KeyCode.LeftAlt }
         };
 
+        public static string GetPCControlsPath()
+        {
+            string primary = $"{PluginInfo.BaseDirectory}/iiMenu_PCControls.txt";
+            if (File.Exists(primary))
+                return primary;
+            string current = Path.Combine(Directory.GetCurrentDirectory(), PluginInfo.BaseDirectory, "iiMenu_PCControls.txt");
+            if (File.Exists(current))
+                return current;
+            string game = Path.Combine(FileUtilities.GetGamePath(), PluginInfo.BaseDirectory, "iiMenu_PCControls.txt");
+            if (File.Exists(game))
+                return game;
+            return primary;
+        }
+
         public static void LoadPCControls()
         {
-            string fileName = $"{PluginInfo.BaseDirectory}/iiMenu_PCControls.txt";
+            string fileName = GetPCControlsPath();
 
             if (File.Exists(fileName))
             {

@@ -26,7 +26,7 @@ namespace iiMenu
     public class Plugin : BaseUnityPlugin
     {
         public static Plugin instance;
-        public static ManualLogSource PluginLogger => instance.Logger;
+        public static ManualLogSource PluginLogger => instance?.Logger;
         public static bool FirstLaunch;
 
         /// <summary>
@@ -113,17 +113,20 @@ namespace iiMenu
 
             PatchHandler.PatchAll(true);
 
-            // Ugily hard-coded but works so well
             if (File.Exists($"{PluginInfo.BaseDirectory}/iiMenu_Preferences.txt"))
             {
-                if (File.ReadAllLines($"{PluginInfo.BaseDirectory}/iiMenu_Preferences.txt")[0].Split(";;").Contains("Accept TOS"))
+                string[] prefLines = File.ReadAllLines($"{PluginInfo.BaseDirectory}/iiMenu_Preferences.txt");
+                if (prefLines.Length > 0 && prefLines[0].Split(";;").Contains("Accept TOS"))
                     TOSPatches.enabled = true;
             }
 
             if (File.Exists($"{PluginInfo.BaseDirectory}/iiMenu_DisableTelemetry.txt"))
                 TelemetryClient.DisableTelemetry = true;
             
-            GorillaTagger.OnPlayerSpawned(LoadMenu);
+            if (GorillaTagger.Instance != null)
+                LoadMenu();
+            else
+                GorillaTagger.OnPlayerSpawned(LoadMenu);
         }
 
         private void OnApplicationQuitting()

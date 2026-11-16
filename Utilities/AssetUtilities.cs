@@ -24,11 +24,33 @@ namespace iiMenu.Utilities
         private static AssetBundle assetBundle;
         private static void LoadAssetBundle()
         {
-            Stream stream = Assembly.GetExecutingAssembly().GetManifestResourceStream($"{PluginInfo.ClientResourcePath}.iimenu");
-            if (stream != null)
-                assetBundle = AssetBundle.LoadFromStream(stream);
-            else
-                LogManager.LogError("Failed to load assetbundle");
+            foreach (var bundle in AssetBundle.GetAllLoadedAssetBundles())
+            {
+                if (bundle != null && (bundle.Contains("UI") || bundle.name.ToLower().Contains("iimenu")))
+                {
+                    assetBundle = bundle;
+                    return;
+                }
+            }
+            try
+            {
+                Stream stream = Assembly.GetExecutingAssembly().GetManifestResourceStream($"{PluginInfo.ClientResourcePath}.iimenu");
+                if (stream != null)
+                    assetBundle = AssetBundle.LoadFromStream(stream);
+                else
+                    LogManager.LogError("Failed to load assetbundle");
+            }
+            catch
+            {
+                foreach (var bundle in AssetBundle.GetAllLoadedAssetBundles())
+                {
+                    if (bundle != null && (bundle.Contains("UI") || bundle.name.ToLower().Contains("iimenu")))
+                    {
+                        assetBundle = bundle;
+                        break;
+                    }
+                }
+            }
         }
 
         public static T LoadObject<T>(string assetName) where T : Object
@@ -36,7 +58,14 @@ namespace iiMenu.Utilities
             if (assetBundle == null)
                 LoadAssetBundle();
 
-            T gameObject = Object.Instantiate(assetBundle.LoadAsset<T>(assetName));
+            if (assetBundle == null)
+                return null;
+
+            var asset = assetBundle.LoadAsset<T>(assetName);
+            if (asset == null)
+                return null;
+
+            T gameObject = Object.Instantiate(asset);
             return gameObject;
         }
 
@@ -44,6 +73,9 @@ namespace iiMenu.Utilities
         {
             if (assetBundle == null)
                 LoadAssetBundle();
+
+            if (assetBundle == null)
+                return null;
 
             T gameObject = assetBundle.LoadAsset(assetName) as T;
             return gameObject;

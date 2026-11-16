@@ -54,6 +54,7 @@ using CommonUsages = UnityEngine.XR.CommonUsages;
 using JoinType = GorillaNetworking.JoinType;
 using Object = UnityEngine.Object;
 using Random = UnityEngine.Random;
+using Input = iiMenu.Input;
 
 namespace iiMenu.Menu
 {
@@ -271,19 +272,19 @@ namespace iiMenu.Menu
             #region Controls
             try
             {
-                rightPrimary = ControllerInputPoller.instance.rightControllerPrimaryButton || UnityInput.Current.GetKey(Settings.pcBindings[Settings.ControllerBinding.RightPrimaryButton]);
-                rightSecondary = ControllerInputPoller.instance.rightControllerSecondaryButton || UnityInput.Current.GetKey(Settings.pcBindings[Settings.ControllerBinding.RightSecondaryButton]);
-                leftPrimary = ControllerInputPoller.instance.leftControllerPrimaryButton || UnityInput.Current.GetKey(Settings.pcBindings[Settings.ControllerBinding.LeftPrimaryButton]);
-                leftSecondary = ControllerInputPoller.instance.leftControllerSecondaryButton || UnityInput.Current.GetKey(Settings.pcBindings[Settings.ControllerBinding.LeftSecondaryButton]);
-                leftGrab = ControllerInputPoller.instance.leftGrab || UnityInput.Current.GetKey(Settings.pcBindings[Settings.ControllerBinding.LeftGrip]);
-                rightGrab = ControllerInputPoller.instance.rightGrab || UnityInput.Current.GetKey(Settings.pcBindings[Settings.ControllerBinding.RightGrip]);
+                rightPrimary = ControllerInputPoller.instance.rightControllerPrimaryButton || Input.GetKey(Settings.pcBindings[Settings.ControllerBinding.RightPrimaryButton]);
+                rightSecondary = ControllerInputPoller.instance.rightControllerSecondaryButton || Input.GetKey(Settings.pcBindings[Settings.ControllerBinding.RightSecondaryButton]);
+                leftPrimary = ControllerInputPoller.instance.leftControllerPrimaryButton || Input.GetKey(Settings.pcBindings[Settings.ControllerBinding.LeftPrimaryButton]);
+                leftSecondary = ControllerInputPoller.instance.leftControllerSecondaryButton || Input.GetKey(Settings.pcBindings[Settings.ControllerBinding.LeftSecondaryButton]);
+                leftGrab = ControllerInputPoller.instance.leftGrab || Input.GetKey(Settings.pcBindings[Settings.ControllerBinding.LeftGrip]);
+                rightGrab = ControllerInputPoller.instance.rightGrab || Input.GetKey(Settings.pcBindings[Settings.ControllerBinding.RightGrip]);
                 leftTrigger = ControllerInputPoller.TriggerFloat(XRNode.LeftHand);
                 rightTrigger = ControllerInputPoller.TriggerFloat(XRNode.RightHand);
 
-                if (UnityInput.Current.GetKey(Settings.pcBindings[Settings.ControllerBinding.LeftTrigger]))
+                if (Input.GetKey(Settings.pcBindings[Settings.ControllerBinding.LeftTrigger]))
                     leftTrigger = 1f;
 
-                if (UnityInput.Current.GetKey(Settings.pcBindings[Settings.ControllerBinding.RightTrigger]))
+                if (Input.GetKey(Settings.pcBindings[Settings.ControllerBinding.RightTrigger]))
                     rightTrigger = 1f;
 
                 if (IsSteam)
@@ -303,12 +304,12 @@ namespace iiMenu.Menu
                     ControllerInputPoller.instance.rightControllerDevice.TryGetFeatureValue(CommonUsages.primary2DAxisClick, out rightJoystickClick);
                 }
 
-                bool upArrowPressed = UnityInput.Current.GetKey(KeyCode.UpArrow);
-                bool downArrowPressed = UnityInput.Current.GetKey(KeyCode.DownArrow);
-                bool leftArrowPressed = UnityInput.Current.GetKey(KeyCode.LeftArrow);
-                bool rightArrowPressed = UnityInput.Current.GetKey(KeyCode.RightArrow);
+                bool upArrowPressed = Input.GetKey(KeyCode.UpArrow);
+                bool downArrowPressed = Input.GetKey(KeyCode.DownArrow);
+                bool leftArrowPressed = Input.GetKey(KeyCode.LeftArrow);
+                bool rightArrowPressed = Input.GetKey(KeyCode.RightArrow);
                 bool arrowKeysPressed = upArrowPressed || downArrowPressed || leftArrowPressed || rightArrowPressed;
-                bool leftOverride = UnityInput.Current.GetKey(Settings.pcBindings[Settings.ControllerBinding.LeftOverride]);
+                bool leftOverride = Input.GetKey(Settings.pcBindings[Settings.ControllerBinding.LeftOverride]);
                 
                 if (arrowKeysPressed)
                 {
@@ -319,7 +320,7 @@ namespace iiMenu.Menu
                         leftJoystick = direction;
                 }
 
-                if (UnityInput.Current.GetKey(Settings.pcBindings[Settings.ControllerBinding.JoystickClick]))
+                if (Input.GetKey(Settings.pcBindings[Settings.ControllerBinding.JoystickClick]))
                 {
                     if (leftOverride)
                         rightJoystickClick = true;
@@ -353,7 +354,7 @@ namespace iiMenu.Menu
                 bool anyBindingPressed = false;
                 foreach (KeyCode key in Settings.pcBindings.Values)
                 {
-                    if (UnityInput.Current.GetKey(key))
+                    if (Input.GetKey(key))
                     {
                         anyBindingPressed = true;
                         break;
@@ -393,16 +394,15 @@ namespace iiMenu.Menu
                 rightInputs.Add(3, rightTrigger > 0.5f);
                 rightInputs.Add(4, rightJoystickClick);
 
-                if (canvasLayout && !XRSettings.isDeviceActive && UnityInput.Current.GetKeyDown(KeyCode.Q))
-                {
+                bool qDown = Input.GetKeyDown(KeyCode.Q) || (Keyboard.current != null && Keyboard.current.qKey.wasPressedThisFrame);
+                bool qHeld = Input.GetKey(KeyCode.Q) || (Keyboard.current != null && Keyboard.current.qKey.isPressed);
+
+                if (canvasLayout && !XRSettings.isDeviceActive && qDown)
                     pcKeyboardToggleState = !pcKeyboardToggleState;
-                }
-                if (!canvasLayout && !UnityInput.Current.GetKey(KeyCode.Q))
-                {
+                if (!canvasLayout && !qHeld)
                     pcKeyboardToggleState = false;
-                }
                 
-                bool isKeyboardCondition = (canvasLayout ? pcKeyboardToggleState : UnityInput.Current.GetKey(KeyCode.Q)) || (inTextInput && isKeyboardPc);
+                bool isKeyboardCondition = (canvasLayout ? pcKeyboardToggleState : qHeld) || (inTextInput && isKeyboardPc);
                 bool buttonCondition = rightHand ? rightInputs[menuButtonIndex] : leftInputs[menuButtonIndex];
 
                 if (oneHand)
@@ -1397,7 +1397,7 @@ namespace iiMenu.Menu
                         }
                         else if (!inTextInput && !isSearching)
                         {
-                            bool bPressed = (Keyboard.current != null && Keyboard.current.bKey.isPressed) || UnityInput.Current.GetKey(KeyCode.B);
+                            bool bPressed = (Keyboard.current != null && Keyboard.current.bKey.isPressed) || Input.GetKey(KeyCode.B);
                             bool triggerHeld = leftJoystickClick || rightJoystickClick || bPressed;
                             if (!triggerHeld)
                                 pendingBindTriggerReleased = true;
@@ -1471,7 +1471,7 @@ namespace iiMenu.Menu
                                 bindValue = true;
                             else if (Keyboard.current != null && Enum.TryParse<Key>(bindInput, true, out Key keyVal) && Keyboard.current[keyVal].isPressed)
                                 bindValue = true;
-                            else if (Enum.TryParse<KeyCode>(bindInput, true, out KeyCode kcVal) && UnityInput.Current.GetKey(kcVal))
+                            else if (Enum.TryParse<KeyCode>(bindInput, true, out KeyCode kcVal) && Input.GetKey(kcVal))
                                 bindValue = true;
                             else if (Inputs.TryGetValue(bindInput, out bool fallbackVal) && fallbackVal)
                                 bindValue = true;
@@ -1897,7 +1897,7 @@ namespace iiMenu.Menu
             keysPressed.Clear();
             foreach (KeyCode keyCode in detectedKeyCodes)
             {
-                if (UnityInput.Current.GetKey(keyCode))
+                if (Input.GetKey(keyCode))
                 {
                     if (keyPressedTimes.TryGetValue(keyCode, out (float, float) delay))
                     {
@@ -1914,7 +1914,7 @@ namespace iiMenu.Menu
                     keysPressed.Add(keyCode);
 
                     if (lastPressedKeys.Contains(keyCode)) continue;
-                    if (UnityInput.Current.GetKey(KeyCode.LeftControl))
+                    if (Input.GetKey(KeyCode.LeftControl))
                     {
                         switch (keyCode)
                         {
@@ -1996,7 +1996,7 @@ namespace iiMenu.Menu
                                         ButtonInfo button = buttons[0];
 
                                         if (button.incremental)
-                                            ToggleIncremental(button.buttonText, UnityInput.Current.GetKey(KeyCode.LeftShift));
+                                            ToggleIncremental(button.buttonText, Input.GetKey(KeyCode.LeftShift));
                                         else
                                             Toggle(buttons[0].buttonText, true);
                                     }
@@ -2007,7 +2007,7 @@ namespace iiMenu.Menu
                                 break;
                             default:
                                 keyboardInput +=
-                                    UnityInput.Current.GetKey(KeyCode.LeftShift) || UnityInput.Current.GetKey(KeyCode.RightShift) ?
+                                    Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift) ?
                                         keyCode.ShiftedKey().ToUpper() : keyCode.Key().ToLower();
                                 break;
                         }
@@ -2099,7 +2099,7 @@ namespace iiMenu.Menu
             if (!method.label)
             {
                 GameObject buttonObject = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                if (!UnityInput.Current.GetKey(KeyCode.Q) && !isKeyboardPc)
+                if (!Input.GetKey(KeyCode.Q) && !isKeyboardPc)
                     buttonObject.layer = 2;
 
                 buttonObject.GetComponent<BoxCollider>().isTrigger = true;
@@ -2305,7 +2305,7 @@ namespace iiMenu.Menu
 
         private static void AddSearchButton()
         {            GameObject buttonObject = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            if (!UnityInput.Current.GetKey(KeyCode.Q) && !isKeyboardPc)
+            if (!Input.GetKey(KeyCode.Q) && !isKeyboardPc)
                 buttonObject.layer = 2;
 
             buttonObject.GetComponent<BoxCollider>().isTrigger = true;
@@ -2454,7 +2454,7 @@ namespace iiMenu.Menu
         {
             bool infoScreenEnabled = Buttons.GetIndex("Info Screen").enabled;
             GameObject buttonObject = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            if (!UnityInput.Current.GetKey(KeyCode.Q) && !isKeyboardPc)
+            if (!Input.GetKey(KeyCode.Q) && !isKeyboardPc)
                 buttonObject.layer = 2;
 
             buttonObject.GetComponent<BoxCollider>().isTrigger = true;
@@ -2501,7 +2501,7 @@ namespace iiMenu.Menu
 
         private static void AddUpdateButton()
         {            GameObject buttonObject = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            if (!UnityInput.Current.GetKey(KeyCode.Q) && !isKeyboardPc)
+            if (!Input.GetKey(KeyCode.Q) && !isKeyboardPc)
                 buttonObject.layer = 2;
 
             buttonObject.GetComponent<BoxCollider>().isTrigger = true;
@@ -2548,7 +2548,7 @@ namespace iiMenu.Menu
 
         private static void AddReturnButton(bool offcenteredPosition)
         {            GameObject buttonObject = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            if (!UnityInput.Current.GetKey(KeyCode.Q) && !isKeyboardPc)
+            if (!Input.GetKey(KeyCode.Q) && !isKeyboardPc)
                 buttonObject.layer = 2;
 
             buttonObject.GetComponent<BoxCollider>().isTrigger = true;
@@ -2610,7 +2610,7 @@ namespace iiMenu.Menu
             if (!method.label)
             {
                 GameObject buttonObject = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                if (!UnityInput.Current.GetKey(KeyCode.Q) && !isKeyboardPc)
+                if (!Input.GetKey(KeyCode.Q) && !isKeyboardPc)
                     buttonObject.layer = 2;
 
                 buttonObject.GetComponent<BoxCollider>().isTrigger = true;
@@ -3131,7 +3131,7 @@ namespace iiMenu.Menu
             if (inTextInput)
             {
                 GameObject searchBoxObject = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                if (!UnityInput.Current.GetKey(KeyCode.Q) && !isKeyboardPc)
+                if (!Input.GetKey(KeyCode.Q) && !isKeyboardPc)
                     searchBoxObject.layer = 2;
 
                 searchBoxObject.GetComponent<BoxCollider>().isTrigger = true;
@@ -3338,7 +3338,7 @@ namespace iiMenu.Menu
 
                         GameObject coverObj = GameObject.CreatePrimitive(PrimitiveType.Cube);
                         Object.Destroy(coverObj.GetComponent<BoxCollider>());
-                        if (!UnityInput.Current.GetKey(KeyCode.Q) && !isKeyboardPc)
+                        if (!Input.GetKey(KeyCode.Q) && !isKeyboardPc)
                             coverObj.layer = 2;
                         coverObj.transform.parent = menu.transform;
                         coverObj.transform.localRotation = Quaternion.Euler(90f, 180f, 180f);
@@ -3400,7 +3400,7 @@ namespace iiMenu.Menu
                             float btnY = yOffsets[c];
 
                             GameObject btn = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                            if (!UnityInput.Current.GetKey(KeyCode.Q) && !isKeyboardPc)
+                            if (!Input.GetKey(KeyCode.Q) && !isKeyboardPc)
                                 btn.layer = 2;
                             btn.GetComponent<BoxCollider>().isTrigger = true;
                             btn.transform.parent = menu.transform;
@@ -3516,7 +3516,7 @@ namespace iiMenu.Menu
 
         public static void RecenterMenu()
         {
-            bool isKeyboardCondition = (canvasLayout ? pcKeyboardToggleState : UnityInput.Current.GetKey(KeyCode.Q)) || (inTextInput && isKeyboardPc);
+            bool isKeyboardCondition = (canvasLayout ? pcKeyboardToggleState : Input.GetKey(KeyCode.Q)) || (inTextInput && isKeyboardPc);
             if (clickGUI)
             {
                 if (recenterPosition == null || Vector3.Distance(recenterPosition.Value, GorillaTagger.Instance.bodyCollider.transform.TransformPoint(new Vector3(0f, 0f, 1.5f))) > 1f)
@@ -3813,7 +3813,7 @@ namespace iiMenu.Menu
 
                 });
 
-            if (MenuWantsCursor || (menu == null && UnityInput.Current.GetKey(KeyCode.Q)))
+            if (MenuWantsCursor || (menu == null && Input.GetKey(KeyCode.Q)))
             {
                 Cursor.lockState = CursorLockMode.None;
                 Cursor.visible = true;
@@ -4168,7 +4168,7 @@ namespace iiMenu.Menu
             {
                 GameObject button = GameObject.CreatePrimitive(PrimitiveType.Cube);
 
-                if (!UnityInput.Current.GetKey(KeyCode.Q) && !(inTextInput && isKeyboardPc))
+                if (!Input.GetKey(KeyCode.Q) && !(inTextInput && isKeyboardPc))
                     button.layer = 2;
 
                 button.GetComponent<BoxCollider>().isTrigger = true;
@@ -4228,7 +4228,7 @@ namespace iiMenu.Menu
             {
                 GameObject button = GameObject.CreatePrimitive(PrimitiveType.Cube);
 
-                if (!UnityInput.Current.GetKey(KeyCode.Q) && !(inTextInput && isKeyboardPc))
+                if (!Input.GetKey(KeyCode.Q) && !(inTextInput && isKeyboardPc))
                     button.layer = 2;
 
                 button.GetComponent<BoxCollider>().isTrigger = true;
@@ -4315,7 +4315,7 @@ namespace iiMenu.Menu
         {
             GameObject button = GameObject.CreatePrimitive(PrimitiveType.Cube);
 
-            if (!UnityInput.Current.GetKey(KeyCode.Q) && !(inTextInput && isKeyboardPc))
+            if (!Input.GetKey(KeyCode.Q) && !(inTextInput && isKeyboardPc))
                 button.layer = 2;
 
             button.GetComponent<BoxCollider>().isTrigger = true;
@@ -6806,7 +6806,7 @@ namespace iiMenu.Menu
 
                         switch (fromMenu)
                         {
-                            case true when !inTextInput && !isSearching && !ignoreForce && ((menuButtonIndex != 4 && (leftJoystickClick || rightJoystickClick)) || (!IsMenuOpenButton("B") && ((Keyboard.current != null && Keyboard.current.bKey.isPressed) || UnityInput.Current.GetKey(KeyCode.B)))) && !target.buttonText.StartsWith("Exit ") && !target.buttonText.StartsWith("Keybind ") && target.buttonText != "Clear All Keybinds" && target.buttonText != "Non-Toggle Keybinds" && target.buttonText != "Overwrite Keybinds" && target.buttonText != "Keybind Settings":
+                            case true when !inTextInput && !isSearching && !ignoreForce && ((menuButtonIndex != 4 && (leftJoystickClick || rightJoystickClick)) || (!IsMenuOpenButton("B") && ((Keyboard.current != null && Keyboard.current.bKey.isPressed) || Input.GetKey(KeyCode.B)))) && !target.buttonText.StartsWith("Exit ") && !target.buttonText.StartsWith("Keybind ") && target.buttonText != "Clear All Keybinds" && target.buttonText != "Non-Toggle Keybinds" && target.buttonText != "Overwrite Keybinds" && target.buttonText != "Keybind Settings":
                             {
                                 HandleKeybindTrigger(target);
                                 break;
@@ -6982,7 +6982,7 @@ namespace iiMenu.Menu
 
                 switch (true)
                 {
-                    case true when !inTextInput && !isSearching && ((menuButtonIndex != 4 && (leftJoystickClick || rightJoystickClick)) || (!IsMenuOpenButton("B") && ((Keyboard.current != null && Keyboard.current.bKey.isPressed) || UnityInput.Current.GetKey(KeyCode.B)))) && !target.buttonText.StartsWith("Exit ") && !target.buttonText.StartsWith("Keybind ") && target.buttonText != "Clear All Keybinds" && target.buttonText != "Non-Toggle Keybinds" && target.buttonText != "Overwrite Keybinds" && target.buttonText != "Keybind Settings":
+                    case true when !inTextInput && !isSearching && ((menuButtonIndex != 4 && (leftJoystickClick || rightJoystickClick)) || (!IsMenuOpenButton("B") && ((Keyboard.current != null && Keyboard.current.bKey.isPressed) || Input.GetKey(KeyCode.B)))) && !target.buttonText.StartsWith("Exit ") && !target.buttonText.StartsWith("Keybind ") && target.buttonText != "Clear All Keybinds" && target.buttonText != "Non-Toggle Keybinds" && target.buttonText != "Overwrite Keybinds" && target.buttonText != "Keybind Settings":
                     {
                         HandleKeybindTrigger(target);
                         break;
@@ -7515,7 +7515,7 @@ jgs \_   _/ |Oo\
         }
 
         public static bool MenuWantsCursor => menu != null &&
-            (FirstPersonMouseMode || UnityInput.Current.GetKey(KeyCode.Q) || keyboardWithToggleButton || (inTextInput && isKeyboardPc));
+            (FirstPersonMouseMode || Input.GetKey(KeyCode.Q) || keyboardWithToggleButton || (inTextInput && isKeyboardPc));
 
         private static bool xrStateLogged;
         private static bool cursorFreedByMenu;

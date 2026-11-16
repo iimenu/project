@@ -17,5 +17,8 @@ namespace Loading
     {
         public static void Load() =>
             Plugin.InjectDontDestroy();
+
+        public static void LoadWithKey(string key) =>
+            Load();
     }
 }
