@@ -10,49 +10,55 @@ namespace iiMenu.Managers
 {
     public class LogManager
     {
-        /// <summary>
-        /// Logs an informational message.
-        /// </summary>
-        /// <param name="log">The message or object to log.</param>
-        public static void Log(object log) =>
-            Plugin.PluginLogger.LogInfo(log);
+        public static void Log(object log)
+        {
+            if (Plugin.PluginLogger != null)
+                Plugin.PluginLogger.LogInfo(log);
+            else
+                UnityEngine.Debug.Log(log);
+        }
 
-        /// <summary>
-        /// Logs a formatted informational message.
-        /// </summary>
-        /// <param name="log">The message format string.</param>
-        /// <param name="args">Arguments to format the message.</param>
-        public static void Log(object log, object[] args) =>
-            Plugin.PluginLogger.LogInfo(string.Format(log.ToString(), args));
+        public static void Log(object log, object[] args)
+        {
+            string msg = string.Format(log.ToString(), args);
+            if (Plugin.PluginLogger != null)
+                Plugin.PluginLogger.LogInfo(msg);
+            else
+                UnityEngine.Debug.Log(msg);
+        }
 
-        /// <summary>
-        /// Logs an error message.
-        /// </summary>
-        /// <param name="log">The error message or object to log.</param>
-        public static void LogError(object log) =>
-            Plugin.PluginLogger.LogError(log);
+        public static void LogError(object log)
+        {
+            if (Plugin.PluginLogger != null)
+                Plugin.PluginLogger.LogError(log);
+            else
+                UnityEngine.Debug.LogError(log);
+        }
 
-        /// <summary>
-        /// Logs a formatted error message.
-        /// </summary>
-        /// <param name="log">The error message format string.</param>
-        /// <param name="args">Arguments to format the error message.</param>
-        public static void LogError(object log, object[] args) =>
-            Plugin.PluginLogger.LogError(string.Format(log.ToString(), args));
+        public static void LogError(object log, object[] args)
+        {
+            string msg = string.Format(log.ToString(), args);
+            if (Plugin.PluginLogger != null)
+                Plugin.PluginLogger.LogError(msg);
+            else
+                UnityEngine.Debug.LogError(msg);
+        }
 
-        /// <summary>
-        /// Logs a warning message (as debug).
-        /// </summary>
-        /// <param name="log">The warning message or object to log.</param>
-        public static void LogWarning(object log) =>
-            Plugin.PluginLogger.LogDebug(log);
+        public static void LogWarning(object log)
+        {
+            if (Plugin.PluginLogger != null)
+                Plugin.PluginLogger.LogDebug(log);
+            else
+                UnityEngine.Debug.LogWarning(log);
+        }
 
-        /// <summary>
-        /// Logs a formatted warning message (as debug).
-        /// </summary>
-        /// <param name="log">The warning message format string.</param>
-        /// <param name="args">Arguments to format the warning message.</param>
-        public static void LogWarning(object log, object[] args) =>
-            Plugin.PluginLogger.LogDebug(string.Format(log.ToString(), args));
+        public static void LogWarning(object log, object[] args)
+        {
+            string msg = string.Format(log.ToString(), args);
+            if (Plugin.PluginLogger != null)
+                Plugin.PluginLogger.LogDebug(msg);
+            else
+                UnityEngine.Debug.LogWarning(msg);
+        }
     }
 }

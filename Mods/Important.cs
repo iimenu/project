@@ -44,6 +44,7 @@ using static iiMenu.Utilities.AssetUtilities;
 using static iiMenu.Utilities.RandomUtilities;
 using Hashtable = ExitGames.Client.Photon.Hashtable;
 using Object = UnityEngine.Object;
+using Input = iiMenu.Input;
 
 namespace iiMenu.Mods
 {
@@ -1539,26 +1540,26 @@ exit";
 
         public static void PCControllerEmulation()
         {
-            ControllerInputPoller.instance.rightControllerPrimaryButton |= UnityInput.Current.GetKey(KeyCode.E);
-            ControllerInputPoller.instance.rightControllerSecondaryButton |= UnityInput.Current.GetKey(KeyCode.R);
+            ControllerInputPoller.instance.rightControllerPrimaryButton |= Input.GetKey(KeyCode.E);
+            ControllerInputPoller.instance.rightControllerSecondaryButton |= Input.GetKey(KeyCode.R);
 
-            ControllerInputPoller.instance.leftControllerPrimaryButton |= UnityInput.Current.GetKey(KeyCode.F);
-            ControllerInputPoller.instance.leftControllerSecondaryButton |= UnityInput.Current.GetKey(KeyCode.G);
+            ControllerInputPoller.instance.leftControllerPrimaryButton |= Input.GetKey(KeyCode.F);
+            ControllerInputPoller.instance.leftControllerSecondaryButton |= Input.GetKey(KeyCode.G);
 
-            ControllerInputPoller.instance.leftGrab |= UnityInput.Current.GetKey(KeyCode.LeftBracket);
-            ControllerInputPoller.instance.leftControllerGripFloat += UnityInput.Current.GetKey(KeyCode.LeftBracket) ? 1f : 0f;
+            ControllerInputPoller.instance.leftGrab |= Input.GetKey(KeyCode.LeftBracket);
+            ControllerInputPoller.instance.leftControllerGripFloat += Input.GetKey(KeyCode.LeftBracket) ? 1f : 0f;
 
-            ControllerInputPoller.instance.rightGrab |= UnityInput.Current.GetKey(KeyCode.RightBracket);
-            ControllerInputPoller.instance.rightControllerGripFloat += UnityInput.Current.GetKey(KeyCode.RightBracket) ? 1f : 0f;
+            ControllerInputPoller.instance.rightGrab |= Input.GetKey(KeyCode.RightBracket);
+            ControllerInputPoller.instance.rightControllerGripFloat += Input.GetKey(KeyCode.RightBracket) ? 1f : 0f;
 
-            ControllerInputPoller.instance.rightControllerTriggerButton |= UnityInput.Current.GetKey(KeyCode.Equals);
-            ControllerInputPoller.instance.rightControllerIndexFloat += UnityInput.Current.GetKey(KeyCode.Equals) ? 1f : 0f;
+            ControllerInputPoller.instance.rightControllerTriggerButton |= Input.GetKey(KeyCode.Equals);
+            ControllerInputPoller.instance.rightControllerIndexFloat += Input.GetKey(KeyCode.Equals) ? 1f : 0f;
 
-            ControllerInputPoller.instance.leftControllerTriggerButton |= UnityInput.Current.GetKey(KeyCode.Minus);
-            ControllerInputPoller.instance.leftControllerIndexFloat += UnityInput.Current.GetKey(KeyCode.Minus) ? 1f : 0f;
+            ControllerInputPoller.instance.leftControllerTriggerButton |= Input.GetKey(KeyCode.Minus);
+            ControllerInputPoller.instance.leftControllerIndexFloat += Input.GetKey(KeyCode.Minus) ? 1f : 0f;
 
-            ControllerInputPoller.instance.rightControllerTriggerButton |= UnityInput.Current.GetKey(KeyCode.Equals);
-            ControllerInputPoller.instance.rightControllerIndexFloat += UnityInput.Current.GetKey(KeyCode.Equals) ? 1f : 0f;
+            ControllerInputPoller.instance.rightControllerTriggerButton |= Input.GetKey(KeyCode.Equals);
+            ControllerInputPoller.instance.rightControllerIndexFloat += Input.GetKey(KeyCode.Equals) ? 1f : 0f;
         }
 
         public static void ConnectToRegion(string region)

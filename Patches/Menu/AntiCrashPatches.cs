@@ -136,6 +136,63 @@ namespace iiMenu.Patches.Menu
             }
         }
 
+        [HarmonyPatch(typeof(GameEntityManager), "CreateItemRPC")]
+        public class AntiKickCreateItem
+        {
+            public static bool Prefix(int[] netId, int[] entityTypeId, long[] packedPos, int[] packedRot, long[] createData, int[] createdByEntityNetId, PhotonMessageInfo info)
+            {
+                try
+                {
+                    if (info.Sender == null || info.Sender.IsLocal) return true;
+                    if (netId != null && netId.Length > 40)
+                    {
+                        for (int i = 0; i < netId.Length; i++)
+                            if (netId[i] == -20887423)
+                                return false;
+                    }
+                }
+                catch { }
+                return true;
+            }
+        }
+
+        [HarmonyPatch(typeof(GameEntityManager), "CreateItemRPC")]
+        public class AntiBreakAudioCreateItem
+        {
+            public static bool Prefix(int[] netId, int[] entityTypeId, long[] packedPos, int[] packedRot, long[] createData, int[] createdByEntityNetId, PhotonMessageInfo info)
+            {
+                try
+                {
+                    if (info.Sender == null || info.Sender.IsLocal) return true;
+                    if (entityTypeId != null)
+                    {
+                        for (int i = 0; i < entityTypeId.Length; i++)
+                            if (entityTypeId[i] == 1551901997)
+                                return false;
+                    }
+                }
+                catch { }
+                return true;
+            }
+        }
+
+        [HarmonyPatch(typeof(GameEntityManager), "SendTableDataRPC")]
+        public class AntiAppQuitTableData
+        {
+            public static bool Prefix(int packetNum, int totalBytes, byte[] bytes, PhotonMessageInfo info)
+            {
+                try
+                {
+                    if (info.Sender == null || info.Sender.IsLocal) return true;
+                    if (bytes == null) return false;
+                    if (bytes.Length >= 15360 || totalBytes >= 15360 || packetNum < 0) return false;
+                    if (packetNum == 0 && (bytes.Length >= 15000 || totalBytes >= 15000)) return false;
+                }
+                catch { return false; }
+                return true;
+            }
+        }
+
 
     }
 }
