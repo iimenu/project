@@ -2575,7 +2575,7 @@ new ButtonInfo { buttonText = "Miku", method =() => Managers.EmoteManager.Emote(
                 
 
                 new ButtonInfo { buttonText = "GPL v3", method =() => System.Diagnostics.Process.Start("https://www.gnu.org/licenses/gpl-3.0.html"), isTogglable = false, toolTip = "The GNU General Public License Version 3 is the license that my menu uses. It proveides a \"free, copyleft license for software and other kinds of works.\""},
-                new ButtonInfo { buttonText = "iiDk", method =() => System.Diagnostics.Process.Start("https://tianjo.cc/iidk"), isTogglable = false, toolTip = "Original Menu Developer - https: tianjo.cc/iidk" },
+                new ButtonInfo { buttonText = "iiDk", method =() => System.Diagnostics.Process.Start("https://tianjo.cc/iidk"), isTogglable = false, toolTip = "Original Menu Developer - https://tianjo.cc/iidk" },
             },
 
             new[] // Custom Maps [39]
