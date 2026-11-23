@@ -13,8 +13,8 @@ namespace iiMenu
         public const string GUID = "corgi.gorillatag.iireborn";
         public const string Name = "ii Reborn";
         public const string Description = "A Gorilla Tag mod menu.";
-        public const string BuildTimestamp = "2026-11-16T16:00:00Z";
-        public const string Version = "1.2.6";
+        public const string BuildTimestamp = "2026-11-23T16:30:00Z";
+        public const string Version = "1.2.7";
 
         public const string BaseDirectory = "iiReborn";
         public const string LegacyBaseDirectory = "iisStupidMenu"; // ii Reborn has no affiliation with nor endorsement by Goldentrophy Software or its name, "ii's Stupid Menu". this is purely a database migration path
