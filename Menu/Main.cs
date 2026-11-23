@@ -836,13 +836,7 @@ namespace iiMenu.Menu
                                 Sound.StopAllSounds();
                             }
                         }
-                    } else if (RecorderPatch.enabled)
-                    {
-                        if (!Buttons.GetIndex("Microphone Feedback").enabled && !Buttons.GetIndex("Debug Microphone").enabled)
-                            GorillaTagger.Instance.myRecorder.DebugEchoMode = VoiceManager.Get().AudioClips.Any() || VoiceManager.Get().PostProcessors.Any();
-
                     }
-                    
                 }
                 catch { }
 
@@ -6660,11 +6654,18 @@ namespace iiMenu.Menu
                 if (doButtonsVibrate)
                     GorillaTagger.Instance.StartVibration(rightHand, GorillaTagger.Instance.tagHapticStrength / 2f, GorillaTagger.Instance.tagHapticDuration / 2f);
 
+                VRRig rig = VRRig.LocalRig ?? GorillaTagger.Instance?.offlineVRRig;
+
                 if (themeType == 69)
                 {
-                    AudioSource audioSource = rightHand ? VRRig.LocalRig.leftHandPlayer : VRRig.LocalRig.rightHandPlayer;
-                    audioSource.volume = buttonClickVolume / 10f;
-                    audioSource.PlayOneShot(LoadSoundFromURL($"{PluginInfo.ServerResourcePath}/Audio/Menu/Buttons/poopsound.ogg", "Audio/Menu/Buttons/poopsound.ogg"), 5f);
+                    AudioSource audioSource = rightHand ? rig?.leftHandPlayer : rig?.rightHandPlayer;
+                    if (audioSource != null && audioSource.isActiveAndEnabled)
+                    {
+                        audioSource.volume = buttonClickVolume / 10f;
+                        audioSource.PlayOneShot(LoadSoundFromURL($"{PluginInfo.ServerResourcePath}/Audio/Menu/Buttons/poopsound.ogg", "Audio/Menu/Buttons/poopsound.ogg"), 5f);
+                    }
+                    else
+                        Play2DAudio(LoadSoundFromURL($"{PluginInfo.ServerResourcePath}/Audio/Menu/Buttons/poopsound.ogg", "Audio/Menu/Buttons/poopsound.ogg"), buttonClickVolume / 10f);
                     rightHand = archiveRightHand;
                     return;
                 }
@@ -6679,8 +6680,29 @@ namespace iiMenu.Menu
 
                 if (buttonClickIndex <= 3 || buttonClickIndex == 11 || buttonClickIndex == 25)
                 {
-                    VRRig.LocalRig.PlayHandTapLocal(buttonClickSound, rightHand, buttonClickVolume / 10f);
-                    if (PhotonNetwork.InRoom && serversidedButtonSounds)
+                    bool played = false;
+                    if (rig != null && rig.enabled)
+                    {
+                        try
+                        {
+                            rig.PlayHandTapLocal(buttonClickSound, rightHand, buttonClickVolume / 10f);
+                            played = true;
+                        }
+                        catch { }
+                    }
+                    if (!played)
+                    {
+                        try
+                        {
+                            if (GTPlayer.Instance?.materialData != null && buttonClickSound >= 0 && buttonClickSound < GTPlayer.Instance.materialData.Count)
+                            {
+                                AudioClip clip = GTPlayer.Instance.materialData[buttonClickSound].audio;
+                                if (clip != null) Play2DAudio(clip, buttonClickVolume / 10f);
+                            }
+                        }
+                        catch { }
+                    }
+                    if (PhotonNetwork.InRoom && serversidedButtonSounds && GorillaTagger.Instance?.myVRRig != null)
                     {
                         GorillaTagger.Instance.myVRRig.SendRPC("RPC_PlayHandTap", RpcTarget.Others, buttonClickSound, rightHand, buttonClickVolume / 10f);
                         RPCProtection();
@@ -6697,6 +6719,7 @@ namespace iiMenu.Menu
                         { 8, "rr" },
                         { 9, "watch" },
                         { 10, "membrane" },
+                        { 12, "wall" },
                         { 13, "slider" },
                         { 14, "can" },
                         { 15, "cut" },
@@ -6729,10 +6752,18 @@ namespace iiMenu.Menu
                     }
                     catch { }
 
-                    AudioSource audioSource = rightHand ? VRRig.LocalRig.leftHandPlayer : VRRig.LocalRig.rightHandPlayer;
-                    audioSource.volume = buttonClickVolume / 10f;
-                    float volumeScale = (buttonClickIndex == 32) ? 5f : 1f;
-                    audioSource.PlayOneShot(LoadSoundFromURL($"{PluginInfo.ServerResourcePath}/Audio/Menu/Buttons/{namesToIds[buttonClickIndex]}.ogg", $"Audio/Menu/Buttons/{namesToIds[buttonClickIndex]}.ogg"), volumeScale);
+                    if (namesToIds.TryGetValue(buttonClickIndex, out string soundName))
+                    {
+                        AudioSource audioSource = rightHand ? rig?.leftHandPlayer : rig?.rightHandPlayer;
+                        float volumeScale = (buttonClickIndex == 32) ? 5f : 1f;
+                        if (audioSource != null && audioSource.isActiveAndEnabled)
+                        {
+                            audioSource.volume = buttonClickVolume / 10f;
+                            audioSource.PlayOneShot(LoadSoundFromURL($"{PluginInfo.ServerResourcePath}/Audio/Menu/Buttons/{soundName}.ogg", $"Audio/Menu/Buttons/{soundName}.ogg"), volumeScale);
+                        }
+                        else
+                            Play2DAudio(LoadSoundFromURL($"{PluginInfo.ServerResourcePath}/Audio/Menu/Buttons/{soundName}.ogg", $"Audio/Menu/Buttons/{soundName}.ogg"), buttonClickVolume / 10f);
+                    }
                 }
             } catch { }
             rightHand = archiveRightHand;

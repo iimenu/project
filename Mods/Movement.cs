@@ -517,13 +517,8 @@ namespace iiMenu.Mods
                     noclipLocomotionLayersSaved = true;
                 }
                 GTPlayer.Instance.locomotionEnabledLayers = 0;
-                if (GorillaTagger.Instance?.bodyCollider != null)
-                    GorillaTagger.Instance.bodyCollider.enabled = false;
-                if (GorillaTagger.Instance?.headCollider != null)
-                    GorillaTagger.Instance.headCollider.enabled = false;
                 if (GorillaTagger.Instance?.rigidbody != null)
                 {
-                    GorillaTagger.Instance.rigidbody.detectCollisions = false;
                     GorillaTagger.Instance.rigidbody.useGravity = false;
                     GorillaTagger.Instance.rigidbody.linearVelocity = Vector3.zero;
                 }
@@ -533,15 +528,9 @@ namespace iiMenu.Mods
                 LayerMask restoreMask = noclipLocomotionLayersSaved && noclipLocomotionLayers != 0 ? noclipLocomotionLayers : (LayerMask)NoInvisLayerMask();
                 noclipLocomotionLayersSaved = false;
                 GTPlayer.Instance.locomotionEnabledLayers = restoreMask;
-                if (GorillaTagger.Instance?.bodyCollider != null)
-                    GorillaTagger.Instance.bodyCollider.enabled = true;
-                if (GorillaTagger.Instance?.headCollider != null)
-                    GorillaTagger.Instance.headCollider.enabled = true;
                 if (GorillaTagger.Instance?.rigidbody != null)
-                {
-                    GorillaTagger.Instance.rigidbody.detectCollisions = true;
                     GorillaTagger.Instance.rigidbody.useGravity = true;
-                }
+                GTPlayer.Instance.ForceRigidBodySync();
             }
         }
 
@@ -549,20 +538,14 @@ namespace iiMenu.Mods
         {
             SetNoclip(false, noclipFlyHeld);
             if (!noclip && GorillaTagger.Instance?.rigidbody != null)
-            {
-                GorillaTagger.Instance.rigidbody.detectCollisions = true;
                 GorillaTagger.Instance.rigidbody.useGravity = true;
-            }
         }
 
         public static void DisableConstantNoclip()
         {
             SetNoclip(false, noclipFlyHeld);
             if (!noclip && GorillaTagger.Instance?.rigidbody != null)
-            {
-                GorillaTagger.Instance.rigidbody.detectCollisions = true;
                 GorillaTagger.Instance.rigidbody.useGravity = true;
-            }
         }
 
         public static void ConstantNoclip()
@@ -595,7 +578,14 @@ namespace iiMenu.Mods
             {
                 GTPlayer.Instance.transform.position += moveDir.normalized * (Time.deltaTime * FlySpeed);
                 if (GorillaTagger.Instance?.rigidbody != null)
+                {
+                    GorillaTagger.Instance.rigidbody.transform.position = GTPlayer.Instance.transform.position;
                     GorillaTagger.Instance.rigidbody.linearVelocity = Vector3.zero;
+                }
+                GTPlayer.Instance.lastPosition = GTPlayer.Instance.transform.position;
+                if (GorillaTagger.Instance?.headCollider != null)
+                    GTPlayer.Instance.lastHeadPosition = GorillaTagger.Instance.headCollider.transform.position;
+                GTPlayer.Instance.ForceRigidBodySync();
             }
         }
 
@@ -603,10 +593,7 @@ namespace iiMenu.Mods
         {
             SetNoclip(noclipHeld, false);
             if (!noclip && GorillaTagger.Instance?.rigidbody != null)
-            {
-                GorillaTagger.Instance.rigidbody.detectCollisions = true;
                 GorillaTagger.Instance.rigidbody.useGravity = true;
-            }
         }
 
         public static void NoclipFly()
@@ -614,7 +601,15 @@ namespace iiMenu.Mods
             if (rightPrimary)
             {
                 GTPlayer.Instance.transform.position += GorillaTagger.Instance.headCollider.transform.forward * (Time.deltaTime * FlySpeed);
-                GorillaTagger.Instance.rigidbody.linearVelocity = Vector3.zero;
+                if (GorillaTagger.Instance?.rigidbody != null)
+                {
+                    GorillaTagger.Instance.rigidbody.transform.position = GTPlayer.Instance.transform.position;
+                    GorillaTagger.Instance.rigidbody.linearVelocity = Vector3.zero;
+                }
+                GTPlayer.Instance.lastPosition = GTPlayer.Instance.transform.position;
+                if (GorillaTagger.Instance?.headCollider != null)
+                    GTPlayer.Instance.lastHeadPosition = GorillaTagger.Instance.headCollider.transform.position;
+                GTPlayer.Instance.ForceRigidBodySync();
             }
 
             SetNoclip(noclipHeld, rightPrimary);
@@ -3088,6 +3083,7 @@ namespace iiMenu.Mods
         public static bool wasDisabledAlready;
         public static bool invisMonke;
 
+        public static bool wasInvis;
         public static bool lastHit;
         public static bool lastHit2;
         public static bool lastRG;
@@ -3108,12 +3104,17 @@ namespace iiMenu.Mods
             {
                 rig.enabled = false;
                 rig.transform.position = GorillaTagger.Instance.bodyCollider.transform.position - Vector3.up * 99999f;
+                wasInvis = true;
             }
             else
             {
-                rig.enabled = true;
-                if (GorillaTagger.Instance?.bodyCollider != null)
-                    rig.transform.position = GorillaTagger.Instance.bodyCollider.transform.position;
+                if (wasInvis)
+                {
+                    rig.transform.position = GTPlayer.Instance != null ? GTPlayer.Instance.transform.position : GorillaTagger.Instance.transform.position;
+                    wasInvis = false;
+                }
+                if (!ghostMonke)
+                    rig.enabled = true;
             }
         }
 
@@ -3130,9 +3131,10 @@ namespace iiMenu.Mods
                 ghostMonke = !ghostMonke;
             lastHit = hit;
 
-            rig.enabled = !ghostMonke;
-            if (!ghostMonke && GorillaTagger.Instance?.bodyCollider != null)
-                rig.transform.position = GorillaTagger.Instance.bodyCollider.transform.position;
+            if (ghostMonke)
+                rig.enabled = false;
+            else if (!invisMonke)
+                rig.enabled = true;
         }
 
         public static void EnableRig()
@@ -3140,12 +3142,13 @@ namespace iiMenu.Mods
             invisMonke = false;
             ghostMonke = false;
             ghostException = false;
+            wasInvis = false;
             VRRig rig = VRRig.LocalRig ?? GorillaTagger.Instance?.offlineVRRig;
             if (rig != null)
             {
                 rig.enabled = true;
-                if (GorillaTagger.Instance?.bodyCollider != null)
-                    rig.transform.position = GorillaTagger.Instance.bodyCollider.transform.position;
+                if (rig.transform.position.y < -1000f)
+                    rig.transform.position = GTPlayer.Instance != null ? GTPlayer.Instance.transform.position : GorillaTagger.Instance.transform.position;
             }
         }
 
