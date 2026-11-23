@@ -302,7 +302,7 @@ namespace iiMenu.Menu
                 new ButtonInfo { buttonText = "Panic", method = Settings.Panic, isTogglable = false, toolTip = "Disables every single active mod."},
             },
 
-            new[] { // Dev Themes [NEW]
+            new[] { // Dev Themes
                 new ButtonInfo { buttonText = "Exit Dev Themes", method =() => CurrentCategoryName = "Menu Settings", isTogglable = false, toolTip = "Returns you back to the menu settings page."},
 
                 new ButtonInfo { buttonText = "poopooVR Theme", method =() => Settings.SetTheme(69), isTogglable = false, toolTip = "Hi I am poopooVR and this is my theme :)"},

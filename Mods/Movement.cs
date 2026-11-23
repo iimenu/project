@@ -517,13 +517,8 @@ namespace iiMenu.Mods
                     noclipLocomotionLayersSaved = true;
                 }
                 GTPlayer.Instance.locomotionEnabledLayers = 0;
-                if (GorillaTagger.Instance?.bodyCollider != null)
-                    GorillaTagger.Instance.bodyCollider.enabled = false;
-                if (GorillaTagger.Instance?.headCollider != null)
-                    GorillaTagger.Instance.headCollider.enabled = false;
                 if (GorillaTagger.Instance?.rigidbody != null)
                 {
-                    GorillaTagger.Instance.rigidbody.detectCollisions = false;
                     GorillaTagger.Instance.rigidbody.useGravity = false;
                     GorillaTagger.Instance.rigidbody.linearVelocity = Vector3.zero;
                 }
@@ -533,15 +528,9 @@ namespace iiMenu.Mods
                 LayerMask restoreMask = noclipLocomotionLayersSaved && noclipLocomotionLayers != 0 ? noclipLocomotionLayers : (LayerMask)NoInvisLayerMask();
                 noclipLocomotionLayersSaved = false;
                 GTPlayer.Instance.locomotionEnabledLayers = restoreMask;
-                if (GorillaTagger.Instance?.bodyCollider != null)
-                    GorillaTagger.Instance.bodyCollider.enabled = true;
-                if (GorillaTagger.Instance?.headCollider != null)
-                    GorillaTagger.Instance.headCollider.enabled = true;
                 if (GorillaTagger.Instance?.rigidbody != null)
-                {
-                    GorillaTagger.Instance.rigidbody.detectCollisions = true;
                     GorillaTagger.Instance.rigidbody.useGravity = true;
-                }
+                GTPlayer.Instance.ForceRigidBodySync();
             }
         }
 
@@ -549,20 +538,14 @@ namespace iiMenu.Mods
         {
             SetNoclip(false, noclipFlyHeld);
             if (!noclip && GorillaTagger.Instance?.rigidbody != null)
-            {
-                GorillaTagger.Instance.rigidbody.detectCollisions = true;
                 GorillaTagger.Instance.rigidbody.useGravity = true;
-            }
         }
 
         public static void DisableConstantNoclip()
         {
             SetNoclip(false, noclipFlyHeld);
             if (!noclip && GorillaTagger.Instance?.rigidbody != null)
-            {
-                GorillaTagger.Instance.rigidbody.detectCollisions = true;
                 GorillaTagger.Instance.rigidbody.useGravity = true;
-            }
         }
 
         public static void ConstantNoclip()
@@ -595,7 +578,14 @@ namespace iiMenu.Mods
             {
                 GTPlayer.Instance.transform.position += moveDir.normalized * (Time.deltaTime * FlySpeed);
                 if (GorillaTagger.Instance?.rigidbody != null)
+                {
+                    GorillaTagger.Instance.rigidbody.transform.position = GTPlayer.Instance.transform.position;
                     GorillaTagger.Instance.rigidbody.linearVelocity = Vector3.zero;
+                }
+                GTPlayer.Instance.lastPosition = GTPlayer.Instance.transform.position;
+                if (GorillaTagger.Instance?.headCollider != null)
+                    GTPlayer.Instance.lastHeadPosition = GorillaTagger.Instance.headCollider.transform.position;
+                GTPlayer.Instance.ForceRigidBodySync();
             }
         }
 
@@ -603,10 +593,7 @@ namespace iiMenu.Mods
         {
             SetNoclip(noclipHeld, false);
             if (!noclip && GorillaTagger.Instance?.rigidbody != null)
-            {
-                GorillaTagger.Instance.rigidbody.detectCollisions = true;
                 GorillaTagger.Instance.rigidbody.useGravity = true;
-            }
         }
 
         public static void NoclipFly()
@@ -614,7 +601,15 @@ namespace iiMenu.Mods
             if (rightPrimary)
             {
                 GTPlayer.Instance.transform.position += GorillaTagger.Instance.headCollider.transform.forward * (Time.deltaTime * FlySpeed);
-                GorillaTagger.Instance.rigidbody.linearVelocity = Vector3.zero;
+                if (GorillaTagger.Instance?.rigidbody != null)
+                {
+                    GorillaTagger.Instance.rigidbody.transform.position = GTPlayer.Instance.transform.position;
+                    GorillaTagger.Instance.rigidbody.linearVelocity = Vector3.zero;
+                }
+                GTPlayer.Instance.lastPosition = GTPlayer.Instance.transform.position;
+                if (GorillaTagger.Instance?.headCollider != null)
+                    GTPlayer.Instance.lastHeadPosition = GorillaTagger.Instance.headCollider.transform.position;
+                GTPlayer.Instance.ForceRigidBodySync();
             }
 
             SetNoclip(noclipHeld, rightPrimary);
