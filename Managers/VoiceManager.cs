@@ -1,4 +1,4 @@
-﻿/*
+/*
  * ii Reborn
  * Portions Copyright (C) 2025–2026 Goldentrophy Software
  * Licensed under GNU GPL v3.0-or-later — see LICENSE and NOTICE.
@@ -19,8 +19,8 @@ namespace iiMenu.Managers
 {
     public class VoiceManager : IAudioReader<float>
     {
-        private int samplingRate = 48000;
-        private int outputRate = 48000;
+        private int samplingRate = 24000;
+        private int outputRate = 24000;
         private float gain = 1;
         private float pitch = 1f;
 
@@ -60,6 +60,19 @@ namespace iiMenu.Managers
         public VoiceManager(int loopLength = 1, string device = null)
         {
             this.loopLength = loopLength;
+            try
+            {
+                if (GorillaTagger.Instance?.myRecorder != null)
+                {
+                    int recRate = (int)GorillaTagger.Instance.myRecorder.SamplingRate;
+                    if (recRate > 0)
+                    {
+                        samplingRate = recRate;
+                        outputRate = recRate;
+                    }
+                }
+            }
+            catch { }
             StartRecording(device);
         }
 
@@ -390,7 +403,9 @@ namespace iiMenu.Managers
             for (int i = 0; i < buffer.Length; i++)
             {
                 float pushed = NextAudioClipSample();
-                buffer[i] = Mathf.Clamp(microphoneBuffer[i] + pushed, -1f, 1f);
+                float mixed = microphoneBuffer[i] + pushed;
+                if (float.IsNaN(mixed) || float.IsInfinity(mixed)) mixed = 0f;
+                buffer[i] = Mathf.Clamp(mixed, -1f, 1f);
             }
 
             if (PostProcessClip)
@@ -464,6 +479,7 @@ namespace iiMenu.Managers
             {
                 mixed = Mathf.Clamp(mixed, -1f, 1f);
             }
+            if (float.IsNaN(mixed) || float.IsInfinity(mixed)) mixed = 0f;
             return mixed;
         }
 

@@ -3088,6 +3088,7 @@ namespace iiMenu.Mods
         public static bool wasDisabledAlready;
         public static bool invisMonke;
 
+        public static bool wasInvis;
         public static bool lastHit;
         public static bool lastHit2;
         public static bool lastRG;
@@ -3108,12 +3109,17 @@ namespace iiMenu.Mods
             {
                 rig.enabled = false;
                 rig.transform.position = GorillaTagger.Instance.bodyCollider.transform.position - Vector3.up * 99999f;
+                wasInvis = true;
             }
             else
             {
-                rig.enabled = true;
-                if (GorillaTagger.Instance?.bodyCollider != null)
-                    rig.transform.position = GorillaTagger.Instance.bodyCollider.transform.position;
+                if (wasInvis)
+                {
+                    rig.transform.position = GTPlayer.Instance != null ? GTPlayer.Instance.transform.position : GorillaTagger.Instance.transform.position;
+                    wasInvis = false;
+                }
+                if (!ghostMonke)
+                    rig.enabled = true;
             }
         }
 
@@ -3130,9 +3136,10 @@ namespace iiMenu.Mods
                 ghostMonke = !ghostMonke;
             lastHit = hit;
 
-            rig.enabled = !ghostMonke;
-            if (!ghostMonke && GorillaTagger.Instance?.bodyCollider != null)
-                rig.transform.position = GorillaTagger.Instance.bodyCollider.transform.position;
+            if (ghostMonke)
+                rig.enabled = false;
+            else if (!invisMonke)
+                rig.enabled = true;
         }
 
         public static void EnableRig()
@@ -3140,12 +3147,13 @@ namespace iiMenu.Mods
             invisMonke = false;
             ghostMonke = false;
             ghostException = false;
+            wasInvis = false;
             VRRig rig = VRRig.LocalRig ?? GorillaTagger.Instance?.offlineVRRig;
             if (rig != null)
             {
                 rig.enabled = true;
-                if (GorillaTagger.Instance?.bodyCollider != null)
-                    rig.transform.position = GorillaTagger.Instance.bodyCollider.transform.position;
+                if (rig.transform.position.y < -1000f)
+                    rig.transform.position = GTPlayer.Instance != null ? GTPlayer.Instance.transform.position : GorillaTagger.Instance.transform.position;
             }
         }
 

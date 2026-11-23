@@ -45,21 +45,8 @@ namespace iiMenu.Mods
             try
             {
                 var vm = VoiceManager.Get();
-                vm.OutputRate = 48000;
-                vm.SamplingRate = 48000;
                 vm.HighQualityMode = HighQuality;
                 vm.SoundboardVolume = MicVolume;
-                try
-                {
-                    var recorder = GorillaTagger.Instance?.myRecorder;
-                    if (recorder != null)
-                    {
-                        try { recorder.SamplingRate = (SamplingRate)48000; } catch { }
-                        try { recorder.Bitrate = 51000; } catch { }
-                        try { recorder.RestartRecording(true); } catch { }
-                    }
-                }
-                catch { }
             }
             catch { }
         }

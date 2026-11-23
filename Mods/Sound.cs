@@ -705,7 +705,6 @@ namespace iiMenu.Mods
                 GorillaTagger.Instance.myRecorder.RestartRecording(true);
             }
 
-            GorillaTagger.Instance.myRecorder.DebugEchoMode = true;
             if (!LoopAudio)
             {
                 AudioIsPlaying = true;
@@ -815,14 +814,12 @@ namespace iiMenu.Mods
                             info.enabled = false;
                     activeSounds.Clear();
                     VoiceManager.Get().StopAudioClips();
-                    GorillaTagger.Instance.myRecorder.DebugEchoMode = false;
                 }
                 else
                 {
                     GorillaTagger.Instance.myRecorder.SourceType = Recorder.InputSourceType.Microphone;
                     GorillaTagger.Instance.myRecorder.AudioClip = null;
                     GorillaTagger.Instance.myRecorder.RestartRecording(true);
-                    GorillaTagger.Instance.myRecorder.DebugEchoMode = false;
                 }
             }
 

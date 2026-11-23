@@ -53,56 +53,6 @@ namespace iiMenu.Patches.Safety
             }
         }
 
-        [HarmonyPatch(typeof(CosmeticsController), nameof(CosmeticsController.ReauthOrBan))]
-        public class NoReauthOrBanNuke
-        {
-            private static bool Prefix(PlayFabError error)
-            {
-                if (ContainmentEnabled && error != null && error.Error == PlayFabErrorCode.AccountBanned)
-                {
-                    NotificationManager.SendNotification("<color=grey>[</color><color=orange>CONTAINMENT</color><color=grey>]</color> Blocked cosmetics ban teardown (offline only).");
-                    return false;
-                }
-                return true;
-            }
-        }
-
-        [HarmonyPatch(typeof(PlayFabAuthenticator), nameof(PlayFabAuthenticator.ShowMothershipAuthErrorMessage))]
-        public class NoMothershipAuthErrorScreen
-        {
-            private static bool Prefix(string errorMessage, string errorCode, string traceId)
-            {
-                if (!ContainmentEnabled)
-                    return true;
-
-                NotificationManager.SendNotification($"<color=grey>[</color><color=orange>CONTAINMENT</color><color=grey>]</color> You have been banned ({errorCode}).");
-                return false;
-            }
-        }
-
-        [HarmonyPatch(typeof(GorillaComputer), nameof(GorillaComputer.GeneralFailureMessage))]
-        public class NoBanFailureScreen
-        {
-            private static bool Prefix(string failMessage)
-            {
-                if (!ContainmentEnabled || string.IsNullOrEmpty(failMessage))
-                    return true;
-
-                string lower = failMessage.ToLower();
-                bool banShaped =
-                    lower.Contains("banned") ||
-                    lower.Contains("ban expires") ||
-                    lower.Contains("unban date") ||
-                    lower.Contains("unable to authenticate with mothership");
-
-                if (!banShaped)
-                    return true;
-
-                NotificationManager.SendNotification("<color=grey>[</color><color=orange>CONTAINMENT</color><color=grey>]</color> Ban screen suppressed — remaining in offline stump.");
-                return false;
-            }
-        }
-
         [HarmonyPatch(typeof(GorillaVRConstraint), nameof(GorillaVRConstraint.Tick))]
         public class NoVRConstraintLatch
         {

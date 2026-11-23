@@ -1,4 +1,4 @@
-﻿/*
+/*
  * ii Reborn
  * Portions Copyright (C) 2025–2026 Goldentrophy Software
  * Licensed under GNU GPL v3.0-or-later — see LICENSE and NOTICE.
@@ -18,39 +18,23 @@ namespace iiMenu.Patches.Menu
     {
         public static bool enabled = true;
 
-        private static readonly System.Func<IAudioDesc> inputFactory = () => VoiceManager.Get();
-        [HarmonyPatch(nameof(Recorder.SourceType), MethodType.Getter)]
-        public static bool Prefix(ref Recorder.InputSourceType __result)
-        {
-            if (enabled)
-            {
-                __result = Recorder.InputSourceType.Factory;
-                return false;
-            }
-            return true;
-            
-        }
-
-        [HarmonyPatch(nameof(Recorder.InputFactory), MethodType.Getter)]
-        public static bool Prefix(ref System.Func<IAudioDesc> __result)
-        {
-            if (enabled)
-            {
-                __result = inputFactory;
-                return false;
-            }
-            return true;
-        }
-
         [HarmonyPatch(nameof(Recorder.CreateLocalVoiceAudioAndSource))]
-        public static bool Prefix(Recorder __instance)
+        [HarmonyPrefix]
+        public static void Prefix(Recorder __instance)
         {
             if (enabled)
             {
                 __instance.SourceType = Recorder.InputSourceType.Factory;
                 __instance.InputFactory = () => VoiceManager.Get();
             }
-            return true;
+        }
+
+        [HarmonyPatch(nameof(Recorder.CreateLocalVoiceAudioAndSource))]
+        [HarmonyPostfix]
+        public static void Postfix(Recorder __instance)
+        {
+            if (enabled)
+                __instance.SourceType = Recorder.InputSourceType.Microphone;
         }
     }
 }
