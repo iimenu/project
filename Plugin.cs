@@ -34,6 +34,7 @@ namespace iiMenu
         /// current <see cref="PluginInfo.BaseDirectory"/>. Rename-only by design — if BOTH
         /// directories exist (e.g. someone alternated legacy and Reborn builds), nothing is
         /// merged or overwritten; both are left untouched and Reborn keeps its own.
+        /// hello world
         /// </summary>
         private static void MigrateLegacyBaseDirectory()
         {
